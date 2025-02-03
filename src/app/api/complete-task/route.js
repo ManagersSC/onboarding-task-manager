@@ -26,25 +26,6 @@ export async function POST(request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Query the Onboarding Tasks Logs table
-    // const filterFormula = `AND({Task} = '${taskId}')`;
-    // console.log("Querying Onboarding Tasks Logs with filter:", filterFormula);
-
-    // const logRecords = await base("Onboarding Tasks Logs")
-    //   .select({
-    //     filterByFormula: filterFormula,
-    //   })
-    //   .firstPage();
-
-    // console.log("ctLog records retrieved:", logRecords);
-    // if (logRecords.length === 0) {
-    //   console.error("ctTask not found for taskId:", taskId);
-    //   return Response.json({ error: "Task log not found" }, { status: 404 });
-    // }
-
-    // const logRecord = logRecords[0];
-    // console.log("ctUpdating task log record with id:", logRecord.id);
-
     // Update the Status field in the Onboarding Tasks Logs table
     const updateResult = await base("Onboarding Tasks Logs").update([
       {
