@@ -1,5 +1,6 @@
 import Airtable from "airtable"
 import { cookies } from "next/headers"
+import logger from "@/lib/logger"
 
 export async function GET() {
   if (!process.env.AIRTABLE_API_KEY) {
@@ -26,8 +27,10 @@ export async function GET() {
     })
     .firstPage()
 
+    logger.debug(`Applicant records: ${JSON.stringify(applicantRecords)}`);
 
     if (!applicantRecords || applicantRecords.length === 0) {
+      logger.info("No applicant record found.")
       return Response.json({ error: "Applicant not found" }, { status: 404 })
     }
 
@@ -36,7 +39,7 @@ export async function GET() {
     const applicantId = applicant._rawJson.id;
     
     const taskIds = applicant.get("Task Log") || [] 
-    console.log(`Tasks in task log: ${taskIds.length}`)
+    logger.info(`Tasks in task log: ${taskIds.length}`)
 
     if (taskIds.length === 0) {
       return Response.json({
@@ -45,15 +48,6 @@ export async function GET() {
         tasks: []
       })
     }
-
-    // let filterFormula3 = `FIND("${applicantRecords[0]._rawJson.fields.Email}", ARRAYJOIN({fldqftlVTfZ5sSkrs}))`;
-    // console.log(filterFormula3);
-
-    // const taskLogRecords = await base("Onboarding Tasks Logs")
-    // .select({
-    //   filterByFormula: `FIND("sauravkc@flowfusionai.com", ARRAYJOIN({fldqftlVTfZ5sSkrs}))`,
-    // })
-    // .all()
 
     const taskLogRecords = await base("Onboarding Tasks Logs")
     .select({
@@ -64,13 +58,18 @@ export async function GET() {
         "Task Title", 
         "Task Desc", 
         "Resource Link", 
-        "Last Status Change Time"
+        "Last Status Change Time",
+        "Created",
+        "Task Week Number"
       ],
+      sort: [
+        { field: "Created", direction: "desc" },
+      ]
     })
     .all()
 
     if (taskLogRecords.length === 0) {
-      console.warn(`No task logs found for applicant: ${applicantId}`);
+      logger.warn(`No task logs found for applicant: ${applicantId}`);
       return Response.json({
         email: applicantEmail,
         recordId: applicantId,
@@ -83,8 +82,17 @@ export async function GET() {
       const logId= record.id;
       const status = record.get("Status");
       const taskField = record.get("Task");
-      // const taskId = Array.isArray(taskField) && taskField.length > 0 ? taskField[0] : record.id;
-      console.log(logId)
+      const taskId = Array.isArray(taskField) && taskField.length > 0 ? taskField[0] : record.id;
+
+      const rawWeek = record.get("Task Week Number");
+      let weekValue = null;
+      if(Array.isArray(rawWeek) && rawWeek.length > 0){
+        weekValue = rawWeek[0];
+      }else if (typeof rawWeek === "string"){
+        weekValue = rawWeek;
+      }
+
+      logger.info(logId)
       return {
         id: logId,
         title: record.get("Task Title") || "Untitled Task",
@@ -94,6 +102,7 @@ export async function GET() {
         // The front end uses the absence of completed and overdue flags to filter for 'assigned' tasks.
         resourceUrl: record.get("Resource Link") || null,
         lastStatusChange: record.get("Last Status Change Time") || null,
+        week: weekValue
       };
     });
 
@@ -103,11 +112,11 @@ export async function GET() {
       tasks,
     };
 
-    console.log(responsePayload);
+    logger.info(responsePayload);
 
     return Response.json(tasks)
   } catch (error) {
-    console.error('Full Error:', {
+    logger.error('Full Error:', {
       message: error.message,
       stack: error.stack
     })

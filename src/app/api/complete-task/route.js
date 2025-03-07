@@ -1,9 +1,10 @@
 import Airtable from "airtable";
 import { cookies } from "next/headers";
+import logger from "@/lib/logger";
 
 export async function POST(request) {
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
-    console.error("ctServer configuration error: Missing API key or base ID");
+    logger.error("ctServer configuration error: Missing API key or base ID");
     return Response.json({ error: "Server configuration error" }, { status: 500 });
   }
 
@@ -12,17 +13,17 @@ export async function POST(request) {
 
   try {
     const { taskId } = await request.json();
-    console.log("ctReceived request with taskId:", taskId);
+    logger.info("ctReceived request with taskId:", taskId);
     if (!taskId) {
-      console.error("ctMissing taskId in request body");
+      logger.error("ctMissing taskId in request body");
       return Response.json({ error: "Missing taskId" }, { status: 400 });
     }
 
     const cookieStore = await cookies();
     const userEmail = cookieStore.get("user_email")?.value;
-    console.log("User email from cookies:", userEmail);
+    logger.info("User email from cookies:", userEmail);
     if (!userEmail) {
-      console.error("ctUnauthorized access: No user_email found in cookies");
+      logger.error("ctUnauthorized access: No user_email found in cookies");
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,12 +37,53 @@ export async function POST(request) {
       },
     ]);
 
-    console.log("ctUpdate result:", updateResult);
-    console.log("ctTask completed successfully for task log record:", taskId);
+    logger.info("ctUpdate result:", updateResult);
+    logger.info("ctTask completed successfully for task log record:", taskId);
 
-    return Response.json({ message: "Task completed successfully" });
+    // Get Applicant Record
+    const applicantRecords = await base("Applicants")
+      .select({
+        filterByFormula: `{Email}='${userEmail}'`,
+        maxRecords: 1
+      })
+    .firstPage();
+    
+    if(!applicantRecords || applicantRecords.length===0){
+      return Response.json({erorr: "No applicant found for this email"}, { status: 404 });
+    }
+
+    const applicantRecord = applicantRecords[0];
+
+    // Get Task Title
+    const taskLogRecord = await base("Onboarding Tasks Logs").find(taskId);
+    const taskTitle = taskLogRecord.fields["Task Title"] || "a task";
+
+    // Generate New Interface Message
+    const applicantId = applicantRecord.id;
+    const applicantName = applicantRecord.fields["Name"] || "Unknown";
+    const interfaceMessage = applicantRecord.fields["Interface Message - Onboarding Status Update"] || "";
+    const currentDateTime = new Date().toLocaleString('en-GB');
+
+    const newLine = `- ${applicantName} has completed ${taskTitle} with record ID: ${taskId} at ${currentDateTime}`;
+    const updatedMessage = interfaceMessage ? `${interfaceMessage}\n${newLine}` : newLine;
+
+    // Update Interface Message
+    await base("Applicants").update([
+      {
+        id: applicantId,
+        fields: {
+          "Interface Message - Onboarding Status Update": updatedMessage,
+        }
+      }
+    ])
+
+    return Response.json({ 
+      message: `Task completed successfully for applicant: ${applicantName}`,
+      recordId: applicantId,
+      interfaceMessage: updatedMessage
+    });
   } catch (error) {
-    console.error("Full Error:", {
+    logger.error("Full Error:", {
       message: error.message,
       stack: error.stack,
     });

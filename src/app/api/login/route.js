@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import logger from "@/lib/logger"
 
 export async function POST(request) {
   try {
@@ -19,7 +20,7 @@ export async function POST(request) {
 
     return Response.json({ message: "Logged in successfully" })
   } catch (error) {
-    console.error('Full Error:', {
+    logger.error('Full Error:', {
       message: error.message,
       stack: error.stack
     })

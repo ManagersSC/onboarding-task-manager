@@ -9,7 +9,7 @@ export default function TaskCard({ task, onComplete }) {
     try {
       await onComplete(task.id)
     } catch (error) {
-      console.error("Error completing task:", error)
+      console.log("Error completing task:", error)
     } finally {
       setIsCompleting(false)
     }
