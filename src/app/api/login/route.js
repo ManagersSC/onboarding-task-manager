@@ -1,16 +1,43 @@
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
 
-// Login
-export async function POST(request) {
-  try {
-    const { email } = await request.json()
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
+  process.env.AIRTABLE_BASE_ID
+);
 
-    if (!email) {
-      return Response.json({ error: "Email is required" }, { status: 400 })
+// Login
+export async function login(request) {
+  try {
+    const { email, password } = await request.json()
+
+    if (!email || !password) {
+      return Response.json({ error: "Email and password is required" }, { status: 400 })
     }
 
-    // Set cookie with email
+    // Fetch user from Airtable
+    const users = await base("Applicants")
+      .select(
+        {
+          filterByFormula: `{Email}='${email}'`,
+          maxRecords: 1
+        }
+      )
+    .firstPage();
+
+    if(users.length === 0){
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    const user = users[0];
+    const storedHashedPassword = users.fields.Password;
+
+    // Compare Password
+    const isMatch = await bcrypt.compare(password, storedHashedPassword);
+    if(!isMatch){
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Set session cookie
     const cookieStore = await cookies()
     cookieStore.set("user_email", email, {
       httpOnly: true,

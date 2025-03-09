@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Clock, AlertCircle, CheckCircle } from "lucide-react"
 
+// TaskCard component
 export default function TaskCard({ task, onComplete }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
