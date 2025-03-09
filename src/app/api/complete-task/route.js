@@ -2,6 +2,7 @@ import Airtable from "airtable";
 import { cookies } from "next/headers";
 import logger from "@/lib/logger";
 
+// Complete tasks
 export async function POST(request) {
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
     logger.error("ctServer configuration error: Missing API key or base ID");

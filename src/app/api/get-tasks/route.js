@@ -2,6 +2,7 @@ import Airtable from "airtable"
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
 
+// Get tasks
 export async function GET() {
   if (!process.env.AIRTABLE_API_KEY) {
     return Response.json({ error: "Missing AIRTABLE_API_KEY" }, { status: 500 })

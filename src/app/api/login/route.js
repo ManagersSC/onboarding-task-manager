@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
 
+// Login
 export async function POST(request) {
   try {
     const { email } = await request.json()
