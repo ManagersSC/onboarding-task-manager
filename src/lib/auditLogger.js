@@ -1,5 +1,5 @@
 import Airtable from "airtable";
-import logger from "@/lib/logger";
+import logger from "./logger";
 
 // Initialize Airtable connection
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
