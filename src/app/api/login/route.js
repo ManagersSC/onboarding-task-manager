@@ -1,11 +1,13 @@
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
+import Airtable from "airtable";
+import bcrypt from "bcryptjs";
 
+// Login route
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
 );
 
-// Login
 export async function login(request) {
   try {
     const { email, password } = await request.json()
@@ -29,7 +31,7 @@ export async function login(request) {
     }
 
     const user = users[0];
-    const storedHashedPassword = users.fields.Password;
+    const storedHashedPassword = user.fields.Password;
 
     // Compare Password
     const isMatch = await bcrypt.compare(password, storedHashedPassword);
