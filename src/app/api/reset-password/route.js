@@ -3,6 +3,7 @@ import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import logger from "@/lib/logger";
+import { logAuditEvent } from "@/lib/auditLogger";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
@@ -57,9 +58,26 @@ export async function resetPassword(request) {
       }
     );
 
+    await logAuditEvent({
+      base,
+      eventType: "Reset Password",
+      eventStatus: "Success",
+      userIdentifier: email,
+      detailedMessage: "User sucessfully resetted password",
+      request
+    });
+
     return Response.json({ message: "Password reset successful" });
   } catch (error) {
     logger.error("Reset Password Error:", error);
+    await logAuditEvent({
+      base,
+      eventType: "Reset Password",
+      eventStatus: "Error",
+      userIdentifier: email,
+      detailedMessage: `User password reset error. Error message: ${error}`,
+      request
+    });
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

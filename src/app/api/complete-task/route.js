@@ -78,6 +78,16 @@ export async function POST(request) {
       }
     ])
 
+    //Log Success Completion
+    await logAuditEvent({
+      base,
+      eventType: "Task Complete",
+      eventStatus: "Success",
+      userIdentifier: userEmail,
+      detailedMessage: `User successfully compelted task. Task ID: ${taskId}`,
+      request
+    });
+
     return Response.json({ 
       message: `Task completed successfully for applicant: ${applicantName}`,
       recordId: applicantId,
@@ -88,6 +98,16 @@ export async function POST(request) {
       message: error.message,
       stack: error.stack,
     });
+
+    await logAuditEvent({
+      base,
+      eventType: "Task Complete",
+      eventStatus: "Success",
+      userIdentifier: userEmail,
+      detailedMessage: `User task completion error: ${error}`,
+      request
+    });
+
     return Response.json(
       {
         error: "Internal server error",
