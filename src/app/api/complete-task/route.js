@@ -50,7 +50,7 @@ export async function POST(request) {
     .firstPage();
     
     if(!applicantRecords || applicantRecords.length===0){
-      return Response.json({erorr: "No applicant found for this email"}, { status: 404 });
+      return Response.json({error: "No applicant found for this email"}, { status: 404 });
     }
 
     const applicantRecord = applicantRecords[0];
