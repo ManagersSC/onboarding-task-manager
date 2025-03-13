@@ -17,9 +17,12 @@ export async function signup(request) {
     );
 
     // Parse and validate request body.
-    const { email, password } = await request.json();
+    const { email, password, confirmPassword } = await request.json();
     if (!email || !password) {
       return Response.json({ error: "Email and password are required" }, { status: 400 });
+    }
+    if (password !== confirmPassword) {
+      return Response.json({ error: "Passwords do not match." }, { status: 400 });
     }
 
     // Normalize email (trim and lowercase)

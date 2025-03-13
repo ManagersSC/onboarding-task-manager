@@ -89,11 +89,30 @@ describe("Signup Route (/api/signup)", () => {
     expect(res.status).toBe(400);
     expect(json.error).toBe("Email and password are required");
   });
+  
+  test("should return 400 if passwords do not match", async () => {
+    setupSignupMocks({ userExists: false });
+    const req = createFakeRequest(
+      { 
+        email: "test@example.com",
+        password: "secret123",
+        confirmPassword: "secret124"
+      }
+    );
+    const res = await signup(req);
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("Passwords do not match.");
+  });
 
   test("should return 404 if the applicant record does not exist", async () => {
     // Simulate that the applicant record is not found in Airtable.
     setupSignupMocks({ userExists: false });
-    const req = createFakeRequest({ email: "nonexistent@example.com", password: "secret" });
+    const req = createFakeRequest({ 
+      email: "nonexistent@example.com", 
+      password: "secret",
+      confirmPassword: "secret"
+    });
     const res = await signup(req);
     const json = await res.json();
     expect(res.status).toBe(404);
@@ -103,7 +122,11 @@ describe("Signup Route (/api/signup)", () => {
   test("should return 400 if the user is already registered", async () => {
     // Simulate that the applicant exists and already has a password.
     setupSignupMocks({ userExists: true, registered: true });
-    const req = createFakeRequest({ email: "registered@example.com", password: "secret" });
+    const req = createFakeRequest({ 
+      email: "registered@example.com", 
+      password: "secret",
+      confirmPassword: "secret" 
+    });
     const res = await signup(req);
     const json = await res.json();
     expect(res.status).toBe(400);
@@ -112,7 +135,11 @@ describe("Signup Route (/api/signup)", () => {
 
   test("should return 200, update the password, and set a cookie if the applicant exists and is not registered", async () => {
     const { mockUpdate, cookieStoreMock } = setupSignupMocks({ userExists: true, registered: false });
-    const req = createFakeRequest({ email: "Existing@Example.Com", password: "secret" });
+    const req = createFakeRequest({ 
+      email: "Existing@Example.Com", 
+      password: "secret",
+      confirmPassword: "secret" 
+    });
     const res = await signup(req);
     const json = await res.json();
     expect(res.status).toBe(200);
@@ -125,7 +152,7 @@ describe("Signup Route (/api/signup)", () => {
         fields: { Password: "hashedPassword" },
       },
     ]);
-    // Verify that the cookie was set with the normalized email.
+    // Verify that the cookie was set with the normalised email.
     expect(cookieStoreMock.set).toHaveBeenCalledWith("user_email", "existing@example.com", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
