@@ -1,69 +1,57 @@
-import { useState } from "react"
-import { Clock, AlertCircle, CheckCircle } from "lucide-react"
+"use client"
 
-// TaskCard component
-export default function TaskCard({ task, onComplete }) {
-  const [isCompleting, setIsCompleting] = useState(false)
+import { Check, Clock, ExternalLink } from "lucide-react"
+import { Button } from "@components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
+import { Badge } from "@components/ui/badge"
 
-  const handleComplete = async () => {
-    setIsCompleting(true)
-    try {
-      await onComplete(task.id)
-    } catch (error) {
-      console.log("Error completing task:", error)
-    } finally {
-      setIsCompleting(false)
-    }
+export function TaskCard({ task, onComplete }) {
+  const statusColors = {
+    assigned: "bg-blue-50 text-blue-700 border-blue-200",
+    overdue: "bg-red-50 text-red-700 border-red-200",
+    completed: "bg-green-50 text-green-700 border-green-200",
   }
 
-  const getStatusIcon = () => {
-    if (task.completed) return <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
-    if (task.overdue) return <AlertCircle className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
-    return <Clock className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
-  }
-
-  const getStatusBadge = () => {
-    if (task.completed)
-      return <div className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium">Completed</div>
-    if (task.overdue)
-      return <div className="bg-red-50 text-red-700 text-xs px-2.5 py-1 rounded-full font-medium">Overdue</div>
-    return <div className="bg-gray-50 text-gray-700 text-xs px-2.5 py-1 rounded-full font-medium">Assigned</div>
+  const statusIcons = {
+    assigned: <Clock className="h-4 w-4" />,
+    overdue: <Clock className="h-4 w-4" />,
+    completed: <Check className="h-4 w-4" />,
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start gap-3">
-        {getStatusIcon()}
-        <div className="space-y-2 flex-1">
-          <h3 className="font-medium text-gray-900">{task.title}</h3>
-          <p className="text-sm text-gray-500 leading-relaxed">{task.description}</p>
-          <div className="flex items-center justify-between pt-2">
-            {getStatusBadge()}
-            <div className="flex items-center gap-2">
-              {task.resourceUrl && (
-                <a
-                  href={task.resourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
-                >
-                  View Resource
-                </a>
-              )}
-              {!task.completed && (
-                <button
-                  onClick={handleComplete}
-                  disabled={isCompleting}
-                  className="text-xs bg-black text-white px-3 py-1.5 rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
-                >
-                  {isCompleting ? "Completing..." : "Complete"}
-                </button>
-              )}
-            </div>
-          </div>
+    <Card className="group relative overflow-hidden transition-all hover:shadow-md">
+      <CardHeader className="p-4">
+        <div className="flex items-start justify-between space-x-4">
+          <Badge variant="outline" className={statusColors[task.status]}>
+            <span className="flex items-center gap-1">
+              {statusIcons[task.status]}
+              {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+            </span>
+          </Badge>
+          {task.week && (
+            <Badge variant="outline" className="text-gray-600">
+              Week {task.week}
+            </Badge>
+          )}
         </div>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <h3 className="font-medium">{task.title}</h3>
+      </CardContent>
+      <CardFooter className="p-4 pt-0">
+        <div className="flex items-center justify-between w-full">
+          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+            <ExternalLink className="h-4 w-4 mr-1" />
+            View Resource
+          </Button>
+          {task.status !== "completed" && (
+            <Button size="sm" onClick={() => onComplete(task.id)} variant="outline">
+              Complete
+            </Button>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
   )
 }
 

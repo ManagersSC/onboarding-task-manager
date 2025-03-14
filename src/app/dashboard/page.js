@@ -1,33 +1,27 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import TaskList from "../../../components/TaskList"
+import { DashboardNav } from "@components/DashboardNav"
+import { TaskList } from "@components/TaskList"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Skeleton } from "@components/ui/skeleton"
 
 export default function DashboardPage() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [selectedWeek, setSelectedWeek] = useState("");
+  const [selectedWeek, setSelectedWeek] = useState("")
 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await fetch("/api/get-tasks");
-
+        const response = await fetch("/api/get-tasks")
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to load tasks");
+          const data = await response.json()
+          throw new Error(data.error || "Failed to load tasks")
         }
-
-        const data = await response.json();
-
-        // Determine if the data is directly an array (when tasks exist)
-        // or an object with a `tasks` property (when no tasks exist)
-        const tasksArray = Array.isArray(data) 
-        ? data // If it's already an array, use it directly
-        : (Array.isArray(data.tasks) ? data.tasks: []); // Otherwise, extract tasks or default to an empty array
-        
-        // update the state with the array of tasks, which will trigger a re-render
+        const data = await response.json()
+        const tasksArray = Array.isArray(data) ? data : Array.isArray(data.tasks) ? data.tasks : []
         setTasks(tasksArray)
       } catch (e) {
         setError(e.message)
@@ -54,85 +48,87 @@ export default function DashboardPage() {
         throw new Error(data.error || "Failed to complete task")
       }
 
-      setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? { ...task, completed: true } : task)))
+      setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? { ...task, status: "completed" } : task)))
     } catch (e) {
-      console.log("Error completing task:", e)
+      console.error("Error completing task:", e)
     }
   }
 
+  // Filter tasks by week
+  const filteredTasks = tasks.filter((task) => {
+    if (!selectedWeek) return true
+    return task.week === selectedWeek
+  })
+
+  // Group tasks by status
+  const assignedTasks = filteredTasks.filter((task) => task.status === "assigned")
+  const overdueTasks = filteredTasks.filter((task) => task.status === "overdue")
+  const completedTasks = filteredTasks.filter((task) => task.status === "completed")
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f8f9fa]">
-        <div className="animate-pulse text-gray-500">Loading tasks...</div>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardNav />
+        <main className="container mx-auto px-4 py-8">
+          <div className="mb-8 flex items-center justify-between">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-10 w-48" />
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-8 w-24" />
+                {[...Array(2)].map((_, j) => (
+                  <Skeleton key={j} className="h-32 w-full" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f8f9fa]">
-        <div className="text-red-500 max-w-md text-center">
-          <h2 className="text-xl font-bold mb-2">Error</h2>
-          <p>{error}</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardNav />
+        <main className="container mx-auto px-4 py-8">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="text-red-800">{error}</p>
+          </div>
+        </main>
       </div>
     )
   }
 
-  // Filter by Week
-  const filterByWeek = tasks.filter((task) => {
-    if(!selectedWeek) return true;
-    return task.week === selectedWeek;
-  })
-
-  // Task Kanban filtering
-  const assignedTasks = filterByWeek.filter((task) => !task.completed && !task.overdue)
-  const overdueTasks = filterByWeek.filter((task) => task.overdue)
-  const completedTasks = filterByWeek.filter((task) => task.completed)
-
   return (
-    <div className="min-h-screen bg-[#f8f9fa] py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Title + Week dropdown in same row */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNav />
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Your Tasks</h1>
-          <div>
-            <label htmlFor="weekSelect" className="mr-2 text-gray-900">
-              Filter by Week:
-            </label>
-            <select
-              id="weekSelect"
-              value={selectedWeek}
-              onChange={(e) => setSelectedWeek(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-gray-900"
-            >
-              <option value="">All</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-            </select>
-          </div>
+          <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter by Week" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Weeks</SelectItem>
+              {[1, 2, 3, 4, 5].map((week) => (
+                <SelectItem key={week} value={week.toString()}>
+                  Week {week}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        { tasks.length > 0 ? (
-          <>
-            {/* Kanban columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <TaskList title="Assigned" tasks={assignedTasks} onComplete={handleComplete} />
-              <TaskList title="Overdue" tasks={overdueTasks} onComplete={handleComplete} />
-              <TaskList title="Completed" tasks={completedTasks} onComplete={handleComplete} />
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center min-h-screen bg-[#f8f9fa]">
-            <p className="text-gray-500">No tasks assigned yet.</p>
-          </div>
-        ) }
-
-        
-      </div>
+        <div className="grid gap-8 md:grid-cols-3">
+          <TaskList title="Assigned" tasks={assignedTasks} onComplete={handleComplete} />
+          <TaskList title="Overdue" tasks={overdueTasks} onComplete={handleComplete} />
+          <TaskList title="Completed" tasks={completedTasks} onComplete={handleComplete} />
+        </div>
+      </main>
     </div>
   )
 }

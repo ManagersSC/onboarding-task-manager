@@ -1,15 +1,20 @@
-import TaskCard from "./TaskCard"
+import { TaskCard } from "@components/TaskCard"
 
-// TaskList component
-export default function TaskList({ title, tasks, onComplete }) {
+export function TaskList({ title, tasks, onComplete }) {
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">{title}</h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <span className="text-sm text-gray-500">{tasks.length} tasks</span>
+      </div>
       <div className="space-y-4">
-        {tasks.length > 0 ? (
-          tasks.map((task) => <TaskCard key={task.id} task={task} onComplete={onComplete} />)
-        ) : (
-          <p className="text-gray-500 text-sm">No tasks available.</p>
+        {tasks.map((task) => (
+          <TaskCard key={task.id} task={task} onComplete={onComplete} />
+        ))}
+        {tasks.length === 0 && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-sm text-muted-foreground">No tasks</p>
+          </div>
         )}
       </div>
     </div>

@@ -1,9 +1,10 @@
 import Airtable from "airtable"
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
+import { logAuditEvent } from "@/lib/auditLogger";
 
 // Get tasks
-export async function GET() {
+export async function GET(request) {
   let userEmail;
   try {
     const cookieStore = await cookies()
