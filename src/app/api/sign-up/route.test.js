@@ -66,7 +66,7 @@ describe("Signup Route (/api/signup)", () => {
     }));
 
     // Import the signup function from the route.
-    ({ signup } = require("./route"));
+    ({ POST } = require("./route"));
     return { mockSelect, mockUpdate, cookieStoreMock };
   };
 
@@ -75,7 +75,7 @@ describe("Signup Route (/api/signup)", () => {
     process.env.AIRTABLE_BASE_ID = "";
     setupSignupMocks({ userExists: true });
     const req = createFakeRequest({ email: "test@example.com", password: "secret" });
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(500);
     expect(json.error).toBe("Server configuration error");
@@ -84,7 +84,7 @@ describe("Signup Route (/api/signup)", () => {
   test("should return 400 if email or password is missing", async () => {
     setupSignupMocks();
     const req = createFakeRequest({ email: "test@example.com" });
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(400);
     expect(json.error).toBe("Email and password are required");
@@ -99,7 +99,7 @@ describe("Signup Route (/api/signup)", () => {
         confirmPassword: "secret124"
       }
     );
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(400);
     expect(json.error).toBe("Passwords do not match.");
@@ -113,7 +113,7 @@ describe("Signup Route (/api/signup)", () => {
       password: "secret",
       confirmPassword: "secret"
     });
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(404);
     expect(json.error).toBe("Applicant record not found");
@@ -127,7 +127,7 @@ describe("Signup Route (/api/signup)", () => {
       password: "secret",
       confirmPassword: "secret" 
     });
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(400);
     expect(json.error).toBe("User already registered. Please log in or reset your password.");
@@ -140,7 +140,7 @@ describe("Signup Route (/api/signup)", () => {
       password: "secret",
       confirmPassword: "secret" 
     });
-    const res = await signup(req);
+    const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.message).toBe("User registered successfully");

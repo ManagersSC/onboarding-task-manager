@@ -5,11 +5,14 @@ import logger from "@/lib/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 
 // Sign up route with immediate post sign-up login.
-export async function signup(request) {
+export async function POST(request) {
   try {
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");
-      return Response.json({ error: "Server configuration error" }, { status: 500 });
+      return Response.json({ 
+        error: "Server configuration error", 
+        userError: "Apologies, we are experiencing a internal error. Please try again later.", 
+      }, { status: 500 });
     }
     
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
@@ -19,10 +22,16 @@ export async function signup(request) {
     // Parse and validate request body.
     const { email, password, confirmPassword } = await request.json();
     if (!email || !password) {
-      return Response.json({ error: "Email and password are required" }, { status: 400 });
+      return Response.json({ 
+        error: "Email and password are required", 
+        userError: "Email and password are required", 
+      }, { status: 400 });
     }
     if (password !== confirmPassword) {
-      return Response.json({ error: "Passwords do not match." }, { status: 400 });
+      return Response.json({ 
+        error: "Passwords do not match.", 
+        userError: "Passwords do not match.", 
+      }, { status: 400 });
     }
 
     // Normalize email (trim and lowercase)
@@ -35,14 +44,20 @@ export async function signup(request) {
 
     // If no applicant record is found, return a 404.
     if (existingApplicants.length === 0) {
-      return Response.json({ error: "Applicant record not found" }, { status: 404 });
+      return Response.json({ 
+        error: "No applicant record found",
+        userError: "Please use the email you provided during your application."
+      }, { status: 404 });
     }
     const applicant = existingApplicants[0];
 
     // If the applicant already has a password (i.e. already registered), return a 400.
     if (applicant.fields && applicant.fields.Password) {
       return Response.json(
-        { error: "User already registered. Please log in or reset your password." },
+        { 
+          error: "User already registered. Please log in or reset your password.", 
+          userError: "Already registered. Please log in or reset your password.", 
+        },
         { status: 400 }
       );
     }

@@ -15,7 +15,7 @@ import { Eye, EyeOff } from "lucide-react"
 const signUpSchema = z
   .object({
     email: z.string().email({ message: "Please enter a valid email address" }),
-    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters" }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -61,7 +61,7 @@ export function SignUpForm({ onSuccess, onLoginClick }) {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to sign up")
+        throw new Error(result.userError || result.error || "Failed to sign up")
       }
 
       // Redirect to dashboard on success
