@@ -6,6 +6,8 @@ import { logAuditEvent } from "@/lib/auditLogger";
 
 // Sign up route with immediate post sign-up login.
 export async function POST(request) {
+  let base;
+  let normalisedEmail;
   try {
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");
@@ -14,8 +16,8 @@ export async function POST(request) {
         userError: "Apologies, we are experiencing a internal error. Please try again later.", 
       }, { status: 500 });
     }
-    
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
+
+    base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
       process.env.AIRTABLE_BASE_ID
     );
 
@@ -35,7 +37,7 @@ export async function POST(request) {
     }
 
     // Normalize email (trim and lowercase)
-    const normalisedEmail = email.trim().toLowerCase();
+    normalisedEmail = email.trim().toLowerCase();
 
     // Look up the applicant record in the ATS database.
     const existingApplicants = await base("Applicants")

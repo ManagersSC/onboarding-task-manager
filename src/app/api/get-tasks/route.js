@@ -4,22 +4,24 @@ import logger from "@/lib/logger"
 
 // Get tasks
 export async function GET() {
-  if (!process.env.AIRTABLE_API_KEY) {
-    return Response.json({ error: "Missing AIRTABLE_API_KEY" }, { status: 500 })
-  }
-  if (!process.env.AIRTABLE_BASE_ID) {
-    return Response.json({ error: "Missing AIRTABLE_BASE_ID" }, { status: 500 })
-  }
-
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
-
+  let userEmail;
   try {
     const cookieStore = await cookies()
-    const userEmail = cookieStore.get("user_email")?.value
+    userEmail = cookieStore.get("user_email")?.value
 
     if (!userEmail) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+      logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");
+      return Response.json({ 
+        error: "Server configuration error", 
+        userError: "Apologies, we are experiencing a internal error. Please try again later.", 
+      }, { status: 500 });
+    }
+
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
     const applicantRecords = await base("Applicants")
     .select({
@@ -121,6 +123,13 @@ export async function GET() {
       message: error.message,
       stack: error.stack
     })
+    logAuditEvent({
+      eventType: "User",
+      eventStatus: "Errror",
+      userIdentifier: userEmail,
+      detailedMessage: `Fetching user detail failed, error message: ${error.message}`,
+      request
+    });
     return Response.json({ 
       error: "Internal server error",
       details: process.env.NODE_ENV === 'development' ? error.message : null
