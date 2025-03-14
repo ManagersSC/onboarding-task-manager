@@ -95,8 +95,7 @@ export async function GET(request) {
       }else if (typeof rawWeek === "string"){
         weekValue = rawWeek;
       }
-
-      logger.info(logId)
+      
       return {
         id: logId,
         title: record.get("Task Title") || "Untitled Task",

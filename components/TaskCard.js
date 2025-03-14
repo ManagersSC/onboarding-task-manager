@@ -4,6 +4,7 @@ import { Check, Clock, ExternalLink } from "lucide-react"
 import { Button } from "@components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Badge } from "@components/ui/badge"
+import Link from "next/link"
 
 export function TaskCard({ task, onComplete }) {
   const statusColors = {
@@ -40,10 +41,23 @@ export function TaskCard({ task, onComplete }) {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <div className="flex items-center justify-between w-full">
-          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-            <ExternalLink className="h-4 w-4 mr-1" />
-            View Resource
-          </Button>
+          {task.resourceUrl ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 hover:text-blue-700"
+                onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                title={task.resourceUrl}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                View Resource
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="text-gray-400 cursor-not-allowed" disabled>
+                <ExternalLink className="h-4 w-4 mr-1" />
+                No Resource
+              </Button>
+          )}
           {task.status !== "completed" && (
             <Button size="sm" onClick={() => onComplete(task.id)} variant="outline">
               Complete
