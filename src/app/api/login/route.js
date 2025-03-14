@@ -8,12 +8,12 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
 );
 
-export async function login(request) {
+export async function POST(request) {
   try {
     const { email, password } = await request.json()
 
     if (!email || !password) {
-      return Response.json({ error: "Email and password is required" }, { status: 400 })
+      return new Response(JSON.stringify({ error: "Email and password is required" }), { status: 400 })
     }
 
     // Fetch user from Airtable
@@ -27,16 +27,21 @@ export async function login(request) {
     .firstPage();
 
     if(users.length === 0){
-      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+      return new Response(JSON.stringify({ error: "Invalid credentials" }), { status: 401 });
     }
 
     const user = users[0];
     const storedHashedPassword = user.fields.Password;
 
+    // Not Registered
+    if(!storedHashedPassword){
+      return new Response(JSON.stringify({ error: "Invalid credentials, please register first."}), { status: 401})
+    }
+
     // Compare Password
     const isMatch = await bcrypt.compare(password, storedHashedPassword);
     if(!isMatch){
-      return Response.json({ error: "Invalid credentials" }, { status: 401 });
+      return new Response(JSON.stringify({ error: "Invalid credentials" }), { status: 401 });
     }
 
     // Set session cookie
@@ -48,16 +53,16 @@ export async function login(request) {
       path: "/",
     })
 
-    return Response.json({ message: "Logged in successfully" })
+    return new Response(JSON.stringify({ message: "Logged in successfully" }))
   } catch (error) {
     logger.error('Full Error:', {
       message: error.message,
       stack: error.stack
     })
-    return Response.json({ 
-      error: "Internal server error",
+    return new Response(JSON.stringify({ 
+      error: `Internal server error. Error: ${error.message}`,
       details: process.env.NODE_ENV === 'development' ? error.message : null
-    }, { status: 500 })
+    }), { status: 500 })
   }
 }
 
