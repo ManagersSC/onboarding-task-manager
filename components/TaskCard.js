@@ -1,12 +1,14 @@
 "use client"
 
-import { Check, Clock, ExternalLink } from "lucide-react"
+import { Check, Clock, ExternalLink, Loader2 } from "lucide-react"
 import { Button } from "@components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Badge } from "@components/ui/badge"
-import Link from "next/link"
+import { useState } from "react"
 
 export function TaskCard({ task, onComplete }) {
+  const [isCompleting, setIsCompleting] = useState(false)
+
   const statusColors = {
     assigned: "bg-blue-50 text-blue-700 border-blue-200",
     overdue: "bg-red-50 text-red-700 border-red-200",
@@ -17,6 +19,15 @@ export function TaskCard({ task, onComplete }) {
     assigned: <Clock className="h-4 w-4" />,
     overdue: <Clock className="h-4 w-4" />,
     completed: <Check className="h-4 w-4" />,
+  }
+
+  const handleCompleteClick = async () => {
+    setIsCompleting(true);
+    try {
+      await onComplete(task.id);
+    } finally {
+      setIsCompleting(false);
+    }
   }
 
   return (
@@ -59,8 +70,15 @@ export function TaskCard({ task, onComplete }) {
               </Button>
           )}
           {task.status !== "completed" && (
-            <Button size="sm" onClick={() => onComplete(task.id)} variant="outline">
-              Complete
+            <Button size="sm" onClick={handleCompleteClick} variant="outline" disabled={isCompleting}>
+              {isCompleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Completing...
+                </>
+              ) : (
+                "Complete"
+              )}
             </Button>
           )}
         </div>

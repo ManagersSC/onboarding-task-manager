@@ -1,6 +1,5 @@
 // route.test.js
 
-// Top-level mocks for next/headers, logger and auditLogger are set in setupMocks.
 import { jest } from "@jest/globals";
 
 // Helper to create a fake request object.
@@ -24,7 +23,7 @@ describe("POST /api/complete-tasks", () => {
 
   // Helper to set up mocks for the POST route.
   const setupMocks = (overrides = {}) => {
-    // Mock next/headers to simulate cookie behaviour.
+    // Mock next/headers to simulate cookie behavior.
     jest.doMock("next/headers", () => ({
       cookies: jest.fn(() => {
         return overrides.cookies || {
@@ -107,7 +106,7 @@ describe("POST /api/complete-tasks", () => {
     const response = await POST(fakeRequest);
     const json = await response.json();
     expect(response.status).toBe(401);
-    expect(json.error).toBe("Unauthorized");
+    expect(json.error).toBe("Unauthorised");
   });
 
   test("should return 404 if no applicant record is found for the provided user_email", async () => {
@@ -133,7 +132,13 @@ describe("POST /api/complete-tasks", () => {
       mockOnboardingFind: jest.fn().mockResolvedValue({ fields: { "Task Title": "Test Task" } }),
       mockApplicantsSelect: jest.fn().mockReturnValue({
         firstPage: jest.fn().mockResolvedValue([
-          { id: "applicant123", fields: { Name: "John Doe", "Interface Message - Onboarding Status Update": "Existing message" } },
+          {
+            id: "applicant123",
+            fields: {
+              Name: "John Doe",
+              "Interface Message - Onboarding Status Update": "Existing message",
+            },
+          },
         ]),
       }),
       mockApplicantsUpdate: jest.fn().mockResolvedValue([{ id: "applicant123" }]),

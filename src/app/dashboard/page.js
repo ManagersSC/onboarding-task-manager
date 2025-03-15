@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
-          task.id === taskId ? { ...task, completed: true } : task
+          task.id === taskId ? { ...task, completed: true, overdue: false } : task
         )
       );
     } catch (e) {
@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   // Filter by Week
   const filterByWeek = tasks.filter((task) => {
-    if (!selectedWeek) return true;
+    if (selectedWeek === "all" || !selectedWeek) return true;
     return task.week === selectedWeek.toString();
   });
 
