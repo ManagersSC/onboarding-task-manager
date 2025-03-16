@@ -6,8 +6,8 @@ import { cookies } from "next/headers"
 export async function GET(request) {
   let userEmail;
   try {
-    const cookieStore = cookies()
-    userEmail = cookieStore.get("user_email")?.value
+    const cookieStore = await cookies()
+    userEmail = await cookieStore.get("user_email")?.value
     if (!userEmail) {
       return Response.json({ 
         error: "Unauthorised",

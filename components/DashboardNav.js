@@ -8,10 +8,21 @@ import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { Skeleton } from "@components/ui/skeleton"
 import { useRouter } from "next/navigation"
 import { Separator } from "@components/ui/separator"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@components/ui/alert-dialog"
 
 export function DashboardNav() {
     const router = useRouter()
     const [isOpen, setIsOpen] = useState(false)
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(false)
 
@@ -53,7 +64,7 @@ export function DashboardNav() {
 
     return (
     <nav className="border-b bg-background">
-        <div className="container flex h-16 items-center px-4">
+        <div className="container mx-auto px-4 flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
             <h2 className="text-lg font-semibold">Task Management</h2>
         </div>
@@ -67,7 +78,7 @@ export function DashboardNav() {
             <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setIsLogoutDialogOpen(true)}
                 className="text-muted-foreground hover:text-foreground"
             >
                 <LogOut className="h-5 w-5" />
@@ -77,6 +88,7 @@ export function DashboardNav() {
         </div>
         </div>
 
+        {/* Profile */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
             <DialogHeader>
@@ -102,17 +114,17 @@ export function DashboardNav() {
                     </div>
                 </div>
                 <Separator />
-                <div className="flex flex-col gap-2">
-                    <Button variant="outline" onClick={handleResetPassword} className="w-full justify-start">
+                <div className="flex gap-3">
+                    <Button variant="outline" onClick={handleResetPassword} className="flex-1">
                     Reset Password
                     </Button>
                     <Button
                     variant="destructive"
                     onClick={() => {
                         setIsOpen(false)
-                        handleLogout()
+                        setIsLogoutDialogOpen(true)
                     }}
-                    className="w-full justify-start"
+                    className="flex-1"
                     >
                     Logout
                     </Button>
@@ -124,6 +136,19 @@ export function DashboardNav() {
             </div>
         </DialogContent>
         </Dialog>
+        {/* Logout Confirmation Dialog */}
+        <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>You will be redirected to the login page.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+        </AlertDialog>
     </nav>
     )
 }
