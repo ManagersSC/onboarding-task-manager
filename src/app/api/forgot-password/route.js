@@ -8,6 +8,7 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
 );
 
+// src/app/api/forgot-password/route.js
 export async function forgotPassword(request) {
   try {
     const { email } = await request.json();

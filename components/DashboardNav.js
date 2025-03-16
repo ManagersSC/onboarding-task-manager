@@ -59,7 +59,7 @@ export function DashboardNav() {
     }
 
     const handleResetPassword = () => {
-        router.push("/reset-password")
+        router.push("/forgot-password")
     }
 
     return (

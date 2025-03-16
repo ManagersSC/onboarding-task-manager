@@ -9,16 +9,23 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
 );
 
-export async function resetPassword(request) {
+export async function POST(request) {
+  let email;
   try {
     const { resetToken, newPassword, confirmPassword } = await request.json();
 
     if (!resetToken || !newPassword || !confirmPassword) {
-      return Response.json({ error: "Invalid request" }, { status: 400 });
+      return Response.json({ 
+        error: "Invalid request",
+        userError: "invalid request" 
+      }, { status: 400 });
     }
 
     if (newPassword !== confirmPassword) {
-      return Response.json({ error: "Passwords do not match" }, { status: 400 });
+      return Response.json({ 
+        error: "Passwords do not match",
+        userError: "Passwords do not match"
+      }, { status: 400 });
     }
 
     // Ensure JWT_SECRET is set.
@@ -49,21 +56,21 @@ export async function resetPassword(request) {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await base("Applicants").update(
+    await base("Applicants").update([
       {
         id: users[0].id,
         fields: {
           "Password": hashedPassword
         }
       }
-    );
+    ]);
 
     await logAuditEvent({
       base,
       eventType: "Reset Password",
       eventStatus: "Success",
       userIdentifier: email,
-      detailedMessage: "User sucessfully resetted password",
+      detailedMessage: "User sucessfully reset password",
       request
     });
 
