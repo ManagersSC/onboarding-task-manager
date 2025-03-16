@@ -9,7 +9,7 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
 );
 
 // src/app/api/forgot-password/route.js
-export async function forgotPassword(request) {
+export async function POST(request) {
   try {
     const { email } = await request.json();
 
@@ -46,8 +46,9 @@ export async function forgotPassword(request) {
     }
 
     // Generate JWT-based reset token (expires in 1 hour).
+    const expiryTime = "1h";
     const payload = { email: normalisedEmail };
-    const tokenOptions = { expiresIn: "1h" };
+    const tokenOptions = { expiresIn: expiryTime };
     const resetToken = jwt.sign(payload, process.env.JWT_SECRET, tokenOptions);
 
     // Ensure Make.com webhook URL is configured.
@@ -64,23 +65,31 @@ export async function forgotPassword(request) {
     }
 
     // Trigger Make.com webhook for email delivery.
-    const webhookResponse = await fetch(process.env.MAKE_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalisedEmail, resetToken }),
-    });
-
-    if (!webhookResponse.ok) {
-      const webhookError = await webhookResponse.text();
-      logger.error("Webhook failed", webhookError);
-      await logAuditEvent({
-        eventType: "Forgot Password Webhook Error",
-        eventStatus: "Error",
-        userIdentifier: normalisedEmail,
-        detailedMessage: `Webhook call failed: ${webhookError}`,
-        request,
+    try{
+      const response = await fetch(process.env.MAKE_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalisedEmail, expiresIn: expiryTime, resetToken }),
       });
-      return Response.json({ error: "Failed to send password reset email" }, { status: 500 });
+  
+      if (!response.ok) {
+        const webhookError = await response.json();
+        logger.error("Webhook failed", webhookError);
+        await logAuditEvent({
+          eventType: "Forgot Password Webhook Error",
+          eventStatus: "Error",
+          userIdentifier: normalisedEmail,
+          detailedMessage: `Webhook call failed:\n Status: ${response.status}\n Error: ${webhookError}`,
+          request,
+        });
+        return Response.json(
+          {error: webhookError.error || "Failed to send password reset email"}, 
+          { status: 500 }
+        );
+      }
+    } catch(err){
+      logger.error("Error triggering Make.com automation", error);
+      return Response.json({ error: "Internal server error" }, { status: 500 });
     }
 
     await logAuditEvent({
