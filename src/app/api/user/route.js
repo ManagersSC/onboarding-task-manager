@@ -39,7 +39,7 @@ export async function GET(request) {
     const userRecord = records[0]
     // Return the user’s name, email, etc. (excluding sensitive data like password)
     const name = userRecord.fields["Name"] || "Unknown";
-    const job = userRecord.fields["Job"] || "Unknown";
+    const job = userRecord.fields["Job Name"] || "Unknown";
     return Response.json({
       email: userEmail,
       name,
