@@ -4,7 +4,8 @@
       "@/*": ["./src/*"],
       "@components/*": ["./components/*"],
       "@components/lib/*": ["./components/lib/*"],
-      "@lib/*": ["./src/lib/*"]
+      "@lib/*": ["./src/lib/*"],
+      "@context/*": ["./src/context/*"]
     }
   }
 }

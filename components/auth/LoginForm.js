@@ -83,7 +83,7 @@ export function LoginForm({ onSuccess, onSignUpClick }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <Button variant="link" className="p-0 h-auto text-sm" onClick={() => router.push("/forgot-password")}>
+            <Button type="button" variant="link" className="p-0 h-auto text-sm" onClick={() => router.push("/forgot-password")}>
               Forgot password?
             </Button>
           </div>

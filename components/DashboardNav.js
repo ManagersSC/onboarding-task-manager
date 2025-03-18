@@ -25,36 +25,52 @@ export function DashboardNav() {
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+    // Check auth status on mount
+    useEffect(() => {
+        const checkAuthStatus = async () => {
+            try {
+                const response = await fetch("/api/status");
+                if (!response.ok) throw new Error("Auth check failed");
+                const { isAuthenticated } = await response.json();
+                setIsAuthenticated(isAuthenticated);
+            } catch(error){
+                console.error("Auth check error: ", error.message);
+            }
+        }
+        checkAuthStatus();
+    }, []);
 
     const fetchProfile = async () => {
-        setLoading(true)
+        if(profile) return;
+        setLoading(true);
         try {
-        const response = await fetch("/api/user")
-        if (!response.ok) throw new Error("Failed to fetch profile")
-        const data = await response.json()
-        setProfile(data)
+            const response = await fetch("/api/user");
+            if (!response.ok) throw new Error("Failed to fetch profile");
+            const data = await response.json();
+        setProfile(data);
         } catch (error) {
-        console.error("Error fetching profile:", error)
+            console.error("Error fetching profile:", error)
         } finally {
-        setLoading(false)
+            setLoading(false)
         }
     }
-
+    
     useEffect(() => {
         if (isOpen) {
-        fetchProfile()
+            fetchProfile()
         }
     }, [isOpen])
 
     const handleLogout = async () => {
         try {
-        const response = await fetch("/api/logout", {
-            method: "POST",
-        })
-        if (!response.ok) throw new Error("Failed to logout")
-        router.push("/")
+            const response = await fetch("/api/logout", { method: "POST" });
+            if (!response.ok) throw new Error("Failed to logout");
+            setProfile(null);
+            router.push("/")
         } catch (error) {
-        console.error("Error logging out:", error)
+            console.error("Error logging out:", error)
         }
     }
 
@@ -65,27 +81,29 @@ export function DashboardNav() {
     return (
     <nav className="border-b bg-background">
         <div className="container mx-auto px-4 flex h-16 items-center">
-        <div className="mr-4 hidden md:flex">
-            <h2 className="text-lg font-semibold">Task Management</h2>
-        </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative" onClick={() => setIsOpen(true)}>
-                <Avatar className="h-8 w-8">
-                <AvatarFallback>{profile?.name?.[0] || <User className="h-4 w-4" />}</AvatarFallback>
-                </Avatar>
-            </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsLogoutDialogOpen(true)}
-                className="text-muted-foreground hover:text-foreground"
-            >
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Logout</span>
-            </Button>
+            <div className="mr-4 hidden md:flex">
+                <h2 className="text-lg font-semibold">Task Management</h2>
             </div>
-        </div>
+            {isAuthenticated && (
+                <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+                    <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="relative" onClick={() => setIsOpen(true)}>
+                        <Avatar className="h-8 w-8">
+                        <AvatarFallback>{profile?.name?.[0] || <User className="h-4 w-4" />}</AvatarFallback>
+                        </Avatar>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsLogoutDialogOpen(true)}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <LogOut className="h-5 w-5" />
+                        <span className="sr-only">Logout</span>
+                    </Button>
+                    </div>
+                </div>
+            )}
         </div>
 
         {/* Profile */}
