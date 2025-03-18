@@ -18,6 +18,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@components/ui/alert-dialog"
+import Link from "next/link"
 
 export function DashboardNav() {
     const router = useRouter()
@@ -82,7 +83,9 @@ export function DashboardNav() {
     <nav className="border-b bg-background">
         <div className="container mx-auto px-4 flex h-16 items-center">
             <div className="mr-4 hidden md:flex">
-                <h2 className="text-lg font-semibold">Task Management</h2>
+                <Link href="/">
+                    <h2 className="text-lg font-semibold">Task Management</h2>
+                </Link>
             </div>
             {isAuthenticated && (
                 <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">

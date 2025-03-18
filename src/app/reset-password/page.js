@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect,  Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -12,6 +12,25 @@ import { Label } from "@components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@components/ui/card"
 import { Alert, AlertDescription } from "@components/ui/alert"
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react"
+
+
+// Loading fallback component
+function ResetPasswordSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+      <div className="space-y-2">
+        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+        <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+      </div>
+      <div className="h-10 w-full bg-gray-200 rounded animate-pulse mt-6" />
+    </div>
+  )
+}
 
 // Form validation schema
 const resetPasswordSchema = z
@@ -117,84 +136,83 @@ export default function ResetPasswordPage() {
             Back to Forgot Password
           </Button>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Reset Password</CardTitle>
-              <CardDescription>Enter your new password below.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
 
-              {success && (
-                <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-                  <AlertDescription>{success}</AlertDescription>
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit(onSubmit)}>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="newPassword"
-                        type={showNewPassword ? "text" : "password"}
-                        placeholder="Enter your new password"
-                        className="pr-10"
-                        {...register("newPassword")}
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                      >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        <span className="sr-only">{showNewPassword ? "Hide password" : "Show password"}</span>
-                      </button>
+          <Suspense fallback={<ResetPasswordSkeleton/>}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+                <CardDescription>Enter your new password below.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                {success && (
+                  <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
+                )}
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="Enter your new password"
+                          className="pr-10"
+                          {...register("newPassword")}
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          <span className="sr-only">{showNewPassword ? "Hide password" : "Show password"}</span>
+                        </button>
+                      </div>
+                      {errors.newPassword && <p className="text-sm text-red-500">{errors.newPassword.message}</p>}
                     </div>
-                    {errors.newPassword && <p className="text-sm text-red-500">{errors.newPassword.message}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm your new password"
-                        className="pr-10"
-                        {...register("confirmPassword")}
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
-                      </button>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your new password"
+                          className="pr-10"
+                          {...register("confirmPassword")}
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
+                        </button>
+                      </div>
+                      {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>}
                     </div>
-                    {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>}
                   </div>
-                </div>
-
-                <Button type="submit" className="w-full mt-6" disabled={isLoading || !resetToken}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Resetting Password...
-                    </>
-                  ) : (
-                    "Reset Password"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <Button type="submit" className="w-full mt-6" disabled={isLoading || !resetToken}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Resetting Password...
+                      </>
+                    ) : (
+                      "Reset Password"
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </Suspense>
         </div>
       </main>
     </div>
