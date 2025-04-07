@@ -1,6 +1,6 @@
 import { TaskCard } from "@components/TaskCard"
 
-export function TaskList({ title, tasks, onComplete }) {
+export default function TaskList({ title, tasks, onComplete }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

@@ -20,7 +20,7 @@ import {
 } from "@components/ui/alert-dialog"
 import Link from "next/link"
 
-export function DashboardNav() {
+export default function DashboardNav() {
     const router = useRouter()
     const [isOpen, setIsOpen] = useState(false)
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)

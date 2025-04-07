@@ -9,6 +9,11 @@ import { useState } from "react"
 export function TaskCard({ task, onComplete }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
+  // Compute status based on task properties if not explicitly provided
+  const computedStatus =
+    task.status ||
+    (task.completed ? "completed" : task.overdue ? "overdue" : "assigned");
+
   const statusColors = {
     assigned: "bg-blue-50 text-blue-700 border-blue-200",
     overdue: "bg-red-50 text-red-700 border-red-200",
@@ -34,10 +39,10 @@ export function TaskCard({ task, onComplete }) {
     <Card className="group relative overflow-hidden transition-all hover:shadow-md">
       <CardHeader className="p-4">
         <div className="flex items-start justify-between space-x-4">
-          <Badge variant="outline" className={statusColors[task.status]}>
+          <Badge variant="outline" className={statusColors[computedStatus]}>
             <span className="flex items-center gap-1">
-              {statusIcons[task.status]}
-              {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+              {statusIcons[computedStatus]}
+              {computedStatus.charAt(0).toUpperCase() + computedStatus.slice(1)}
             </span>
           </Badge>
           {task.week && (
@@ -69,7 +74,7 @@ export function TaskCard({ task, onComplete }) {
                 No Resource
               </Button>
           )}
-          {task.status !== "completed" && (
+          {computedStatus !== "completed" && (
             <Button size="sm" onClick={handleCompleteClick} variant="outline" disabled={isCompleting}>
               {isCompleting ? (
                 <>
@@ -86,4 +91,3 @@ export function TaskCard({ task, onComplete }) {
     </Card>
   )
 }
-

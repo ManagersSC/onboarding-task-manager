@@ -64,7 +64,8 @@ export async function GET(request) {
         "Resource Link", 
         "Last Status Change Time",
         "Created",
-        "Task Week Number"
+        "Task Week Number",
+        "Folder Name"
       ],
       sort: [
         { field: "Created", direction: "desc" },
@@ -85,8 +86,6 @@ export async function GET(request) {
     const tasks = taskLogRecords.map((record) => {
       const logId= record.id;
       const status = record.get("Status");
-      const taskField = record.get("Task");
-      const taskId = Array.isArray(taskField) && taskField.length > 0 ? taskField[0] : record.id;
 
       const rawWeek = record.get("Task Week Number");
       let weekValue = null;
@@ -100,12 +99,13 @@ export async function GET(request) {
         id: logId,
         title: record.get("Task Title") || "Untitled Task",
         description: record.get("Task Desc") || "",
+        status: status,
         completed: status === "Completed",
         overdue: status === "Overdue",
-        // The front end uses the absence of completed and overdue flags to filter for 'assigned' tasks.
         resourceUrl: record.get("Resource Link") || null,
         lastStatusChange: record.get("Last Status Change Time") || null,
-        week: weekValue
+        week: weekValue,
+        folder: record.get("Folder Name") || null
       };
     });
 
