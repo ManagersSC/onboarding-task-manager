@@ -1,10 +1,12 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
-import { Card, CardContent } from "@components/ui/card"
+import { Suspense, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Skeleton } from "@components/ui/skeleton"
 import { LoginForm } from "./LoginForm"
 import { SignUpForm } from "./SignUpForm"
+import { AdminLoginForm } from "./AdminLoginForm"
 import { useSearchParams } from "next/navigation"
 
 export function AuthComponent() {
@@ -27,28 +29,34 @@ export function AuthComponent() {
 }
 
 const AuthForm = () => {
-  const searchParams = useSearchParams();
-  const initialIsLogin = searchParams.get("mode") === "register" ? false : true
+  const searchParams = useSearchParams()
+  const initialTab =
+    searchParams.get("mode") === "register" ? "signup" : searchParams.get("mode") === "admin" ? "admin" : "login"
 
-  const [isLogin, setIsLogin] = useState(initialIsLogin);
-
-  useEffect(() => {
-    if(searchParams.get("mode") === "register"){
-      setIsLogin(false)
-    } else {
-      setIsLogin(true)
-    }
-  }, [searchParams]);
+  const [activeTab, setActiveTab] = useState(initialTab)
 
   return (
     <Card className="border shadow-md overflow-hidden">
-      {/* The Forms */}
+      <CardHeader className="pb-2">
+        <CardTitle className="text-center text-2xl">Welcome</CardTitle>
+      </CardHeader>
       <CardContent className="p-6">
-        {isLogin ? (
-          <LoginForm onSignUpClick={() => setIsLogin(false)} />
-        ) : (
-          <SignUpForm onLoginClick={() => setIsLogin(true)} />
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="login">User Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="admin">Admin</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <LoginForm onSignUpClick={() => setActiveTab("signup")} />
+          </TabsContent>
+          <TabsContent value="signup">
+            <SignUpForm onLoginClick={() => setActiveTab("login")} />
+          </TabsContent>
+          <TabsContent value="admin">
+            <AdminLoginForm onUserLoginClick={() => setActiveTab("login")} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )
