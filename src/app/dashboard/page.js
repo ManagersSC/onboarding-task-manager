@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import DashboardNav from "@components/DashboardNav"
+import { DashboardNav } from "@components/DashboardNav"
 import FolderCard from "@components/FolderCard"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Skeleton } from "@components/ui/skeleton"
