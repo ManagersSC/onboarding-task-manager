@@ -19,6 +19,7 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
 export async function logAuditEvent({
   eventType,
   eventStatus,
+  userRole,
   userIdentifier,
   detailedMessage,
   request
@@ -31,13 +32,13 @@ export async function logAuditEvent({
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("host") || "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
-    console.log("Calling Airtable create() with:", {
-        eventType,
-        eventStatus,
-        userIdentifier,
-        detailedMessage,
-        ipAddress,
-        userAgent
+    logger.debug("Calling Airtable create() with:", {
+      eventType,
+      eventStatus,
+      userIdentifier,
+      detailedMessage,
+      ipAddress,
+      userAgent
     });
 
     // Create a record in Airtable
@@ -47,6 +48,7 @@ export async function logAuditEvent({
           "Timestamp": new Date().toISOString(),
           "Event Type": eventType,
           "Event Status": eventStatus,
+          "Role": userRole,
           "User Identifier": userIdentifier || "unknown",
           "Detailed Message": detailedMessage || "No details provided",
           "IP Address": ipAddress,

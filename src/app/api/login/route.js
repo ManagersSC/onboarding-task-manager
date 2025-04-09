@@ -8,6 +8,8 @@ import { logAuditEvent } from "@/lib/auditLogger"; // Added import
 export async function POST(request) {
   let base;
   let normalisedEmail;
+  let userRole;
+
   try {
     const { email, password } = await request.json();
 
@@ -59,6 +61,7 @@ export async function POST(request) {
       );
     }
 
+    userRole = "User";
     const user = users[0];
     const storedHashedPassword = user.fields.Password;
 
@@ -85,24 +88,39 @@ export async function POST(request) {
       );
     }
 
-    // Set session cookie
+    // Set encrypted session cookie with user role
     const cookieStore = await cookies();
-    cookieStore.set("user_email", email, {
+    const sessionData = {
+      userEmail: normalisedEmail,
+      userRole: 'user'
+    }
+    const sealedSession = await sealData(sessionData, {
+      password: process.env.SESSION_SECRET,
+      ttl: 60 * 60 * 8, // 8 hours expiration
+    })
+    cookieStore.set("session", sealedSession, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 8
     });
 
     logAuditEvent({
       eventType: "Login",
       eventStatus: "Success",
+      userRole,
       userIdentifier: normalisedEmail,
-      detailedMessage: `User login: ${normalisedEmail}`,
-      request,
-    });
+      detailedMessage: `Admin login: ${normalisedEmail}`,
+      request
+    })
 
-    return new Response(JSON.stringify({ message: "Logged in successfully" }));
+    return new Response(JSON.stringify({ 
+      message: "Logged in successfully",
+      role: "user",
+      name: user.fields.Name || "User"
+    }));
+    
   } catch (error) {
     logger.error("Full Error:", {
       message: error.message,

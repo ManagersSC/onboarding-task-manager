@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { sealData } from "iron-session";
 import logger from "@/lib/logger";
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
@@ -8,6 +9,7 @@ import { logAuditEvent } from "@/lib/auditLogger";
 export async function POST(request) {
     let base;
     let normalisedEmail;
+    let userRole;
 
     try{
         const { email, password } = await request.json();
@@ -21,7 +23,8 @@ export async function POST(request) {
             )
         }
 
-        normalisedEmail = email.trim().toLowerCase();
+        const escapedEmail = email.replace(/'/g, "''");
+        normalisedEmail = escapedEmail.trim().toLowerCase();
 
         if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
             logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID")
@@ -54,6 +57,7 @@ export async function POST(request) {
             )
         }
 
+        userRole = "Admin";
         const admin = admins[0];
         const storedHashedPassword = admin.fields.Password;
 
@@ -81,24 +85,29 @@ export async function POST(request) {
         }
 
 
-        // Set session cookie with admin role
+        // Set encrypted session cookie with admin role
         const cookieStore = await cookies();
-        cookieStore.set("user_email", email, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/"
-        });
-        cookieStore.set("user_role", "admin", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
+        const sessionData = {
+            userEmail: normalisedEmail,
+            userRole: 'admin'
+        }
+        logger.debug(`Session Data to add: \nemail: ${sessionData.userEmail} \nrole: ${sessionData.userRole}`)
+        const sealedSession = await sealData(sessionData, {
+            password: process.env.SESSION_SECRET,
+            ttl: 60 * 60 * 8, // 8 hours expiration
         })
+        cookieStore.set("session", sealedSession, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 8
+        });
 
         logAuditEvent({
             eventType: "Login",
             eventStatus: "Success",
+            userRole,
             userIdentifier: normalisedEmail,
             detailedMessage: `Admin login: ${normalisedEmail}`,
             request
@@ -120,6 +129,7 @@ export async function POST(request) {
         logAuditEvent({
             eventType: "Login",
             eventStatus: "Error",
+            userRole: userRole || "Unknown",
             userIdentifier: normalisedEmail,
             detailedMessage: `Admin login failed, error message: ${error.message}`,
             request,

@@ -1,18 +1,53 @@
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
 import Airtable from "airtable"
+import { unsealData, sealData } from "iron-session"
 import { logAuditEvent } from "@/lib/auditLogger"
 
 export async function GET(request) {
+  let email;
+  let role;
   try {
     // Verify admin role
-    const cookieStore = await cookies()
-    const role = cookieStore.get("user_role")?.value
-    const email = cookieStore.get("user_email")?.value
+    const sessionCookie = (await cookies()).get('session')?.value;
+    if(!sessionCookie){
+      logger.debug("no sessionCookie");
+      return Response.json(
+        { error: "Unauthorised"},
+        { status: 401 }
+      )
+    }
+    let session;
+    try {
+      session = await unsealData(sessionCookie, {
+        password: process.env.SESSION_SECRET,
+        ttl: 60 * 60 * 8, // Match login ttl
+      });
+    } catch (error) {
+      logger.debug(`Invalid session: ${error.message}`)
+      return Response.json({ 
+        error: "invalid Session",
+        details: process.env.NODE_ENV === "development" ? error.message : null
+      }, { status: 401 });
+    }
+    if(!session.userEmail){
+      logger.debug(`Invalid session format`)
+      return Response.json(
+        { error: "Invalid session format" },
+        { status: 401 }
+      );
+    }
 
-    // if (role !== "admin" || !email) {
-    //   return Response.json({ error: "Unauthorized" }, { status: 401 })
-    // }
+    // Extract Session data
+    const userEmail = session.userEmail;
+    const userRole = session.userRole;
+    logger.debug(`Session cookie: \nEmail: ${userEmail} \nRole: ${userRole}`)
+    
+    // Check for admin privileges correctly
+    if (userRole !== "admin") {
+      logger.debug(`role: ${userRole}`)
+      return Response.json({ error: "Insufficient privileges" }, { status: 403 });
+    }
 
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing Airtable credentials")
@@ -20,6 +55,9 @@ export async function GET(request) {
     }
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+
+    const escapedEmail = userEmail.replace(/'/g, "''");
+    const email = escapedEmail;
 
     // Get admin profile from Staff table
     const staffResponse = await base("Staff")
@@ -37,6 +75,23 @@ export async function GET(request) {
         role: "Admin",
       })
     }
+
+    // Renew Session
+    const renewedSession = { userEmail: email, userRole: userRole };
+    const renewedSealed = await sealData(renewedSession, {
+      password: process.env.SESSION_SECRET,
+      ttl: 60 * 60,
+    });
+
+    const cookieStore = await cookies();
+  
+    cookieStore.set('session', renewedSealed, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 8,
+    });
 
     const adminUser = staffResponse[0]
 

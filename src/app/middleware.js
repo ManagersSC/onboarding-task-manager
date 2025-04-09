@@ -1,22 +1,32 @@
 // src/middleware.js
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
+import { unsealData } from "iron-session";
 
-export function middleware(request) {
+export async function middleware(request) {
   const path = request.nextUrl.pathname
-  const isPublic = path === "/login" || path === "/signup" || path === "/forgot-password"
+  const isPublic = ["/login", "/signup", "forgot-password"].includes(path);
   const isAdminRoute = path.startsWith("/admin")
 
-  const token = request.cookies.get("user_email")?.value
-  const role = request.cookies.get("user_role")?.value
+  // Check session cookie
+  const sessionCookie = request.cookies.get("session")?.value;
+  if(!isPublic && !sessionCookie){
+    return NextResponse.redirect(new URL("/", request.nextUrl));
+  }
 
-  // Redirect to login if not authenticated
-  if (!isPublic && !token) {
-    return NextResponse.redirect(new URL("/login", request.nextUrl))
+  // Unseal session to check for role
+  let session;
+  try{
+    session = await unsealData(sessionCookie, {
+      password: process.env.SESSION_SECRET,
+      ttl: 60 * 60 * 8
+    })
+  } catch (error){
+    return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
   // Check admin access
-  if (isAdminRoute && role !== "admin") {
-    return NextResponse.redirect(new URL("/login?mode=admin", request.nextUrl))
+  if (isAdminRoute && session.userRole !== "admin") {
+    return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl))
   }
 
   return NextResponse.next()

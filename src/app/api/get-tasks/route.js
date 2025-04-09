@@ -2,17 +2,43 @@ import Airtable from "airtable"
 import { cookies } from "next/headers"
 import logger from "@/lib/logger"
 import { logAuditEvent } from "@/lib/auditLogger";
+import { unsealData } from "iron-session";
 
 // Get tasks
 export async function GET(request) {
   let userEmail;
-  try {
-    const cookieStore = await cookies()
-    userEmail = cookieStore.get("user_email")?.value
+  let userRole;
 
-    if (!userEmail) {
+  try {
+    const sessionCookie = (await cookies()).get('session')?.value;
+    if (!sessionCookie) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    // Session Validation Error Handling
+    let session;
+    try{
+      session = await unsealData(sessionCookie, {
+        password: process.env.SESSION_SECRET,
+        ttl: 60 * 60 * 8 
+      });
+    } catch (error){
+      return Response.json(
+        { error: "Invalid session. Pleas log in again." },
+        { status: 401 }
+      )
+    }
+
+    if(!session.userEmail){
+      return Response.json(
+        { error: "Invalid session: no user email" },
+        { status: 401 }
+      );
+    }
+
+    // Extract session data
+    userEmail = session.userEmail;
+    userRole = session.userRole;
 
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");
@@ -126,6 +152,7 @@ export async function GET(request) {
     logAuditEvent({
       eventType: "User",
       eventStatus: "Errror",
+      userRole: userRole || "Unknown",
       userIdentifier: userEmail,
       detailedMessage: `Fetching user detail failed, error message: ${error.message}`,
       request
