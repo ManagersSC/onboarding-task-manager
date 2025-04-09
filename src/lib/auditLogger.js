@@ -54,8 +54,6 @@ export async function logAuditEvent({
         }
       }
     ]);
-
-    console.log("Airtable create() was successfully called!");
   } catch (error) {
     logger.error("Audit log creation failed:", error);
   }
