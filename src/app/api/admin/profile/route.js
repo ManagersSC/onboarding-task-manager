@@ -5,8 +5,8 @@ import { unsealData, sealData } from "iron-session"
 import { logAuditEvent } from "@/lib/auditLogger"
 
 export async function GET(request) {
-  let email;
-  let role;
+  let userEmail;
+  let userRole;
   try {
     // Verify admin role
     const sessionCookie = (await cookies()).get('session')?.value;
@@ -39,9 +39,9 @@ export async function GET(request) {
     }
 
     // Extract Session data
-    const userEmail = session.userEmail;
-    const userRole = session.userRole;
-    logger.debug(`Session cookie: \nEmail: ${userEmail} \nRole: ${userRole}`)
+    userEmail = session.userEmail;
+    userRole = session.userRole;
+    logger.debug(`(PROFILE API) Session cookie: \nEmail: ${userEmail} \nRole: ${userRole}`)
     
     // Check for admin privileges correctly
     if (userRole !== "admin") {
@@ -102,6 +102,14 @@ export async function GET(request) {
     })
   } catch (error) {
     logger.error("Error fetching admin profile:", error)
+    logAuditEvent({
+      eventType: "Login",
+      eventStatus: "Error",
+      userRole: userRole || "Unknown",
+      userIdentifier: userEmail,
+      detailedMessage: `Admin login failed, error message: ${error.message}`,
+      request,
+    })
     return Response.json({ error: "Internal server error" }, { status: 500 })
   }
 }

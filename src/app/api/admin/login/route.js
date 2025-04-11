@@ -59,6 +59,7 @@ export async function POST(request) {
 
         userRole = "Admin";
         const admin = admins[0];
+        
         const storedHashedPassword = admin.fields.Password;
 
         // Not Registered or no password set
@@ -89,7 +90,8 @@ export async function POST(request) {
         const cookieStore = await cookies();
         const sessionData = {
             userEmail: normalisedEmail,
-            userRole: 'admin'
+            userRole: 'admin',
+            userName: admin.fields.Name
         }
         logger.debug(`Session Data to add: \nemail: ${sessionData.userEmail} \nrole: ${sessionData.userRole}`)
         const sealedSession = await sealData(sessionData, {

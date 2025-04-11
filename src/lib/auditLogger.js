@@ -1,5 +1,7 @@
 import Airtable from "airtable";
 import logger from "./logger";
+import { cookies } from "next/headers";
+import { unsealData } from "iron-session";
 
 // Initialize Airtable connection
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
@@ -29,6 +31,20 @@ export async function logAuditEvent({
       throw new Error("Airtable environment variables are missing");
     }
 
+    const sessionCookie = cookies();
+    let session;
+
+    try{
+      session = await unsealData(sessionCookie, {
+        password: process.env.SESSION_SECRET,
+        ttl: 60 * 60 * 8
+      });
+    } catch (error){
+      logger.debug(`Invalid session during audit logging: ${error.message}`);
+      return
+    }
+    const name = session.userName;
+
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("host") || "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
@@ -49,6 +65,7 @@ export async function logAuditEvent({
           "Event Type": eventType,
           "Event Status": eventStatus,
           "Role": userRole,
+          "Name": name || "Unknown",
           "User Identifier": userIdentifier || "unknown",
           "Detailed Message": detailedMessage || "No details provided",
           "IP Address": ipAddress,

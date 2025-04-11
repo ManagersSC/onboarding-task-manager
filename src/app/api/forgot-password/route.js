@@ -26,13 +26,6 @@ export async function POST(request) {
       .firstPage();
 
     if (users.length === 0) {
-      await logAuditEvent({
-        eventType: "Forgot Password",
-        eventStatus: "Error",
-        userIdentifier: normalisedEmail,
-        detailedMessage: "User not found",
-        request,
-      });
       // Return generic response to prevent enumeration.
       return Response.json({
         message: "If the email is registered, a password reset email will be sent.",

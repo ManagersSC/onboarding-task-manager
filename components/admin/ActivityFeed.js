@@ -13,16 +13,17 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
+import { useSearchParams } from "next/navigation"
 
 export function ActivityFeed() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState("all") // all, user, admin
+  const [filter, setFilter] = useState('all')
 
   const fetchActivities = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/admin/activities?filter=${filter}`)
+      const response = await fetch(`/api/admin/activity?filter=${encodeURIComponent(filter)}`)
       if (response.ok) {
         const data = await response.json()
         setActivities(data.activities || [])
@@ -35,6 +36,8 @@ export function ActivityFeed() {
   }
 
   useEffect(() => {
+    // const params = new URLSearchParams(searchParams)
+    // params.set('filter', filter)
     fetchActivities()
   }, [filter])
 
