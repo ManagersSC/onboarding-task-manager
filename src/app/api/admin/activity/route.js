@@ -11,12 +11,9 @@ export async function GET(request){
         // Session Cookie
         const sessionCookie = (await cookies()).get('session')?.value;
         if(!sessionCookie){
-            logger.debug("no sessionCookie");
-            return Response.json(
-              { error: "Unauthorised"},
-              { status: 401 }
-            )
-          }
+            logger.debug("API GET ACTIVITY: No sessionCookie");
+            return Response.json({ error: "Unauthorised"},{ status: 401 })
+        }
         let session;
         try{
             session = await unsealData(sessionCookie, {
@@ -53,6 +50,7 @@ export async function GET(request){
         // Get Filter Query Params
         const { searchParams } = new URL(request.url);
         const filter = searchParams.get("filter") || "all";
+        const limit = Number.parseInt(searchParams.get("limit") || "15", 10);
 
         // Airtable
         if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
@@ -78,7 +76,7 @@ export async function GET(request){
         // Get activity from Website Log table
         const activityResponse = await base("Website Audit Log")
             .select({
-                maxRecords: 15,
+                maxRecords: limit,
                 sort: [{ field: "Timestamp", direction: "desc" }],
                 filterByFormula: filterFormula,
                 fields: ["Timestamp", "Event Type", "Role", "Event Status", "User Identifier", "Detailed Message"]
@@ -156,7 +154,7 @@ export async function GET(request){
                 }
             }
         });
-        logger.debug(`All activities: ${activities}`)
+        // logger.debug(`All activities: ${activities}`)
 
         return Response.json ({ activities });
     } catch (error){
