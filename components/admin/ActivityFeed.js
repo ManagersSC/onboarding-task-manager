@@ -22,6 +22,20 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 
+// Predefined event types
+const EVENT_TYPES = [
+  { value: "all", label: "All Types" },
+  { value: "login", label: "Login" },
+  { value: "signup", label: "Sign Up" },
+  { value: "logout", label: "Logout" },
+  { value: "task_completed", label: "Task Completed" },
+  { value: "task_created", label: "Task Created" },
+  { value: "task_assigned", label: "Task Assigned" },
+  { value: "user", label: "User" },
+  { value: "reset_password", label: "Reset Password" },
+  { value: "server", label: "Server" },
+]
+
 export function ActivityFeed() {
   const [activities, setActivities] = useState([])
   const [allActivities, setAllActivities] = useState([])
@@ -36,6 +50,7 @@ export function ActivityFeed() {
   const [searchTerm, setSearchTerm] = useState("")
   const [eventTypeFilter, setEventTypeFilter] = useState("all")
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -100,6 +115,7 @@ export function ActivityFeed() {
 
       setAllActivities(allRecords)
       setFilteredActivities(allRecords)
+      
     } catch (error) {
       console.error("Error fetching all activities:", error)
     } finally {
@@ -140,7 +156,7 @@ export function ActivityFeed() {
     }
 
     // Apply date range filter
-    if (dateRange.from) {
+    if (dateRange?.from) {
       const fromDate = new Date(dateRange.from)
       fromDate.setHours(0, 0, 0, 0)
 
@@ -150,7 +166,7 @@ export function ActivityFeed() {
       })
     }
 
-    if (dateRange.to) {
+    if (dateRange?.to) {
       const toDate = new Date(dateRange.to)
       toDate.setHours(23, 59, 59, 999)
 
@@ -167,6 +183,11 @@ export function ActivityFeed() {
 
   const handleViewAll = () => {
     setIsModalOpen(true)
+  }
+
+  // Handle date range selection
+  const handleDateRangeSelect = (range) => {
+    setDateRange(range)
   }
 
   // Get current page items
@@ -188,26 +209,45 @@ export function ActivityFeed() {
         return "Sign Up"
       case "reset_password":
         return "Reset Password"
+      case "task_created":
+        return "Task Created"
+      case "task_assigned":
+        return "Task Assigned"
+      case "user":
+        return "User"
+      case "server":
+        return "Server"
       default:
         return "Activity"
     }
   }
 
-  const getActivityTypeColor = (type) => {
-    switch (type) {
-      case "task_completed":
+  const getActivityTypeColor = (type, status) => {
+    // green for success, red for error
+    if (status) {
+      if (status.toLowerCase() === "success") {
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-      case "login":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-      case "logout":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
-      case "signup":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
-      case "reset_password":
-        return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+      } else if (status.toLowerCase() === "error") {
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+      }
     }
+
+    // Default color for other statuses
+    return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+  }
+
+  // Format date range for display
+  const formatDateRange = () => {
+    if (!dateRange) return "Date Range"
+
+    if (dateRange.from) {
+      if (dateRange.to) {
+        return `${format(dateRange.from, "LLL dd, y")} - ${format(dateRange.to, "LLL dd, y")}`
+      }
+      return format(dateRange.from, "LLL dd, y")
+    }
+
+    return "Date Range"
   }
 
   const renderActivityItem = (activity, index) => (
@@ -223,19 +263,21 @@ export function ActivityFeed() {
       </Avatar>
       <div className="flex-1 space-y-1.5">
         <div className="flex items-baseline">
-          <p className="text-sm font-medium">
-            {activity.user?.name || activity.user?.email}
-          </p>
-          {activity.user?.name && activity.user?.email && (
-            <span className="text-xs text-muted-foreground truncate">({activity.user.email})</span>
-          )}
-          <span className="ml-auto text-xs text-muted-foreground">{activity.timeAgo}</span>
+          <div className="flex items-baseline gap-1.5 truncate">
+            <p className="text-sm font-medium truncate">
+              {activity.user?.name || activity.user?.email?.split("@")[0] || "Unknown"}
+            </p>
+            {activity.user?.name && activity.user?.email && (
+              <span className="text-xs text-muted-foreground truncate">({activity.user.email})</span>
+            )}
+          </div>
+          <span className="ml-auto text-xs text-muted-foreground shrink-0">{activity.timeAgo}</span>
         </div>
         <div className="flex flex-col space-y-1">
           <div
             className={`
               inline-flex self-start rounded-2xl rounded-tl-none px-3 py-2 text-sm 
-              ${getActivityTypeColor(activity.type)}
+              ${getActivityTypeColor(activity.type, activity.status)}
             `}
           >
             {getActivityTypeLabel(activity.type)}: {activity.status}
@@ -475,70 +517,57 @@ export function ActivityFeed() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("all")} className="justify-between">
-                    All Types
-                    {eventTypeFilter === "all" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("login")} className="justify-between">
-                    Login
-                    {eventTypeFilter === "login" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("logout")} className="justify-between">
-                    Logout
-                    {eventTypeFilter === "logout" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("signup")} className="justify-between">
-                    Sign Up
-                    {eventTypeFilter === "signup" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("task_completed")} className="justify-between">
-                    Task Completed
-                    {eventTypeFilter === "task_completed" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEventTypeFilter("reset_password")} className="justify-between">
-                    Reset Password
-                    {eventTypeFilter === "reset_password" && <span>✓</span>}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {/* Event Type Filter Dropdown */}
                   <div className="p-2">
-                    <Popover>
+                    <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select event type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EVENT_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DropdownMenuSeparator />
+
+
+                  <div className="p-2">
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateRange.from ? (
-                            dateRange.to ? (
-                              <>
-                                {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
-                              </>
-                            ) : (
-                              format(dateRange.from, "LLL dd, y")
-                            )
-                          ) : (
-                            <span>Date Range</span>
-                          )}
+                          {formatDateRange()}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="end">
                         <Calendar
                           initialFocus
                           mode="range"
-                          defaultMonth={dateRange.from}
+                          defaultMonth={dateRange?.from ? dateRange.from : undefined}
                           selected={dateRange}
-                          onSelect={setDateRange}
+                          onSelect={handleDateRangeSelect}
                           numberOfMonths={2}
                         />
                         <div className="flex items-center justify-between p-3 border-t border-border">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setDateRange({ from: undefined, to: undefined })}
+                            onClick={() => {
+                              setDateRange({ from: undefined, to: undefined })
+                            }}
                           >
                             <X className="h-4 w-4 mr-1" />
                             Clear
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => document.body.click()} // Close the popover
+                            onClick={() => {
+                              setDatePickerOpen(false)
+                            }}
                           >
                             Apply
                           </Button>
