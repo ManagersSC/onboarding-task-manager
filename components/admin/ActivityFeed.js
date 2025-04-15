@@ -223,7 +223,12 @@ export function ActivityFeed() {
       </Avatar>
       <div className="flex-1 space-y-1.5">
         <div className="flex items-baseline">
-          <p className="text-sm font-medium">{activity.user?.name || activity.user?.email}</p>
+          <p className="text-sm font-medium">
+            {activity.user?.name || activity.user?.email}
+          </p>
+          {activity.user?.name && activity.user?.email && (
+            <span className="text-xs text-muted-foreground truncate">({activity.user.email})</span>
+          )}
           <span className="ml-auto text-xs text-muted-foreground">{activity.timeAgo}</span>
         </div>
         <div className="flex flex-col space-y-1">

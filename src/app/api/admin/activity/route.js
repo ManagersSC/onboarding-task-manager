@@ -8,6 +8,7 @@ import format from "date-fns/format";
 export async function GET(request){
     let userEmail;
     let userRole;
+    let userName;
     try{
         // Session Cookie
         const sessionCookie = (await cookies()).get('session')?.value;
@@ -80,7 +81,7 @@ export async function GET(request){
                 maxRecords: limit,
                 sort: [{ field: "Timestamp", direction: "desc" }],
                 filterByFormula: filterFormula,
-                fields: ["Timestamp", "Event Type", "Role", "Event Status", "User Identifier", "Detailed Message"]
+                fields: ["Timestamp", "Event Type", "Role", "Name", "Event Status", "User Identifier", "Detailed Message"]
         }).firstPage();
 
         logger.debug(`Acitvity records length: ${activityResponse.length}`)
@@ -96,11 +97,6 @@ export async function GET(request){
             const diffMins = Math.floor(diffMs / 60000);
             const diffHours = Math.floor(diffMins / 60);
             const diffDays = Math.floor(diffHours / 24);
-
-            // const diffMs = format(new Date(now - timestamp));
-            // const diffMins = format(new Date(diffMs / 60000));
-            // const diffHours = format(new Date(diffMins / 60));
-            // const diffDays = format(new Date(diffHours / 24));
 
             let timeAgo;
             if (diffDays > 0) {
@@ -136,7 +132,7 @@ export async function GET(request){
             }
 
             // Extract User Info
-            let userName = fields["Name"];
+            userName = fields["Name"];
             const userIdentifier = fields["User Identifier"] || "Unknown";
             const isEmail = userIdentifier.includes("@");
             const acitivityRole = fields["Role"];
@@ -154,7 +150,7 @@ export async function GET(request){
                 timestamp: fields.Timestamp,
                 status: fields["Event Status"],
                 user: {
-                    email: userEmail,
+                    email: isEmail ? userIdentifier : null,
                     name: userName,
                     role: acitivityRole
                 }
