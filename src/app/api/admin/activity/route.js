@@ -3,6 +3,7 @@ import logger from "@/lib/logger";
 import { unsealData } from "iron-session";
 import Airtable from "airtable";
 import { logAuditEvent } from "@/lib/auditLogger";
+import format from "date-fns/format";
 
 export async function GET(request){
     let userEmail;
@@ -92,9 +93,14 @@ export async function GET(request){
 
             // Calculate time ago
             const diffMs = now - timestamp;
-            const diffMins = diffMs / 60000;
+            const diffMins = Math.floor(diffMs / 60000);
             const diffHours = Math.floor(diffMins / 60);
             const diffDays = Math.floor(diffHours / 24);
+
+            // const diffMs = format(new Date(now - timestamp));
+            // const diffMins = format(new Date(diffMs / 60000));
+            // const diffHours = format(new Date(diffMins / 60));
+            // const diffDays = format(new Date(diffHours / 24));
 
             let timeAgo;
             if (diffDays > 0) {
@@ -160,7 +166,7 @@ export async function GET(request){
     } catch (error){
         logger.error("Error fetching admin activites: ", error);
         logAuditEvent({
-            eventType: "Login",
+            eventType: "Server",
             eventStatus: "Error",
             userRole: userRole || "Unknown",
             userIdentifier: userEmail,

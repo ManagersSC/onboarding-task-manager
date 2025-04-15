@@ -2,13 +2,15 @@ import { cookies } from "next/headers";
 import logger from "@/lib/logger";
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
-import { logAuditEvent } from "@/lib/auditLogger"; // Added import
+import { sealData } from "iron-session";
+import { logAuditEvent } from "@/lib/auditLogger";
 
 // Login route
 export async function POST(request) {
   let base;
   let normalisedEmail;
   let userRole;
+  let userName;
 
   try {
     const { email, password } = await request.json();
@@ -61,7 +63,6 @@ export async function POST(request) {
       );
     }
 
-    userRole = "User";
     const user = users[0];
     const storedHashedPassword = user.fields.Password;
 
@@ -92,7 +93,8 @@ export async function POST(request) {
     const cookieStore = await cookies();
     const sessionData = {
       userEmail: normalisedEmail,
-      userRole: 'user'
+      userRole: 'user',
+      userName: user.fields.Name
     }
     const sealedSession = await sealData(sessionData, {
       password: process.env.SESSION_SECRET,
@@ -106,12 +108,16 @@ export async function POST(request) {
       maxAge: 60 * 60 * 8
     });
 
+    userRole = sessionData.userRole;
+    userName = sessionData.userName || "Unknown";
+
     logAuditEvent({
       eventType: "Login",
       eventStatus: "Success",
       userRole,
+      userName,
       userIdentifier: normalisedEmail,
-      detailedMessage: `Admin login: ${normalisedEmail}`,
+      detailedMessage: `User login: ${normalisedEmail}`,
       request
     })
 
@@ -130,6 +136,8 @@ export async function POST(request) {
       eventType: "Login",
       eventStatus: "Errror",
       userIdentifier: normalisedEmail,
+      userRole,
+      userName,
       detailedMessage: `Fetching user detail failed, error message: ${error.message}`,
       request,
     });

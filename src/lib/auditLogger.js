@@ -22,6 +22,7 @@ export async function logAuditEvent({
   eventType,
   eventStatus,
   userRole,
+  userName,
   userIdentifier,
   detailedMessage,
   request
@@ -31,31 +32,12 @@ export async function logAuditEvent({
       throw new Error("Airtable environment variables are missing");
     }
 
-    const sessionCookie = cookies();
-    let session;
-
-    try{
-      session = await unsealData(sessionCookie, {
-        password: process.env.SESSION_SECRET,
-        ttl: 60 * 60 * 8
-      });
-    } catch (error){
-      logger.debug(`Invalid session during audit logging: ${error.message}`);
-      return
-    }
-    const name = session.userName;
-
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("host") || "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
-    logger.debug("Calling Airtable create() with:", {
-      eventType,
-      eventStatus,
-      userIdentifier,
-      detailedMessage,
-      ipAddress,
-      userAgent
-    });
+    if(userRole === "admin") { userRole = "Admin"} 
+    else if (userRole === "user"){ userRole = "User" }
+    else { userRole = "Unknown"}
 
     // Create a record in Airtable
     await base("Website Audit Log").create([
@@ -65,7 +47,7 @@ export async function logAuditEvent({
           "Event Type": eventType,
           "Event Status": eventStatus,
           "Role": userRole,
-          "Name": name || "Unknown",
+          "Name": userName || "Unknown",
           "User Identifier": userIdentifier || "unknown",
           "Detailed Message": detailedMessage || "No details provided",
           "IP Address": ipAddress,

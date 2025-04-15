@@ -4,8 +4,6 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@components/ui/card"
 import { Skeleton } from "@components/ui/skeleton"
 
-// const getServerSideProps = withIron
-
 export function DashboardHeader({ userName }) {
   const [loading, setLoading] = useState(true)
   useEffect(() => {
@@ -14,7 +12,7 @@ export function DashboardHeader({ userName }) {
   })
 
   return (
-    <Card className="bg-white border-none shadow-sm">
+    <Card className="bg-background border-none shadow-sm">
     {loading ? (
         <>
             <Skeleton className="h-8 w-1/2 mb-4" />
@@ -23,10 +21,10 @@ export function DashboardHeader({ userName }) {
         ): (
         <>
             <CardContent className="p-6">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold">
                     Welcome, {userName}
                 </h1>
-                <p className="text-gray-500 mt-1">
+                <p className="text-muted-foreground mt-1">
                     Here's what's happening with your onboarding processes today.
                 </p>
             </CardContent>

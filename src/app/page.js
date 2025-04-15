@@ -2,7 +2,7 @@ import { AuthComponent } from "@components/auth/AuthComponent"
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold">Welcome Back</h1>

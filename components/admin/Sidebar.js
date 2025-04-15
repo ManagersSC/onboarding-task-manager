@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Users, ClipboardList, FileText, LogOut, ChevronLeft, ChevronRight, User } from "lucide-react"
 import { cn } from "@components/lib/utils"
 import { Button } from "@components/ui/button"
+import { ThemeToggle } from "@components/theme-toggle"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,13 +66,13 @@ export function Sidebar() {
     <>
       <div
         className={cn(
-          "flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
+          "flex flex-col bg-background border-r border-gray-200 transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-800",
           isCollapsed ? "w-16" : "w-64",
         )}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-800">
           {!isCollapsed && (
-            <Link href="/admin/dashboard" className="font-semibold text-lg">
+            <Link href="/admin/dashboard" className="font-semibold text-lg dark:text-white">
               Onboarding Manager
             </Link>
           )}
@@ -93,8 +94,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center px-3 py-2 rounded-md transition-colors",
                   pathname === item.href
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                    ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100",
                   isCollapsed && "justify-center",
                 )}
               >
@@ -104,11 +105,23 @@ export function Sidebar() {
             ))}
           </nav>
         </div>
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+          {/* Theme Toggle */}
+          <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
+            {isCollapsed ? (
+              <ThemeToggle />
+            ) : (
+              <div className="flex items-center w-full px-3 py-2 text-gray-600 dark:text-gray-400">
+                <ThemeToggle />
+                <span className="ml-3">Theme</span>
+              </div>
+            )}
+          </div>
+
           <Button
             variant="ghost"
             className={cn(
-              "w-full flex items-center text-red-600 hover:text-red-700 hover:bg-red-50",
+              "w-full flex items-center text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20",
               isCollapsed && "justify-center",
             )}
             onClick={() => setIsLogoutDialogOpen(true)}

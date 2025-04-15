@@ -10,6 +10,7 @@ export async function POST(request) {
     let base;
     let normalisedEmail;
     let userRole;
+    let userName;
 
     try{
         const { email, password } = await request.json();
@@ -57,7 +58,6 @@ export async function POST(request) {
             )
         }
 
-        userRole = "Admin";
         const admin = admins[0];
         
         const storedHashedPassword = admin.fields.Password;
@@ -106,10 +106,14 @@ export async function POST(request) {
             maxAge: 60 * 60 * 8
         });
 
+        userRole = sessionData.userRole;
+        userName = sessionData.userName;
+
         logAuditEvent({
             eventType: "Login",
             eventStatus: "Success",
-            userRole,
+            userRole: userRole,
+            userName: userName,
             userIdentifier: normalisedEmail,
             detailedMessage: `Admin login: ${normalisedEmail}`,
             request
@@ -132,6 +136,7 @@ export async function POST(request) {
             eventType: "Login",
             eventStatus: "Error",
             userRole: userRole || "Unknown",
+            userName: userName || "Unknown",
             userIdentifier: normalisedEmail,
             detailedMessage: `Admin login failed, error message: ${error.message}`,
             request,
