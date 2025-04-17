@@ -1,5 +1,15 @@
 {
     "files.associations": {
         "*.css": "tailwindcss"
-    }
+    },
+    "emmet.includeLanguages": {
+        "javascript": "javascriptreact",
+        "typescript": "typescriptreact"
+    },
+    "emmet.triggerExpansionOnTab": true,
+    "emmet.syntaxProfiles": {
+        "javascript": "jsx",
+        "javascriptreact": "jsx",
+        "typescriptreact": "jsx"
+    },
 }
