@@ -142,28 +142,27 @@ export async function POST(request) {
           const applicantRecord = applicantRecords[0]
 
           // Find the Summary record linked to this Applicant
-          const summaryRecords = await base("Summary")
+          const summaryRecord = await base("Summary")
             .select({
-              filterByFormula: `SEARCH('${applicantRecord.id}', {Applicant})`,
+              filterByFormula: `FIND("${applicantRecord.fields.Email}", {Applicant})`,
               maxRecords: 1,
             })
             .firstPage()
 
-          let summaryRecordId = null
-          if (summaryRecords.length > 0) {
-            summaryRecordId = summaryRecords[0].id
-          }
-
-          // Create a record in Onboarding Tasks Logs
+          // Record data object for Onboarding Tasks Logs
           const logRecordData = {
             Status: "Assigned",
             Assigned: [applicantRecord.id],
+            Summary: summaryRecord.length > 0 
+              ?  [summaryRecord[0].id]
+              : [],
+            Task: taskRecordId
+              ? [taskRecordId]
+              : []
           }
 
-          // If we have a task record (Core task), link it
-          if (taskRecordId) {
-            logRecordData["Task"] = [taskRecordId]
-          } else if (taskFunction === "Custom") {
+          
+          if (taskFunction === "Custom") {
             // For Custom tasks, we don't create an Onboarding Task record
             // but we still need to provide task details in the log
             // We can't set these directly, but we can note it in the audit log
@@ -172,11 +171,6 @@ export async function POST(request) {
             // logRecordData["Week Number"] = taskName
             // logRecordData["Task Title"] = taskName
             // logRecordData["Task Title"] = taskName
-          }
-
-          // Add Summary if available
-          if (summaryRecordId) {
-            logRecordData["Summary"] = [summaryRecordId]
           }
 
           const logRecord = await base("Onboarding Tasks Logs").create(logRecordData)
