@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { DashboardNav } from "@components/DashboardNav"
+import { ProfileActions } from "@components/ProfileActions"
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
 import TaskList from "@components/TaskList"
@@ -139,12 +139,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNav />
       <main className="container mx-auto px-4 py-8">
-        {/* Dashboard Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
-          <p className="text-muted-foreground">Manage and track your onboarding tasks</p>
+        {/* Dashboard Header with Profile Actions*/}
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
+            <p className="text-muted-foreground">Manage and track your onboarding tasks</p>
+          </div>
+          <ProfileActions />
         </div>
 
         {/* Summary Cards */}

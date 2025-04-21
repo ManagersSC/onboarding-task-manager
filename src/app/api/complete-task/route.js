@@ -2,6 +2,7 @@ import Airtable from "airtable";
 import { cookies } from "next/headers";
 import logger from "@/lib/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { unsealData } from "iron-session";
 
 // Complete tasks
 export async function POST(request) {
@@ -20,6 +21,9 @@ export async function POST(request) {
   
   try {
     // Session Validation Error Handling
+    const cookieStore = cookies();
+    const sessionCookie = (await cookieStore).get("session")?.value;
+    
     let session;
     try{
       session = await unsealData(sessionCookie, {
@@ -145,7 +149,7 @@ export async function POST(request) {
     logAuditEvent({
       base,
       eventType: "Task Complete",
-      eventStatus: "Error", // Changed from "Success" to "Error" for clarity.
+      eventStatus: "Error",
       userIdentifier: userEmail,
       detailedMessage: `User task completion error: ${error}`,
       request,
