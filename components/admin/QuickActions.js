@@ -33,6 +33,7 @@ export function QuickActions() {
   const [taskWeek, setTaskWeek] = useState("")
   const [taskDay, setTaskDay] = useState("")
   const [taskLink, setTaskLink] = useState("")
+  const [taskUrgency, setTaskUrgency] = useState("Medium")
   const [currentEmail, setCurrentEmail] = useState("")
   const [assigneeEmails, setAssigneeEmails] = useState([])
   const [isCreatingTask, setIsCreatingTask] = useState(false)
@@ -96,16 +97,18 @@ export function QuickActions() {
       errors.taskName = "Task name is required"
     }
 
-    if (!taskWeek) {
-      errors.taskWeek = "Week is required"
-    }
-
-    if (!taskDay) {
-      errors.taskDay = "Day is required"
-    }
-
-    if (!taskMedium) {
-      errors.taskMedium = "Medium is required"
+    if (taskFunction === "Core"){
+      if (!taskWeek) {
+        errors.taskWeek = "Week is required"
+      }
+  
+      if (!taskDay) {
+        errors.taskDay = "Day is required"
+      }
+  
+      if (!taskMedium) {
+        errors.taskMedium = "Medium is required"
+      }
     }
 
     // If task function is Custom, at least one email is required
@@ -140,10 +143,11 @@ export function QuickActions() {
           taskName,
           taskDescription,
           taskFunction,
-          taskMedium,
-          taskWeek,
-          taskDay,
+          taskMedium: taskFunction === "Core" ? taskMedium : "",
+          taskWeek: taskFunction === "Core" ? taskWeek : "",
+          taskDay: taskFunction === "Core" ? taskDay : "",
           taskLink,
+          taskUrgency: taskFunction === "Custom" ? taskUrgency : "",
           assigneeEmails: assigneeEmails.length > 0 ? assigneeEmails : null,
         }),
       })
@@ -193,6 +197,7 @@ export function QuickActions() {
     setTaskWeek("")
     setTaskDay("")
     setTaskLink("")
+    setTaskUrgency("Medium")
     setCurrentEmail("")
     setAssigneeEmails([])
     setValidationErrors({})
@@ -270,55 +275,79 @@ export function QuickActions() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="task-week">Week</Label>
-                  <Select value={taskWeek} onValueChange={setTaskWeek}>
-                    <SelectTrigger id="task-week" className={validationErrors.taskWeek ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select" />
+              {taskFunction === "Custom" &&
+                (<div className="grid gap-2">
+                  <Label htmlFor="task-urgency">Urgency</Label>
+                  <Select value={taskUrgency} onValueChange={setTaskUrgency}>
+                    <SelectTrigger id="task-urgency">
+                      <SelectValue placeholder="Select urgency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Week 1</SelectItem>
-                      <SelectItem value="2">Week 2</SelectItem>
-                      <SelectItem value="3">Week 3</SelectItem>
-                      <SelectItem value="4">Week 4</SelectItem>
-                      <SelectItem value="5">Week 5</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
                     </SelectContent>
                   </Select>
-                  {validationErrors.taskWeek && <p className="text-xs text-red-500">{validationErrors.taskWeek}</p>}
-                </div>
+                </div>)
+              }
 
-                <div className="grid gap-2">
-                  <Label htmlFor="task-day">Day</Label>
-                  <Select value={taskDay} onValueChange={setTaskDay}>
-                    <SelectTrigger id="task-day" className={validationErrors.taskDay ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Day 1</SelectItem>
-                      <SelectItem value="2">Day 2</SelectItem>
-                      <SelectItem value="3">Day 3</SelectItem>
-                      <SelectItem value="4">Day 4</SelectItem>
-                      <SelectItem value="5">Day 5</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.taskDay && <p className="text-xs text-red-500">{validationErrors.taskDay}</p>}
-                </div>
-              </div>
+              {/* Only show these fields for Core tasks */}
+              {taskFunction === "Core" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="task-week">Week</Label>
+                      <Select value={taskWeek} onValueChange={setTaskWeek}>
+                        <SelectTrigger id="task-week" className={validationErrors.taskWeek ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Week 1</SelectItem>
+                          <SelectItem value="2">Week 2</SelectItem>
+                          <SelectItem value="3">Week 3</SelectItem>
+                          <SelectItem value="4">Week 4</SelectItem>
+                          <SelectItem value="5">Week 5</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {validationErrors.taskWeek && <p className="text-xs text-red-500">{validationErrors.taskWeek}</p>}
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="task-medium">Medium</Label>
-                <Select value={taskMedium} onValueChange={setTaskMedium}>
-                  <SelectTrigger id="task-medium" className={validationErrors.taskMedium ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Document">Document</SelectItem>
-                    <SelectItem value="Video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-                {validationErrors.taskMedium && <p className="text-xs text-red-500">{validationErrors.taskMedium}</p>}
-              </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="task-day">Day</Label>
+                      <Select value={taskDay} onValueChange={setTaskDay}>
+                        <SelectTrigger id="task-day" className={validationErrors.taskDay ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Day 1</SelectItem>
+                          <SelectItem value="2">Day 2</SelectItem>
+                          <SelectItem value="3">Day 3</SelectItem>
+                          <SelectItem value="4">Day 4</SelectItem>
+                          <SelectItem value="5">Day 5</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {validationErrors.taskDay && <p className="text-xs text-red-500">{validationErrors.taskDay}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="task-medium">Medium</Label>
+                    <Select value={taskMedium} onValueChange={setTaskMedium}>
+                      <SelectTrigger id="task-medium" className={validationErrors.taskMedium ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Document">Document</SelectItem>
+                        <SelectItem value="Video">Video</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {validationErrors.taskMedium && (
+                      <p className="text-xs text-red-500">{validationErrors.taskMedium}</p>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="grid gap-2">
                 <Label htmlFor="task-link">Resource Link (Optional)</Label>

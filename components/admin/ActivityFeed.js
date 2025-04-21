@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
@@ -22,7 +22,7 @@ export function ActivityFeed() {
   const [filter, setFilter] = useState("all")
 
   // Fetch activities for the main feed (limited to 15)
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/admin/dashboard-activity?filter=${encodeURIComponent(filter)}&limit=15`)
@@ -35,12 +35,12 @@ export function ActivityFeed() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
 
   // Initial fetch for main feed
   useEffect(() => {
     fetchActivities()
-  }, [filter])
+  }, [filter, fetchActivities])
 
   const getActivityTypeLabel = (type) => {
     switch (type) {

@@ -123,7 +123,7 @@ export function LoginForm({ onSuccess, onSignUpClick }) {
 
       <div className="text-center mt-4">
         <p className="text-sm text-muted-foreground">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Button variant="link" className="p-0 h-auto" onClick={onSignUpClick}>
             Sign up
           </Button>

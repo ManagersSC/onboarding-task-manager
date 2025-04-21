@@ -58,6 +58,7 @@ export async function POST(request) {
       taskWeek,
       taskDay,
       taskLink,
+      taskUrgency,
       assigneeEmails,
     } = body
 
@@ -163,14 +164,8 @@ export async function POST(request) {
 
           
           if (taskFunction === "Custom") {
-            // For Custom tasks, we don't create an Onboarding Task record
-            // but we still need to provide task details in the log
-            // We can't set these directly, but we can note it in the audit log
-            // logRecordData["Task Title"] = taskName
-            // logRecordData["Task Desc"] = taskDescription || ""
-            // logRecordData["Week Number"] = taskName
-            // logRecordData["Task Title"] = taskName
-            // logRecordData["Task Title"] = taskName
+            logRecordData["isCustom"] = true
+            logRecordData["Urgency"] = taskUrgency
           }
 
           const logRecord = await base("Onboarding Tasks Logs").create(logRecordData)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { User, LogOut } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Button } from "@components/ui/button"
@@ -43,7 +43,7 @@ export function DashboardNav() {
         checkAuthStatus();
     }, []);
 
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         if(profile) return;
         setLoading(true);
         try {
@@ -56,13 +56,13 @@ export function DashboardNav() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [profile])
     
     useEffect(() => {
         if (isOpen) {
             fetchProfile()
         }
-    }, [isOpen])
+    }, [isOpen, fetchProfile])
 
     const handleLogout = async () => {
         try {

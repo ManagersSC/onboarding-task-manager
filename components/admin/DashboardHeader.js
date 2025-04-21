@@ -9,7 +9,7 @@ export function DashboardHeader({ userName }) {
   useEffect(() => {
     setTimeout(2000);
     setLoading(false);
-  })
+  },[])
 
   return (
     <Card className="bg-background border-none shadow-sm">
@@ -25,7 +25,7 @@ export function DashboardHeader({ userName }) {
                     Welcome, {userName}
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    Here's what's happening with your onboarding processes today.
+                    Here&apos;s what&apos;s happening with your onboarding processes today.
                 </p>
             </CardContent>
         </>
