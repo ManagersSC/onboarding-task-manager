@@ -1,18 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ProfileActions } from "@components/ProfileActions"
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
-import TaskList from "@components/TaskList"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
+import { ProfileActions } from "@components/ProfileActions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Skeleton } from "@components/ui/skeleton"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card, CardContent, CardTitle } from "@components/ui/card"
-import { Clock, CheckCircle, AlertCircle, Search, LayoutDashboard, ListFilter } from "lucide-react"
+import {
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Search,
+  LayoutDashboard,
+  ListFilter,
+  SlidersHorizontal,
+  X,
+  Star,
+  Flag,
+} from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
+import { Label } from "@components/ui/label"
 
 // Determines the status of a folder
 function getFolderStatus(subtasks) {
@@ -24,13 +36,36 @@ function getFolderStatus(subtasks) {
   return "completed"
 }
 
+// TaskList Component
+const TaskList = ({ tasks, onComplete }) => {
+  return (
+    <div className="divide-y divide-border">
+      {tasks.map((task) => (
+        <TaskCard key={task.id} task={task} onComplete={onComplete} />
+      ))}
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [selectedWeek, setSelectedWeek] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [activeView, setActiveView] = useState("kanban")
+
+  // Consolidated filters
+  const [filters, setFilters] = useState({
+    status: "all", // all, assigned, overdue, completed
+    week: "all",
+    type: "all", // all, standard, custom
+    urgency: "all", // all, critical, high, medium, low
+  })
+
+  // Active filters count for badge
+  const getActiveFiltersCount = () => {
+    return Object.entries(filters).filter(([key, value]) => value !== "all").length
+  }
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -53,7 +88,9 @@ export default function DashboardPage() {
           resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
           lastStatusChange: task.lastStatusChange,
           week: task.week,
-          folder: task.folder, // will be null if not associated with a folder
+          folder: task.folder,
+          isCustom: task.isCustom || false,
+          urgency: task.urgency, // No default urgency
         }))
 
         setTasks(tasksArray)
@@ -86,15 +123,49 @@ export default function DashboardPage() {
     }
   }
 
-  // Filter tasks by week and search query
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({
+      status: "all",
+      week: "all",
+      type: "all",
+      urgency: "all",
+    })
+    setSearchQuery("")
+  }
+
+  // Apply filters to tasks
   const filteredTasks = tasks.filter((task) => {
-    const matchesWeek = selectedWeek === "" || selectedWeek === "all" || task.week === selectedWeek.toString()
+    // Filter by search query
     const matchesSearch =
       searchQuery === "" ||
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    return matchesWeek && matchesSearch
+    // Filter by status
+    let matchesStatus = true
+    if (filters.status !== "all") {
+      const taskStatus = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
+      matchesStatus = taskStatus === filters.status
+    }
+
+    // Filter by week
+    const matchesWeek = filters.week === "all" || task.week === filters.week
+
+    // Filter by type
+    const matchesType =
+      filters.type === "all" ||
+      (filters.type === "custom" && task.isCustom) ||
+      (filters.type === "standard" && !task.isCustom)
+
+    // Filter by urgency
+    const matchesUrgency =
+      filters.urgency === "all" ||
+      (filters.urgency === "no urgency"
+        ? !task.urgency
+        : task.urgency && task.urgency.toLowerCase() === filters.urgency.toLowerCase())
+
+    return matchesSearch && matchesStatus && matchesWeek && matchesType && matchesUrgency
   })
 
   // Group tasks that have a folder name
@@ -132,15 +203,42 @@ export default function DashboardPage() {
   const totalTasks = tasks.length
   const completedTasksCount = tasks.filter((task) => task.completed).length
   const overdueTasksCount = tasks.filter((task) => task.overdue).length
+  const assignedTasksCount = tasks.filter((task) => !task.completed && !task.overdue).length
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0
 
   // Get available weeks for filter
   const availableWeeks = [...new Set(tasks.map((task) => task.week).filter(Boolean))].sort((a, b) => a - b)
 
+  // Count tasks by type
+  const customTasksCount = tasks.filter((task) => task.isCustom).length
+  const standardTasksCount = tasks.length - customTasksCount
+
+  // Count tasks by urgency
+  const urgencyCounts = tasks.reduce((counts, task) => {
+    if (task.urgency) {
+      counts[task.urgency] = (counts[task.urgency] || 0) + 1
+    }
+    return counts
+  }, {})
+
+  // Add a "No Urgency" count if needed
+  const tasksWithoutUrgency = tasks.filter((task) => !task.urgency).length
+  if (tasksWithoutUrgency > 0) {
+    urgencyCounts["No Urgency"] = tasksWithoutUrgency
+  }
+
+  // Get status counts for the status tabs
+  const statusCounts = {
+    all: tasks.length,
+    assigned: assignedTasksCount,
+    overdue: overdueTasksCount,
+    completed: completedTasksCount,
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
-        {/* Dashboard Header with Profile Actions*/}
+        {/* Dashboard Header with Profile Actions */}
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
@@ -171,9 +269,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-foreground">
-                    {assignedTasks.length + foldersByStatus.assigned.length}
-                  </span>
+                  <span className="text-2xl font-bold text-foreground">{assignedTasksCount}</span>
                   <span className="text-sm text-muted-foreground ml-2">assigned</span>
                 </div>
               </div>
@@ -199,10 +295,11 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Filters and View Toggle */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6 items-start md:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            <div className="relative w-full sm:w-80">
+        {/* Consolidated Filter Bar */}
+        <div className="mb-6 flex flex-col space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search tasks..."
@@ -212,41 +309,195 @@ export default function DashboardPage() {
               />
             </div>
 
-            <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Filter by Week" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Weeks</SelectItem>
-                {availableWeeks.map((week) => (
-                  <SelectItem key={week} value={week.toString()}>
-                    Week {week}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+              {/* Status Filter */}
+              <Tabs
+                value={filters.status}
+                onValueChange={(value) => setFilters({ ...filters, status: value })}
+                className="w-full md:w-auto"
+              >
+                <TabsList className="grid grid-cols-4 w-full md:w-auto">
+                  <TabsTrigger value="all" className="text-xs md:text-sm">
+                    All
+                    <Badge variant="secondary" className="ml-1 bg-muted">
+                      {statusCounts.all}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="assigned" className="text-xs md:text-sm">
+                    Assigned
+                    <Badge variant="secondary" className="ml-1 bg-muted">
+                      {statusCounts.assigned}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="overdue" className="text-xs md:text-sm">
+                    Overdue
+                    <Badge variant="secondary" className="ml-1 bg-muted">
+                      {statusCounts.overdue}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="text-xs md:text-sm">
+                    Completed
+                    <Badge variant="secondary" className="ml-1 bg-muted">
+                      {statusCounts.completed}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Advanced Filters */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filters
+                    {getActiveFiltersCount() > 0 && (
+                      <Badge className="ml-1 bg-primary text-primary-foreground">{getActiveFiltersCount()}</Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] min-w-[320px]" align="end">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none">Task Filters</h4>
+                      <p className="text-sm text-muted-foreground">Refine tasks by type, week, and urgency</p>
+                    </div>
+                    <div className="grid gap-2">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Type</Label>
+                        <div className="col-span-3">
+                          <Select
+                            value={filters.type}
+                            onValueChange={(value) => setFilters({ ...filters, type: value })}                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent style={{ mindWidth: "180px" }}>
+                              <SelectItem value="all">All Types</SelectItem>
+                              <SelectItem value="standard">Standard ({standardTasksCount})</SelectItem>
+                              <SelectItem value="custom">Custom ({customTasksCount})</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Week</Label>
+                        <div className="col-span-3">
+                          <Select
+                            value={filters.week}
+                            onValueChange={(value) => setFilters({ ...filters, week: value })}
+                            className="col-span-3"
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select week" />
+                            </SelectTrigger>
+                            <SelectContent style={{ mindWidth: "180px"}}>
+                              <SelectItem value="all">All Weeks</SelectItem>
+                              {availableWeeks.map((week) => (
+                                <SelectItem key={week} value={week.toString()}>
+                                  Week {week}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Urgency</Label>
+                        <div className="col-span-3">
+                          <Select
+                            value={filters.urgency}
+                            onValueChange={(value) => setFilters({ ...filters, urgency: value })}
+                            className="col-span-3"
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select urgency" />
+                            </SelectTrigger>
+                            <SelectContent style={{ mindWidth: "180px"}}>
+                              <SelectItem value="all">All Urgency</SelectItem>
+                              {Object.keys(urgencyCounts).map((urgency) => (
+                                <SelectItem key={urgency} value={urgency.toLowerCase()}>
+                                  {urgency} ({urgencyCounts[urgency]})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">
+                      <X className="h-4 w-4 mr-2" />
+                      Reset Filters
+                    </Button>
+                  </div>
+                </PopoverContent>
+                
+              </Popover>
+
+              {/* View Toggle */}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant={activeView === "kanban" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveView("kanban")}
+                  className="h-9"
+                >
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Kanban
+                </Button>
+                <Button
+                  variant={activeView === "list" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveView("list")}
+                  className="h-9"
+                >
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  List
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button
-              variant={activeView === "kanban" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveView("kanban")}
-              className="flex-1 md:flex-none"
-            >
-              <LayoutDashboard className="h-4 w-4 mr-2" />
-              Kanban
-            </Button>
-            <Button
-              variant={activeView === "list" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveView("list")}
-              className="flex-1 md:flex-none"
-            >
-              <ListFilter className="h-4 w-4 mr-2" />
-              List
-            </Button>
-          </div>
+          {/* Active Filters Display */}
+          {getActiveFiltersCount() > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {filters.status !== "all" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Status: {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}
+                  <X
+                    className="h-3 w-3 ml-1 cursor-pointer"
+                    onClick={() => setFilters({ ...filters, status: "all" })}
+                  />
+                </Badge>
+              )}
+              {filters.type !== "all" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  {filters.type === "custom" ? <Star className="h-3 w-3 mr-1" /> : null}
+                  Type: {filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}
+                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setFilters({ ...filters, type: "all" })} />
+                </Badge>
+              )}
+              {filters.week !== "all" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Week: {filters.week}
+                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setFilters({ ...filters, week: "all" })} />
+                </Badge>
+              )}
+              {filters.urgency !== "all" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Flag className="h-3 w-3 mr-1" />
+                  Urgency: {filters.urgency.charAt(0).toUpperCase() + filters.urgency.slice(1)}
+                  <X
+                    className="h-3 w-3 ml-1 cursor-pointer"
+                    onClick={() => setFilters({ ...filters, urgency: "all" })}
+                  />
+                </Badge>
+              )}
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="h-7 px-2 text-xs">
+                Clear all
+              </Button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -269,6 +520,15 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
+        ) : filteredTasks.length === 0 ? (
+          <div className="text-center py-12 border rounded-lg">
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">No tasks found</h3>
+            <p className="text-muted-foreground mb-4">No tasks match your current filter criteria.</p>
+            <Button onClick={resetFilters}>Reset Filters</Button>
+          </div>
         ) : (
           <>
             {activeView === "kanban" ? (
@@ -391,50 +651,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="mb-6 w-full md:w-auto">
-                  <TabsTrigger value="all">All Tasks</TabsTrigger>
-                  <TabsTrigger value="assigned">Assigned</TabsTrigger>
-                  <TabsTrigger value="overdue">Overdue</TabsTrigger>
-                  <TabsTrigger value="completed">Completed</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="all">
-                  <TaskList
-                    title="All Tasks"
-                    tasks={[
-                      ...assignedTasks.map((task) => ({ ...task, status: "assigned" })),
-                      ...overdueTasks.map((task) => ({ ...task, status: "overdue" })),
-                      ...completedTasks.map((task) => ({ ...task, status: "completed" })),
-                    ]}
-                    onComplete={handleComplete}
-                  />
-                </TabsContent>
-
-                <TabsContent value="assigned">
-                  <TaskList
-                    title="Assigned Tasks"
-                    tasks={assignedTasks.map((task) => ({ ...task, status: "assigned" }))}
-                    onComplete={handleComplete}
-                  />
-                </TabsContent>
-
-                <TabsContent value="overdue">
-                  <TaskList
-                    title="Overdue Tasks"
-                    tasks={overdueTasks.map((task) => ({ ...task, status: "overdue" }))}
-                    onComplete={handleComplete}
-                  />
-                </TabsContent>
-
-                <TabsContent value="completed">
-                  <TaskList
-                    title="Completed Tasks"
-                    tasks={completedTasks.map((task) => ({ ...task, status: "completed" }))}
-                    onComplete={handleComplete}
-                  />
-                </TabsContent>
-              </Tabs>
+              <TaskList tasks={filteredTasks} onComplete={handleComplete} />
             )}
           </>
         )}

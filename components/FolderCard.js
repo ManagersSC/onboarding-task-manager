@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2 } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
@@ -9,6 +9,30 @@ import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
 import { Progress } from "@components/ui/progress"
 import { cn } from "@components/lib/utils"
+
+// Urgency configuration
+const urgencyConfig = {
+  Critical: {
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-50 dark:bg-red-900/20",
+    borderColor: "border-red-200 dark:border-red-800",
+  },
+  High: {
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-50 dark:bg-orange-900/20",
+    borderColor: "border-orange-200 dark:border-orange-800",
+  },
+  Medium: {
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-900/20",
+    borderColor: "border-amber-200 dark:border-amber-800",
+  },
+  Low: {
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-900/20",
+    borderColor: "border-green-200 dark:border-green-800",
+  },
+}
 
 function TaskModal({ folderName, tasks, onClose, onComplete }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
@@ -57,8 +81,9 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50%]">Task</TableHead>
+                <TableHead className="w-[40%]">Task</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Type/Urgency</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -67,6 +92,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
                 tasks.map((task) => {
                   const status = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
                   const statusDetails = statusConfig[status]
+                  const urgencyInfo = urgencyConfig[task.urgency] || urgencyConfig.Medium
 
                   return (
                     <TableRow key={task.id}>
@@ -78,6 +104,34 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
                             <span className="hidden sm:inline">{statusDetails.label}</span>
                           </span>
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {task.isCustom && (
+                            <Badge
+                              variant="outline"
+                              className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">Custom</span>
+                            </Badge>
+                          )}
+
+                          {task.urgency && task.urgency !== "Medium" && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "flex items-center gap-1",
+                                urgencyInfo.color,
+                                urgencyInfo.bgColor,
+                                urgencyInfo.borderColor,
+                              )}
+                            >
+                              <Flag className="h-3 w-3" />
+                              <span className="hidden sm:inline">{task.urgency}</span>
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -121,7 +175,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                     No tasks in this folder
                   </TableCell>
                 </TableRow>
@@ -144,6 +198,24 @@ export default function FolderCard({ folderName, tasks, onComplete, status }) {
   const completedTasks = tasks.filter((task) => task.completed).length
   const progress = Math.round((completedTasks / totalTasks) * 100) || 0
   const weekNumber = tasks[0]?.week || "N/A"
+
+  // Check if folder contains any custom tasks
+  const hasCustomTasks = tasks.some((task) => task.isCustom)
+
+  // Get highest urgency level in the folder
+  const urgencyLevels = ["Critical", "High", "Medium", "Low"]
+  const tasksWithUrgency = tasks.filter((task) => task.urgency)
+  const highestUrgencyTask =
+    tasksWithUrgency.length > 0
+      ? tasksWithUrgency.reduce((highest, task) => {
+          const currentIndex = urgencyLevels.indexOf(task.urgency)
+          const highestIndex = urgencyLevels.indexOf(highest)
+          return currentIndex < highestIndex ? task.urgency : highest
+        }, "Low")
+      : null
+
+  const showUrgency = highestUrgencyTask && highestUrgencyTask !== "Medium" && highestUrgencyTask !== "Low"
+  const urgencyInfo = highestUrgencyTask ? urgencyConfig[highestUrgencyTask] : null
 
   // Status styling
   const statusConfig = {
@@ -196,6 +268,7 @@ export default function FolderCard({ folderName, tasks, onComplete, status }) {
           "cursor-pointer transition-all hover:shadow-md",
           statusInfo.accentClass,
           isHovered && "shadow-md",
+          hasCustomTasks && "ring-1 ring-purple-300 dark:ring-purple-800",
         )}
         onClick={() => setIsOpen(true)}
         onMouseEnter={() => setIsHovered(true)}
@@ -206,10 +279,33 @@ export default function FolderCard({ folderName, tasks, onComplete, status }) {
             <div className="flex items-center gap-2">
               <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h3 className="font-medium text-foreground">{folderName}</h3>
+              {hasCustomTasks && (
+                <Badge
+                  variant="outline"
+                  className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                >
+                  <Star className="h-3 w-3" />
+                </Badge>
+              )}
             </div>
-            <Badge variant="outline" className="text-foreground/70 dark:text-foreground/80">
-              Week {weekNumber}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {showUrgency && urgencyInfo && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "flex items-center gap-1",
+                    urgencyInfo.color,
+                    urgencyInfo.bgColor,
+                    urgencyInfo.borderColor,
+                  )}
+                >
+                  <Flag className="h-3 w-3" />
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-foreground/70 dark:text-foreground/80">
+                Week {weekNumber}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-2 pb-2">

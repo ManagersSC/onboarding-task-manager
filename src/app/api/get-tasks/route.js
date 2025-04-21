@@ -87,13 +87,15 @@ export async function GET(request) {
       fields: [
         "Task", 
         "Status", 
-        "Task Title", 
-        "Task Desc", 
-        "Resource Link", 
+        "Display Title", 
+        "Display Desc", 
+        "Display Resource Link", 
         "Last Status Change Time",
         "Created",
         "Task Week Number",
-        "Folder Name"
+        "Folder Name",
+        "isCustom",
+        "Urgency"
       ],
       sort: [
         { field: "Created", direction: "desc" },
@@ -114,6 +116,8 @@ export async function GET(request) {
     const tasks = taskLogRecords.map((record) => {
       const logId= record.id;
       const status = record.get("Status");
+      const isCustom = record.get("isCustom");
+      const urgency = record.get("Urgency");
 
       const rawWeek = record.get("Task Week Number");
       let weekValue = null;
@@ -125,12 +129,14 @@ export async function GET(request) {
       
       return {
         id: logId,
-        title: record.get("Task Title") || "Untitled Task",
-        description: record.get("Task Desc") || "",
+        title: record.get("Display Title") || "Untitled Task",
+        description: record.get("Display Desc") || "",
         status: status,
         completed: status === "Completed",
         overdue: status === "Overdue",
-        resourceUrl: record.get("Resource Link") || null,
+        resourceUrl: record.get("Display Resource Link") || null,
+        isCustom,
+        urgency,
         lastStatusChange: record.get("Last Status Change Time") || null,
         week: weekValue,
         folder: record.get("Folder Name") || null
@@ -155,6 +161,7 @@ export async function GET(request) {
       eventType: "User",
       eventStatus: "Errror",
       userRole: userRole || "Unknown",
+      userName: userName || "Unknown",
       userIdentifier: userEmail,
       detailedMessage: `Fetching user detail failed, error message: ${error.message}`,
       request

@@ -1,19 +1,42 @@
+// Replace the entire file content with the proper TaskCard component
+
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, ExternalLink, Loader2, AlertCircle } from "lucide-react"
+import { Card, CardContent, CardFooter } from "@components/ui/card"
 import { Button } from "@components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Badge } from "@components/ui/badge"
+import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
 import { cn } from "@components/lib/utils"
+
+// Urgency configuration
+const urgencyConfig = {
+  Critical: {
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-50 dark:bg-red-900/20",
+    borderColor: "border-red-200 dark:border-red-800",
+  },
+  High: {
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-50 dark:bg-orange-900/20",
+    borderColor: "border-orange-200 dark:border-orange-800",
+  },
+  Medium: {
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-900/20",
+    borderColor: "border-amber-200 dark:border-amber-800",
+  },
+  Low: {
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-900/20",
+    borderColor: "border-green-200 dark:border-green-800",
+  },
+}
 
 export function TaskCard({ task, onComplete }) {
   const [isCompleting, setIsCompleting] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
 
-  // Compute status based on task properties if not explicitly provided
-  const computedStatus = task.status || (task.completed ? "completed" : task.overdue ? "overdue" : "assigned")
-
+  // Status configuration
   const statusConfig = {
     assigned: {
       icon: <Clock className="h-4 w-4" />,
@@ -37,9 +60,15 @@ export function TaskCard({ task, onComplete }) {
     },
   }
 
-  const statusInfo = statusConfig[computedStatus]
+  // Ensure we have a valid status
+  const status = task.status || (task.completed ? "completed" : task.overdue ? "overdue" : "assigned")
+  const statusInfo = statusConfig[status] || statusConfig.assigned
 
-  const handleCompleteClick = async () => {
+  // Get urgency styling if available
+  const urgencyInfo = task.urgency ? urgencyConfig[task.urgency] : null
+
+  const handleComplete = async () => {
+    if (task.completed) return
     setIsCompleting(true)
     try {
       await onComplete(task.id)
@@ -49,59 +78,70 @@ export function TaskCard({ task, onComplete }) {
   }
 
   return (
-    <Card
-      className={cn(
-        "group relative overflow-hidden transition-all hover:shadow-md",
-        statusInfo.accentClass,
-        isHovered && "shadow-md",
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <CardHeader className="p-4 pb-2">
-        <div className="flex items-start justify-between space-x-4">
-          <Badge variant="outline" className={statusInfo.badgeClass}>
-            <span className="flex items-center gap-1">
-              {statusInfo.icon}
-              {statusInfo.label}
-            </span>
-          </Badge>
-          {task.week && (
-            <Badge variant="outline" className="text-foreground/70 dark:text-foreground/80">
-              Week {task.week}
+    <Card className={cn("overflow-hidden", statusInfo.accentClass)}>
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start gap-2 mb-2">
+          <h3 className="font-medium text-foreground">{task.title}</h3>
+          <div className="flex flex-wrap gap-1">
+            <Badge variant="outline" className={statusInfo.badgeClass}>
+              <span className="flex items-center gap-1">
+                {statusInfo.icon}
+                <span className="hidden sm:inline">{statusInfo.label}</span>
+              </span>
             </Badge>
-          )}
+
+            {task.isCustom && (
+              <Badge
+                variant="outline"
+                className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+              >
+                <Star className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Custom</span>
+              </Badge>
+            )}
+
+            {task.urgency && task.urgency !== "Medium" && urgencyInfo && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "flex items-center gap-1",
+                  urgencyInfo.color,
+                  urgencyInfo.bgColor,
+                  urgencyInfo.borderColor,
+                )}
+              >
+                <Flag className="h-3 w-3" />
+                <span className="hidden sm:inline">{task.urgency}</span>
+              </Badge>
+            )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-2 pb-2">
-        <h3 className="font-medium text-foreground">{task.title}</h3>
-        {task.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>}
+
+        {task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
+
+        {task.week && <div className="text-xs text-muted-foreground mb-2">Week {task.week}</div>}
       </CardContent>
-      <CardFooter className="p-4 pt-2 flex items-center justify-between">
-        {task.resourceUrl ? (
+
+      <CardFooter className="p-4 pt-0 flex justify-between">
+        {task.resourceUrl && (
           <Button
             variant="ghost"
             size="sm"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 h-8"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-            title={task.resourceUrl}
           >
             <ExternalLink className="h-4 w-4 mr-1.5" />
-            View Resource
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" className="text-muted-foreground cursor-not-allowed px-2 h-8" disabled>
-            <ExternalLink className="h-4 w-4 mr-1.5" />
-            No Resource
+            Resource
           </Button>
         )}
-        {computedStatus !== "completed" && (
+
+        {!task.completed ? (
           <Button
+            variant={task.overdue ? "default" : "outline"}
             size="sm"
-            onClick={handleCompleteClick}
-            variant={computedStatus === "overdue" ? "default" : "outline"}
+            className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
             disabled={isCompleting}
-            className={cn("h-8", computedStatus === "overdue" && "bg-red-600 hover:bg-red-700 text-white")}
+            onClick={handleComplete}
           >
             {isCompleting ? (
               <>
@@ -115,6 +155,10 @@ export function TaskCard({ task, onComplete }) {
               </>
             )}
           </Button>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            Completed {task.lastStatusChange ? new Date(task.lastStatusChange).toLocaleDateString() : ""}
+          </div>
         )}
       </CardFooter>
     </Card>
