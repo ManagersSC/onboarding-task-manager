@@ -12,7 +12,6 @@ export default async function AdminDashboard() {
     password: process.env.SESSION_SECRET,
     cookieName: 'session'
   })
-  console.log(session.userName)
   return (
     <div className="p-6 space-y-6">
       <DashboardHeader userName={session.userName} />

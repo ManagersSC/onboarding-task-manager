@@ -166,6 +166,9 @@ export async function POST(request) {
           if (taskFunction === "Custom") {
             logRecordData["isCustom"] = true
             logRecordData["Urgency"] = taskUrgency
+            logRecordData["Custom Task Title"] = taskName
+            logRecordData["Custom Task Desc"] = taskDescription || ""
+            logRecordData["Custom Resource Link"] = taskLink || ""
           }
 
           const logRecord = await base("Onboarding Tasks Logs").create(logRecordData)
