@@ -8,6 +8,7 @@ import { unsealData } from "iron-session";
 export async function GET(request) {
   let userEmail;
   let userRole;
+  let userName;
 
   try {
     const sessionCookie = (await cookies()).get('session')?.value;
@@ -39,6 +40,7 @@ export async function GET(request) {
     // Extract session data
     userEmail = session.userEmail;
     userRole = session.userRole;
+    userName = session.userName;
 
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");

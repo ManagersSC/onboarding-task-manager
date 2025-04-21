@@ -1,15 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, ExternalLink, Loader2, X, Folder } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
-import { Card, CardContent, CardHeader } from "@components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
+import { Progress } from "@components/ui/progress"
+import { cn } from "@components/lib/utils"
 
-
-function Modal({ folderName, tasks, onClose, onComplete }) {
+function TaskModal({ folderName, tasks, onClose, onComplete }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
   const handleCompleteTask = async (taskId) => {
@@ -26,37 +27,39 @@ function Modal({ folderName, tasks, onClose, onComplete }) {
     assigned: {
       icon: <Clock className="h-4 w-4" />,
       label: "Assigned",
-      variant: "outline",
-      className: "bg-blue-50 text-blue-700 border-blue-200",
+      badgeClass:
+        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     },
     overdue: {
-      icon: <Clock className="h-4 w-4" />,
+      icon: <AlertCircle className="h-4 w-4" />,
       label: "Overdue",
-      variant: "outline",
-      className: "bg-red-50 text-red-700 border-red-200",
+      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     },
     completed: {
       icon: <Check className="h-4 w-4" />,
       label: "Completed",
-      variant: "outline",
-      className: "bg-green-50 text-green-700 border-green-200",
+      badgeClass:
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     },
   }
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] p-0 gap-0">
-        <DialogHeader className="px-3 py-4 sm:p-6 border-b flex flex-row items-center justify-between">
-          <DialogTitle className="text-lg sm:text-xl font-semibold truncate pr-2">{folderName}</DialogTitle>
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle className="flex items-center gap-2">
+            <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            {folderName}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="px-3 py-3 sm:p-6 sm:pt-4 sm:pb-4 overflow-auto max-h-[70vh]">
+        <div className="px-6 py-4 overflow-auto max-h-[70vh]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50%] py-3">Task</TableHead>
-                <TableHead className="py-3">Status</TableHead>
-                <TableHead className="text-right py-3">Actions</TableHead>
+                <TableHead className="w-[50%]">Task</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,22 +70,22 @@ function Modal({ folderName, tasks, onClose, onComplete }) {
 
                   return (
                     <TableRow key={task.id}>
-                      <TableCell className="font-medium py-3 sm:py-4">{task.title}</TableCell>
-                      <TableCell className="py-3 sm:py-4">
-                        <Badge variant={statusDetails.variant} className={statusDetails.className}>
+                      <TableCell className="font-medium">{task.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={statusDetails.badgeClass}>
                           <span className="flex items-center gap-1">
                             {statusDetails.icon}
-                            <span className="hidden xs:inline">{statusDetails.label}</span>
+                            <span className="hidden sm:inline">{statusDetails.label}</span>
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right py-3 sm:py-4">
-                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
                           {task.resourceUrl && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-blue-600 hover:text-blue-700 px-1 sm:px-3"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                               onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
                             >
                               <ExternalLink className="h-4 w-4 sm:mr-1.5" />
@@ -92,9 +95,9 @@ function Modal({ folderName, tasks, onClose, onComplete }) {
 
                           {!task.completed && (
                             <Button
-                              variant="outline"
+                              variant={task.overdue ? "default" : "outline"}
                               size="sm"
-                              className="h-8 px-1 sm:px-3"
+                              className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
                               disabled={completingTaskId === task.id}
                               onClick={() => handleCompleteTask(task.id)}
                             >
@@ -133,58 +136,111 @@ function Modal({ folderName, tasks, onClose, onComplete }) {
 
 export default function FolderCard({ folderName, tasks, onComplete, status }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
 
-  // Calculate task counts
+  // Calculate task counts and progress
   const totalTasks = tasks.length
+  const completedTasks = tasks.filter((task) => task.completed).length
+  const progress = Math.round((completedTasks / totalTasks) * 100) || 0
   const weekNumber = tasks[0]?.week || "N/A"
 
   // Status styling
-  const statusStyles = {
+  const statusConfig = {
     assigned: {
-      badge: "bg-blue-50 text-blue-700 border-blue-200",
+      icon: <Clock className="h-4 w-4" />,
+      label: "Assigned",
+      badgeClass:
+        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      accentClass: "border-l-4 border-blue-500 dark:border-blue-400",
+      progressClass: "bg-blue-500 dark:bg-blue-400",
     },
     overdue: {
-      badge: "bg-red-50 text-red-700 border-red-200",
+      icon: <AlertCircle className="h-4 w-4" />,
+      label: "Overdue",
+      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+      accentClass: "border-l-4 border-red-500 dark:border-red-400",
+      progressClass: "bg-red-500 dark:bg-red-400",
     },
     completed: {
-      badge: "bg-green-50 text-green-700 border-green-200",
+      icon: <Check className="h-4 w-4" />,
+      label: "Completed",
+      badgeClass:
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+      accentClass: "border-l-4 border-green-500 dark:border-green-400",
+      progressClass: "bg-green-500 dark:bg-green-400",
     },
   }
 
-  const statusStyle = statusStyles[status] || statusStyles.assigned
+  const statusInfo = statusConfig[status]
+
+  const handleCompleteAll = async () => {
+    setIsCompleting(true)
+    try {
+      // Get all incomplete task IDs
+      const incompleteTasks = tasks.filter((task) => !task.completed).map((task) => task.id)
+
+      // Complete each task sequentially
+      for (const taskId of incompleteTasks) {
+        await onComplete(taskId)
+      }
+    } finally {
+      setIsCompleting(false)
+    }
+  }
 
   return (
     <>
       <Card
-        className="cursor-pointer transition-all hover:shadow-md hover:bg-gray-50 mb-4"
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md",
+          statusInfo.accentClass,
+          isHovered && "shadow-md",
+        )}
         onClick={() => setIsOpen(true)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Folder className="h-5 w-5 text-blue-600" />
-            <h3 className="font-medium text-lg">{folderName}</h3>
-          </div>
-          <Badge variant="outline" className="text-gray-600">
-            Week {weekNumber}
-          </Badge>
-        </CardHeader>
-        <CardContent className="p-4 pt-2">
+        <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Badge variant="outline" className={statusStyle.badge}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Badge>
-              <span className="text-sm text-gray-500 ml-2">
-                {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
-              </span>
+            <div className="flex items-center gap-2">
+              <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-medium text-foreground">{folderName}</h3>
             </div>
-            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-none">View Tasks</Badge>
+            <Badge variant="outline" className="text-foreground/70 dark:text-foreground/80">
+              Week {weekNumber}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 pt-2 pb-2">
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline" className={statusInfo.badgeClass}>
+              <span className="flex items-center gap-1">
+                {statusInfo.icon}
+                {statusInfo.label}
+              </span>
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {completedTasks}/{totalTasks} tasks
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium text-foreground">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" indicatorClassName={statusInfo.progressClass} />
           </div>
         </CardContent>
+        <CardFooter className="p-4 pt-2">
+          <Button size="sm" variant="secondary" className="w-full">
+            View Tasks
+          </Button>
+        </CardFooter>
       </Card>
 
       {isOpen && (
-        <Modal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} />
+        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} />
       )}
     </>
   )

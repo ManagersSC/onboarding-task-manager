@@ -5,6 +5,10 @@ import { logAuditEvent } from "@/lib/auditLogger";
 
 // Complete tasks
 export async function POST(request) {
+  let userEmail;
+  let userName;
+  let userRole;
+
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
     logger.error("ctServer configuration error: Missing API key or base ID");
     return Response.json({ error: "Server configuration error" }, { status: 500 });
@@ -13,9 +17,34 @@ export async function POST(request) {
   const base = new Airtable({ 
     apiKey: process.env.AIRTABLE_API_KEY 
   }).base(process.env.AIRTABLE_BASE_ID);
-
-  let userEmail;
+  
   try {
+    // Session Validation Error Handling
+    let session;
+    try{
+      session = await unsealData(sessionCookie, {
+        password: process.env.SESSION_SECRET,
+        ttl: 60 * 60 * 8 
+      });
+    } catch (error){
+      return Response.json(
+        { error: "Invalid session. Pleas log in again." },
+        { status: 401 }
+      )
+    }
+
+    if(!session.userEmail){
+      return Response.json(
+        { error: "Invalid session: no user email" },
+        { status: 401 }
+      );
+    }
+
+    // Extract session data
+    userEmail = session.userEmail;
+    userRole = session.userRole;
+    userName = session.userName;
+
     const { taskId } = await request.json();
     logger.info("ctReceived request with taskId:", taskId);
     if (!taskId) {
@@ -26,8 +55,6 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    userEmail = cookieStore.get("user_email")?.value;
     logger.info("User email from cookies:", userEmail);
     if (!userEmail) {
       logger.error("ctUnauthorised access: No user_email found in cookies");
@@ -102,6 +129,8 @@ export async function POST(request) {
       eventType: "Task Complete",
       eventStatus: "Success",
       userIdentifier: userEmail,
+      userName,
+      userRole,
       detailedMessage: `User successfully completed task. Task ID: ${taskId}`,
       request,
     }).catch((err) => logger.error("Audit log error: ", err));
