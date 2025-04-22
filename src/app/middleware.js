@@ -4,7 +4,7 @@ import { unsealData } from "iron-session";
 
 export async function middleware(request) {
   const path = request.nextUrl.pathname
-  const isPublic = ["/login", "/signup", "forgot-password"].includes(path);
+  const isPublic = ["/", "/signup", "forgot-password"].includes(path);
   const isAdminRoute = path.startsWith("/admin")
 
   // Check session cookie

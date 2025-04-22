@@ -56,7 +56,7 @@ export function ProfileActions() {
       const response = await fetch("/api/logout", { method: "POST" })
       if (!response.ok) throw new Error("Failed to logout")
       setProfile(null)
-      router.push("/login")
+      router.push("/")
     } catch (error) {
       console.error("Error logging out:", error)
     }
