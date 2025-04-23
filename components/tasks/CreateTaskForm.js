@@ -119,7 +119,7 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
     setIsCreatingTask(true)
 
     try {
-      const response = await fetch("/api/admin/create-task", {
+      const response = await fetch("/api/admin/tasks/create-task", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

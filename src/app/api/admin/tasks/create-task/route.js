@@ -161,11 +161,21 @@ export async function POST(request) {
               ? [taskRecordId]
               : []
           }
-
+          
+          // Add job role information for filtering
+          try {
+            // Get the job role from the applicant record
+            const applicantJob = applicantRecord.fields.Job || null;
+            if (applicantJob) {
+              logRecordData["Applicant Job"] = applicantJob;
+            }
+          } catch (jobError) {
+            logger.warn(`Could not get job role for applicant ${email}: ${jobError.message}`);
+          }
           
           if (taskFunction === "Custom") {
             logRecordData["isCustom"] = true
-            logRecordData["Urgency"] = taskUrgency
+            logRecordData["Urgency"] = taskUrgency || "Medium"
             logRecordData["Custom Task Title"] = taskName
             logRecordData["Custom Task Desc"] = taskDescription || ""
             logRecordData["Custom Resource Link"] = taskLink || ""
