@@ -9,7 +9,7 @@ export async function GET(request) {
   let userEmail, userRole, userName
 
   try {
-    // Session Cookie and Validation
+    // 1. Session Cookie and Validation (unchanged)
     const sessionCookie = (await cookies()).get("session")?.value
     if (!sessionCookie) {
       logger.debug("API GET CORE-TASKS: No session cookie")
@@ -39,7 +39,7 @@ export async function GET(request) {
     userEmail = session.userEmail
     userName = session.userName
 
-    // Parse Query Parameters
+    // 2. Parse Query Parameters (unchanged)
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search") || ""
     const week = searchParams.get("week") || ""
@@ -50,14 +50,17 @@ export async function GET(request) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10)
     const clientCursor = searchParams.get("cursor")
 
-    // Airtable credentials check
+    // 3. Airtable credentials check (unchanged)
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing Airtable credentials")
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    // Build filter formula
-    const conditions = ["{Task Function} = 'Core'"]
+    // 4. Build filter formula: exclude Week 0 (managers only) (changed)
+    const conditions = [
+      // Exclude manager-only Week Number = 0
+      "NOT({Week Number} = '0')"
+    ]
     const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
     if (search) {
       conditions.push(`OR(
@@ -65,70 +68,56 @@ export async function GET(request) {
         FIND(LOWER("${safeSearch}"), LOWER({Folder Name})) > 0
       )`)
     }
-    if (week) conditions.push(`{Week Number} = '${week}'`)
-    if (day) conditions.push(`{Day Number} = '${day}'`)
+    if (week)    conditions.push(`{Week Number} = '${week}'`)
+    if (day)     conditions.push(`{Day Number} = '${day}'`)
     if (jobRole) conditions.push(`{Job} = '${jobRole}'`)
-    const filterByFormula = conditions.join(' AND ')
+    const filterByFormula = conditions.join(" AND ")
 
-    // Sort field mapping
+    // 5. Sort field mapping (unchanged)
     const sortFieldMap = { createdTime: 'Created Time' }
     const sortField = sortFieldMap[sortBy] || sortBy
 
-    // Initialize Airtable SDK
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
-      .base(process.env.AIRTABLE_BASE_ID)
+    // 6. Fetch via REST API for reliable pagination (changed)
+    const apiUrl = new URL(
+      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks`
+    )
+    const params = apiUrl.searchParams
+    params.set('pageSize', pageSize)
+    if (clientCursor) params.set('offset', clientCursor)
+    if (filterByFormula) params.set('filterByFormula', filterByFormula)
+    params.set('sort[0][field]', sortField)
+    params.set('sort[0][direction]', sortDirection)
 
-    // Prepare query options
-    const queryOptions = {
-      pageSize,
-      filterByFormula,
-      sort: [{ field: sortField, direction: sortDirection }],
-      ...(clientCursor ? { offset: clientCursor } : {}),
+    logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
+
+    const airtableRes = await fetch(apiUrl.toString(), {
+      headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
+    })
+    if (!airtableRes.ok) {
+      throw new Error(`Airtable REST error: ${airtableRes.statusText}`)
     }
 
-    // Fetch first page of records
-    let records = []
-    let nextCursor = null
-    await new Promise((resolve, reject) => {
-      base('Onboarding Tasks')
-        .select(queryOptions)
-        .eachPage(
-          (pageRecords, fetchNextPage) => {
-            records = pageRecords
-            // Attempt to extract next offset token
-            try {
-              const fnStr = fetchNextPage.toString()
-              const match = fnStr.match(/"offset":"([^"]+)"/)
-              if (match && match[1]) nextCursor = match[1]
-            } catch (e) {
-              logger.warn('Could not extract nextCursor', e)
-            }
-            // Stop after first page
-            resolve()
-          },
-          (err) => {
-            if (err) reject(err)
-            else resolve()
-          }
-        )
-    })
+    const { records: rawRecords, offset } = await airtableRes.json()
+    const records = rawRecords || []
+    const nextCursor = offset || null
 
-    // Format tasks for frontend
+    // 7. Format tasks for frontend
     const tasks = records.map(rec => ({
       id: rec.id,
-      title: rec.fields['Task'] || 'Untitled Task',
-      description: rec.fields['Task Body'] || '',
-      week: rec.fields['Week Number'] || '',
-      day: rec.fields['Day Number'] || '',
-      folderName: rec.fields['Folder Name'] || '',
-      type: rec.fields['Type'] || '',
-      taskFunction: rec.fields['Task Function'] || 'Core',
-      job: rec.fields['Job'] || '',
-      location: rec.fields['Location'] || '',
-      resourceUrl: rec.fields['Link'] || '',
-      createdTime: rec.fields['Created Time'] || '',
+      title:        rec.fields['Task'] || 'Untitled Task',
+      description:  rec.fields['Task Body'] || '',
+      week:         rec.fields['Week Number'] || '',
+      day:          rec.fields['Day Number'] || '',
+      folderName:   rec.fields['Folder Name'] || '',
+      type:         rec.fields['Type'] || '',
+      taskFunction: rec.fields['Task Function'] || '',
+      job:          rec.fields['Job'] || '',
+      location:     rec.fields['Location'] || '',
+      resourceUrl:  rec.fields['Link'] || '',
+      createdTime:  rec.fields['Created Time'] || '',
     }))
 
+    // 8. Return JSON with pagination info
     return Response.json({
       tasks,
       pagination: {
@@ -139,6 +128,7 @@ export async function GET(request) {
     })
 
   } catch (error) {
+    // Error handling (unchanged)
     logger.error('Error in core-tasks GET:', error)
     logAuditEvent({
       eventType: 'Task Page Query',
@@ -157,7 +147,7 @@ export async function DELETE(request) {
   let userEmail, userRole, userName
 
   try {
-    // Session Cookie and Validation
+    // DELETE handler unchanged, using SDK for deletion
     const sessionCookie = (await cookies()).get("session")?.value
     if (!sessionCookie) {
       logger.debug("API DELETE CORE-TASKS: No session cookie")
@@ -187,22 +177,19 @@ export async function DELETE(request) {
     userEmail = session.userEmail
     userName = session.userName
 
-    // Parse request body
     const { taskIds } = await request.json()
     if (!Array.isArray(taskIds) || taskIds.length === 0) {
       return Response.json({ error: "Invalid request: taskIds is required" }, { status: 400 })
     }
 
-    // Airtable credentials check
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing Airtable credentials")
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    // Initialize Airtable SDK
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
+      .base(process.env.AIRTABLE_BASE_ID)
 
-    // Delete tasks
     const deletedIds = []
     const failedIds = []
     for (const id of taskIds) {
@@ -215,7 +202,6 @@ export async function DELETE(request) {
       }
     }
 
-    // Audit log
     logAuditEvent({
       eventType: "Task Deletion",
       eventStatus: failedIds.length === 0 ? "Success" : "Partial Success",
