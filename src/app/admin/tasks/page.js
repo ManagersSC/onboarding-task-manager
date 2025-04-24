@@ -1,14 +1,14 @@
-import { TasksAndResourcesPage } from "@components/tasks/TasksAndResourcesPage"
+import { TasksPage } from "@components/tasks/TasksPage"
 
 export const metadata = {
-  title: "Tasks & Resources",
+  title: "Tasks Management",
   description: "Manage onboarding tasks and resources",
 }
 
-export default function TasksPage() {
+export default function AdminTasksPage() {
   return (
     <div className="p-6 space-y-6">
-      <TasksAndResourcesPage />
+      <TasksPage />
     </div>
   )
 }

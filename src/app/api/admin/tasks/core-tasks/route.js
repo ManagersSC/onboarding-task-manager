@@ -56,22 +56,23 @@ export async function GET(request) {
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    // 4. Build filter formula: exclude Week 0 (managers only) (changed)
+    // 4. Build filter formula
     const conditions = [
-      // Exclude manager-only Week Number = 0
-      "NOT({Week Number} = '0')"
+      "NOT({Week Number} = '0')",
+      "NOT({Day Number} = 0)"
     ]
     const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
     if (search) {
       conditions.push(`OR(
-        FIND(LOWER("${safeSearch}"), LOWER({Task})) > 0,
-        FIND(LOWER("${safeSearch}"), LOWER({Folder Name})) > 0
-      )`)
+          FIND(LOWER("${safeSearch}"), LOWER({Task})) > 0,
+          FIND(LOWER("${safeSearch}"), LOWER({Folder Name})) > 0
+        )`
+      )
     }
     if (week)    conditions.push(`{Week Number} = '${week}'`)
     if (day)     conditions.push(`{Day Number} = '${day}'`)
     if (jobRole) conditions.push(`{Job} = '${jobRole}'`)
-    const filterByFormula = conditions.join(" AND ")
+    const filterByFormula = `AND(${conditions.join(",")})`
 
     // 5. Sort field mapping (unchanged)
     const sortFieldMap = { createdTime: 'Created Time' }
@@ -88,7 +89,8 @@ export async function GET(request) {
     params.set('sort[0][field]', sortField)
     params.set('sort[0][direction]', sortDirection)
 
-    logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
+    logger.debug(`Filter Formula: ${filterByFormula}`)
+    // logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
 
     const airtableRes = await fetch(apiUrl.toString(), {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
