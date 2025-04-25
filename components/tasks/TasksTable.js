@@ -106,17 +106,16 @@ function TableFilters({
 }
 
 export function TasksTable() {
-  // State for data and UI
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Controlled search term (emitted by SearchBar)
+  // Filters
   const [searchTerm, setSearchTerm] = useState("")
   const [weekFilter, setWeekFilter] = useState("all")
   const [dayFilter, setDayFilter] = useState("all")
 
-  // Pagination state
+  // Page size with controlled input
   const [pagination, setPagination] = useState({
     pageSize: 10,
     hasNextPage: false,
@@ -124,31 +123,53 @@ export function TasksTable() {
     cursorHistory: [],
     currentCursor: null,
   })
+  const [pageSizeInput, setPageSizeInput] = useState(pagination.pageSize.toString())
+  const debouncedPageSize = useDebounce(pageSizeInput, 500)
 
-  // Fetch tasks (includes searchTerm)
+  // Sync input when pageSize changes
+  useEffect(() => {
+    setPageSizeInput(pagination.pageSize.toString())
+  }, [pagination.pageSize])
+
+  // Commit debounced page size
+  useEffect(() => {
+    const newSize = parseInt(debouncedPageSize, 10)
+    if (
+      debouncedPageSize !== "" &&
+      !isNaN(newSize) &&
+      newSize > 0 &&
+      newSize <= 100 &&
+      newSize !== pagination.pageSize
+    ) {
+      setPagination((prev) => ({
+        ...prev,
+        pageSize: newSize,
+        currentCursor: null,
+        nextCursor: null,
+        cursorHistory: [],
+      }))
+    }
+  }, [debouncedPageSize, pagination.pageSize])
+
   const fetchTasks = useCallback(
     async (cursor = null) => {
       setLoading(true)
       setError(null)
 
       try {
-        const params = new URLSearchParams({
-          pageSize: pagination.pageSize.toString(),
-        })
-        if (cursor) params.append('cursor', cursor)
-        if (searchTerm) params.append('search', searchTerm)
+        const params = new URLSearchParams({ pageSize: pagination.pageSize.toString() })
+        if (cursor) params.append("cursor", cursor)
+        if (searchTerm) params.append("search", searchTerm)
         if (weekFilter !== "all") params.append("week", weekFilter)
         if (dayFilter !== "all") params.append("day", dayFilter)
 
         const url = `/api/admin/tasks/core-tasks?${params.toString()}`
-        console.log("🔍 fetching tasks with:", url);
-        const response = await fetch(url)
-        if (!response.ok) throw new Error(`Error fetching tasks: ${response.statusText}`)
-        const data = await response.json()
+        console.log("🔍 fetching tasks with:", url)
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`Error fetching tasks: ${res.statusText}`)
+        const data = await res.json()
 
-        const newTasks = (data.tasks || []).map((t) => ({ ...t, id: t.id.toString() }))
-        setTasks(newTasks)
-
+        setTasks((data.tasks || []).map((t) => ({ ...t, id: t.id.toString() })))
         setPagination((prev) => ({
           ...prev,
           hasNextPage: data.pagination?.hasNextPage || false,
@@ -157,7 +178,7 @@ export function TasksTable() {
         }))
       } catch (err) {
         setError(err.message)
-        toast({ title: 'Error', description: err.message, variant: 'destructive' })
+        toast({ title: "Error", description: err.message, variant: "destructive" })
       } finally {
         setLoading(false)
       }
@@ -165,7 +186,7 @@ export function TasksTable() {
     [pagination.pageSize, searchTerm, weekFilter, dayFilter]
   )
 
-  // Initial fetch and refetch on searchTerm change (resets pagination)
+  // Refetch on filters or pageSize change
   useEffect(() => {
     setPagination((prev) => ({
       ...prev,
@@ -174,26 +195,24 @@ export function TasksTable() {
       cursorHistory: [],
     }))
     fetchTasks(null)
-  }, [searchTerm, weekFilter, dayFilter, fetchTasks])
+  }, [searchTerm, weekFilter, dayFilter, pagination.pageSize, fetchTasks])
 
+  // Pagination
   const handleNextPage = useCallback(() => {
     if (pagination.hasNextPage && pagination.nextCursor) {
-      fetchTasks(pagination.nextCursor)
       setPagination((prev) => ({
         ...prev,
         cursorHistory: [...prev.cursorHistory, prev.currentCursor],
       }))
+      fetchTasks(pagination.nextCursor)
     }
   }, [pagination, fetchTasks])
 
   const handlePreviousPage = useCallback(() => {
     const history = [...pagination.cursorHistory]
     const prevCursor = history.pop() || null
+    setPagination((prev) => ({ ...prev, cursorHistory: history }))
     fetchTasks(prevCursor)
-    setPagination((prev) => ({
-      ...prev,
-      cursorHistory: history,
-    }))
   }, [pagination.cursorHistory, fetchTasks])
 
   // Handlers passed to filters
@@ -202,13 +221,10 @@ export function TasksTable() {
   const handleWeekChange = useCallback((value) => setWeekFilter(value), [])
   const handleDayChange = useCallback((value) => setDayFilter(value), [])
 
-  // Generate skeleton rows based on page size
-  const renderSkeletonRows = () => {
-    const skeletonCount = Math.min(pagination.pageSize, 5)
-    return Array(skeletonCount)
+  const renderSkeletonRows = () =>
+    Array(Math.min(pagination.pageSize, 5))
       .fill(0)
-      .map((_, index) => <SkeletonRow key={`skeleton-${index}`} />)
-  }
+      .map((_, i) => <SkeletonRow key={i} />)
 
   return (
     <div className="space-y-4">
@@ -282,6 +298,20 @@ export function TasksTable() {
       </div>
 
       {/* Pagination Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Items per page:</span>
+          <Input
+            type="text"
+            placeholder={pagination.pageSize.toString()}
+            value={pageSizeInput}
+            onChange={(e) => setPageSizeInput(e.target.value)}
+            className="w-16 h-8"
+            aria-label="Page size"
+          />
+        </div>
+      </div>
+
       <div className="flex items-center justify-end space-x-2">
         <Button
           variant="outline"

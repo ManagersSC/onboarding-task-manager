@@ -14,7 +14,7 @@ export function TasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Tasks & Resources</h1>
-          <p className="text-muted-foreground">Manage onboarding tasks and resources for your team.</p>
+          <p className="text-sm text-muted-foreground">Manage onboarding tasks and resources for your team.</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
