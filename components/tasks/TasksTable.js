@@ -10,6 +10,7 @@ import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
 import { SkeletonRow } from "./SkeletonRow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { TaskEditSheet } from "./TaskEditSheet"
 
 // All table filters
 function TableFilters({ 
@@ -114,6 +115,10 @@ export function TasksTable() {
   const [searchTerm, setSearchTerm] = useState("")
   const [weekFilter, setWeekFilter] = useState("all")
   const [dayFilter, setDayFilter] = useState("all")
+
+  // Task Editing
+  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   // Page size with controlled input
   const [pagination, setPagination] = useState({
@@ -221,6 +226,12 @@ export function TasksTable() {
   const handleWeekChange = useCallback((value) => setWeekFilter(value), [])
   const handleDayChange = useCallback((value) => setDayFilter(value), [])
 
+  // Open edit sheet
+  const handleOpenEditSheet = (taskId) => {
+    setEditingTaskId(taskId)
+    setIsSheetOpen(true)
+  }
+
   const renderSkeletonRows = () =>
     Array(Math.min(pagination.pageSize, 5))
       .fill(0)
@@ -251,6 +262,7 @@ export function TasksTable() {
               <TableHead>Day</TableHead>
               <TableHead>Folder</TableHead>
               <TableHead>Resource</TableHead>
+              <TableHead>Edit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -258,13 +270,13 @@ export function TasksTable() {
               renderSkeletonRows()
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-red-500">
+                <TableCell colSpan={7} className="h-24 text-center text-red-500">
                   Error: {error}
                 </TableCell>
               </TableRow>
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   {searchTerm ? `No tasks found matching \"${searchTerm}\"` : "No tasks found"}
                 </TableCell>
               </TableRow>
@@ -289,6 +301,11 @@ export function TasksTable() {
                     ) : (
                       "—"
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
+                      Open
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -332,6 +349,9 @@ export function TasksTable() {
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
+
+      {/* Task Edit Sheet */}
+      <TaskEditSheet taskId={editingTaskId} open={isSheetOpen} onOpenChange={setIsSheetOpen} />
     </div>
   )
 }
