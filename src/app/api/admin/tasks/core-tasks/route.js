@@ -42,13 +42,17 @@ export async function GET(request) {
     // 2. Parse Query Parameters (unchanged)
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search") || ""
-    const week = searchParams.get("week") || ""
-    const day = searchParams.get("day") || ""
     const jobRole = searchParams.get("jobRole") || ""
     const sortBy = searchParams.get("sortBy") || "Task"
     const sortDirection = searchParams.get("sortDirection") === "desc" ? "desc" : "asc"
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10)
     const clientCursor = searchParams.get("cursor")
+
+    // Treat "all" as no-filter
+    const rawWeek = searchParams.get("week") || ""
+    const rawDay = searchParams.get("day") || ""
+    const week = rawWeek &&  rawWeek !== "all" ? rawWeek : ""
+    const day = rawDay &&  rawDay !== "all" ? rawDay : ""
 
     // 3. Airtable credentials check (unchanged)
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
