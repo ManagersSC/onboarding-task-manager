@@ -1,4 +1,4 @@
-import { TasksPage } from "@components/tasks/TasksPage"
+import { ResourcePage } from "@components/tasks/ResourcePage"
 
 export const metadata = {
   title: "Tasks Management",
@@ -8,7 +8,7 @@ export const metadata = {
 export default function AdminTasksPage() {
   return (
     <div className="p-6 space-y-6">
-      <TasksPage />
+      <ResourcePage />
     </div>
   )
 }

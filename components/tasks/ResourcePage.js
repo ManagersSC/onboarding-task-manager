@@ -6,7 +6,7 @@ import { Plus } from "lucide-react"
 import { TasksTable } from "./TasksTable"
 import { CreateTaskDialog } from "./CreateTaskDialog"
 
-export function TasksPage() {
+export function ResourcePage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
   return (

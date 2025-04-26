@@ -15,20 +15,22 @@ export function CreateTaskDialog({
   trigger,
   title = "Create New Task",
   description = "Add a new task for users to complete during onboarding.",
+  open,
+  onOpenChange
 }) {
   const [isOpen, setIsOpen] = useState(false)
 
   const handleSuccess = (data) => {
-    setIsOpen(false)
+    if (onOpenChange) onOpenChange(false)
   }
 
   const handleCancel = () => {
-    setIsOpen(false)
+    if (onOpenChange) onOpenChange(false)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

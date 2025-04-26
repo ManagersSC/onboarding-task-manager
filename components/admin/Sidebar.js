@@ -42,7 +42,7 @@ export function Sidebar() {
     },
     {
       title: "Tasks & Resources",
-      href: "/admin/tasks",
+      href: "/admin/resources",
       icon: ClipboardList,
     },
     {
