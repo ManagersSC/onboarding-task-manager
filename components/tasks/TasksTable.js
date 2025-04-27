@@ -12,6 +12,7 @@ import { SkeletonRow } from "./SkeletonRow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { TaskEditSheet } from "./TaskEditSheet"
 import { cn } from "@components/lib/utils"
+import { FileViewerModal } from "./files/FileViewerModal"
 
 // All table filters
 function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
@@ -124,6 +125,10 @@ export function TasksTable() {
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
+  // File Viewer Modal
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false)
+  const [currentTaskId, setCurrentTaskId] = useState(null)
+
   // Column resizing - using refs instead of state to avoid stale closures
   const [columnWidths, setColumnWidths] = useState({
     title: 200,
@@ -131,7 +136,7 @@ export function TasksTable() {
     week: 100,
     day: 100,
     folder: 150,
-    attachments: 120, // New column for attachments
+    attachments: 120,
     resource: 100,
     edit: 100,
   })
@@ -148,6 +153,7 @@ export function TasksTable() {
     cursorHistory: [],
     currentCursor: null,
   })
+  // Track attachment counts for each task
   const [pageSizeInput, setPageSizeInput] = useState(pagination.pageSize.toString())
   const debouncedPageSize = useDebounce(pageSizeInput, 500)
 
@@ -194,13 +200,15 @@ export function TasksTable() {
         if (!res.ok) throw new Error(`Error fetching tasks: ${res.statusText}`)
         const data = await res.json()
 
-        setTasks((data.tasks || []).map((t) => ({ ...t, id: t.id.toString() })))
+        const fetchedTasks = (data.tasks || []).map((t) => ({ ...t, id: t.id.toString() }))
+        setTasks(fetchedTasks)
         setPagination((prev) => ({
           ...prev,
           hasNextPage: data.pagination?.hasNextPage || false,
           nextCursor: data.pagination?.nextCursor || null,
           currentCursor: cursor,
         }))
+
       } catch (err) {
         setError(err.message)
         toast({ title: "Error", description: err.message, variant: "destructive" })
@@ -252,11 +260,16 @@ export function TasksTable() {
     setIsSheetOpen(true)
   }
 
-  // View attachments
-  const handleViewAttachments = (taskId) => {
-    // For now, just open the edit sheet which has the attachments
-    setEditingTaskId(taskId)
-    setIsSheetOpen(true)
+  // Handle file viewer open
+  const handleOpenFileViewer = (taskId) => {
+    setCurrentTaskId(taskId)
+    setIsFileViewerOpen(true)
+  }
+
+  // Handle file updates
+  const handleFilesUpdated = () => {
+    // Refresh the task list to get updated attachment counts
+    fetchTasks(pagination.currentCursor)
   }
 
   // Column resize handlers - completely rewritten to use refs
@@ -343,6 +356,13 @@ export function TasksTable() {
     </div>
   )
 
+  // Get attachment count text based on count
+  const getAttachmentText = (count) => {
+    if (count === undefined || count === null) return "View Files"
+    if (count === 0) return "No Files"
+    return `View ${count} ${count === 1 ? "File" : "Files"}`
+  }
+
   return (
     <div className="space-y-4">
       {/* Search Bar & Filters */}
@@ -377,7 +397,7 @@ export function TasksTable() {
               <TableHead style={{ width: `${columnWidths.folder}px` }}>
                 <ResizableHeader column="folder">Folder</ResizableHeader>
               </TableHead>
-              {/* New Attachments Column */}
+              {/* Attachments Column */}
               <TableHead style={{ width: `${columnWidths.attachments}px` }}>
                 <ResizableHeader column="attachments">Attachments</ResizableHeader>
               </TableHead>
@@ -418,21 +438,17 @@ export function TasksTable() {
                   <TableCell style={{ width: `${columnWidths.folder}px` }}>
                     {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
                   </TableCell>
-                  {/* New Attachments Cell */}
+                  {/* Attachments Cell */}
                   <TableCell style={{ width: `${columnWidths.attachments}px` }}>
-                    {task.attachments && task.attachments.length > 0 ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="flex items-center gap-1"
-                        onClick={() => handleViewAttachments(task.id)}
-                      >
-                        <Paperclip className="h-4 w-4" />
-                        <span>{task.attachments.length}</span>
-                      </Button>
-                    ) : (
-                      "—"
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="flex items-center gap-1"
+                      onClick={() => handleOpenFileViewer(task.id)}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                      <span>{getAttachmentText(task.attachmentCount)}</span>
+                    </Button>
                   </TableCell>
                   <TableCell style={{ width: `${columnWidths.resource}px` }}>
                     {task.resourceUrl ? (
@@ -498,6 +514,16 @@ export function TasksTable() {
         onOpenChange={setIsSheetOpen}
         onEditSuccess={() => fetchTasks(pagination.currentCursor)}
       />
+
+      {/* File Viewer Modal */}
+      {isFileViewerOpen && (
+        <FileViewerModal
+          isOpen={isFileViewerOpen}
+          onClose={() => setIsFileViewerOpen(false)}
+          taskId={currentTaskId}
+          onFilesUpdated={handleFilesUpdated}
+        />
+      )}
     </div>
   )
 }

@@ -1,9 +1,11 @@
+"use client"
+
 import { TableCell, TableRow } from "@components/ui/table"
 import { Skeleton } from "@components/ui/skeleton"
 
 export function SkeletonRow() {
   return (
-    <TableRow className="animate-pulse">
+    <TableRow>
       <TableCell>
         <Skeleton className="h-5 w-[180px]" />
       </TableCell>
@@ -11,16 +13,22 @@ export function SkeletonRow() {
         <Skeleton className="h-5 w-[150px]" />
       </TableCell>
       <TableCell>
-        <Skeleton className="h-5 w-16" />
+        <Skeleton className="h-5 w-[60px]" />
       </TableCell>
       <TableCell>
-        <Skeleton className="h-5 w-12" />
+        <Skeleton className="h-5 w-[60px]" />
       </TableCell>
       <TableCell>
-        <Skeleton className="h-6 w-[120px] rounded-full" />
+        <Skeleton className="h-5 w-[100px]" />
       </TableCell>
-      <TableCell className="text-center">
-        <Skeleton className="h-8 w-8 rounded-full inline-block" />
+      <TableCell>
+        <Skeleton className="h-5 w-[100px]" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-[30px]" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-8 w-[60px]" />
       </TableCell>
     </TableRow>
   )

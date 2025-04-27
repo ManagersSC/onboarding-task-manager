@@ -108,21 +108,25 @@ export async function GET(request) {
     const nextCursor = offset || null
 
     // 7. Format tasks for frontend
-    const tasks = records.map(rec => ({
-      id: rec.id,
-      title:        rec.fields['Task'] || 'Untitled Task',
-      description:  rec.fields['Task Body'] || '',
-      week:         rec.fields['Week Number'] || '',
-      day:          rec.fields['Day Number'] || '',
-      folderName:   rec.fields['Folder Name'] || '',
-      type:         rec.fields['Type'] || '',
-      taskFunction: rec.fields['Task Function'] || '',
-      job:          rec.fields['Job'] || '',
-      location:     rec.fields['Location'] || '',
-      resourceUrl:  rec.fields['Link'] || '',
-      createdTime:  rec.fields['Created Time'] || '',
-      attachments:  rec.fields['File(s)'] || [],
-    }))
+    const tasks = records.map(rec => {
+      const rawAttachments = rec.fields['File(s)'] || [];
+      return {
+        id: rec.id,
+        title:        rec.fields['Task'] || 'Untitled Task',
+        description:  rec.fields['Task Body'] || '',
+        week:         rec.fields['Week Number'] || '',
+        day:          rec.fields['Day Number'] || '',
+        folderName:   rec.fields['Folder Name'] || '',
+        type:         rec.fields['Type'] || '',
+        taskFunction: rec.fields['Task Function'] || '',
+        job:          rec.fields['Job'] || '',
+        location:     rec.fields['Location'] || '',
+        resourceUrl:  rec.fields['Link'] || '',
+        createdTime:  rec.fields['Created Time'] || '',
+        attachments:  rec.fields['File(s)'] || [],
+        attachmentCount: rawAttachments.length,
+      }
+    })
 
     // 8. Return JSON with pagination info
     return Response.json({

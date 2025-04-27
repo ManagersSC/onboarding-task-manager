@@ -165,7 +165,7 @@ export async function PATCH(request, { params }) {
 }
 
 
-async function uploadFileViaJson(recordId, fieldName, file) {
+export async function uploadFileViaJson(recordId, fieldName, file) {
   // 1) Read raw bytes
   const arrayBuffer = await file.arrayBuffer()
   const base64 = Buffer.from(arrayBuffer).toString("base64")
