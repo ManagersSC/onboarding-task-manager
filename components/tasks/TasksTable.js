@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
@@ -11,11 +11,10 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { SkeletonRow } from "./SkeletonRow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { TaskEditSheet } from "./TaskEditSheet"
+import { cn } from "@components/lib/utils"
 
 // All table filters
-function TableFilters({ 
-  onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount 
-}) {
+function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
   const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
 
@@ -78,7 +77,9 @@ function TableFilters({
             <SelectContent>
               <SelectItem value="all">All Weeks</SelectItem>
               {[1, 2, 3, 4, 5].map((w) => (
-                <SelectItem key={w} value={`${w}`}>Week {w}</SelectItem>
+                <SelectItem key={w} value={`${w}`}>
+                  Week {w}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -91,7 +92,9 @@ function TableFilters({
             <SelectContent>
               <SelectItem value="all">All Days</SelectItem>
               {[1, 2, 3, 4, 5].map((d) => (
-                <SelectItem key={d} value={`${d}`}>Day {d}</SelectItem>
+                <SelectItem key={d} value={`${d}`}>
+                  Day {d}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -110,6 +113,7 @@ export function TasksTable() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [hoveredResizer, setHoveredResizer] = useState(null)
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("")
@@ -119,6 +123,21 @@ export function TasksTable() {
   // Task Editing
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+
+  // Column resizing - using refs instead of state to avoid stale closures
+  const [columnWidths, setColumnWidths] = useState({
+    title: 200,
+    description: 200,
+    week: 100,
+    day: 100,
+    folder: 150,
+    resource: 100,
+    edit: 100,
+  })
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(0)
+  const resizingColumnRef = useRef(null)
+  const tableRef = useRef(null)
 
   // Page size with controlled input
   const [pagination, setPagination] = useState({
@@ -138,7 +157,7 @@ export function TasksTable() {
 
   // Commit debounced page size
   useEffect(() => {
-    const newSize = parseInt(debouncedPageSize, 10)
+    const newSize = Number.parseInt(debouncedPageSize, 10)
     if (
       debouncedPageSize !== "" &&
       !isNaN(newSize) &&
@@ -188,7 +207,7 @@ export function TasksTable() {
         setLoading(false)
       }
     },
-    [pagination.pageSize, searchTerm, weekFilter, dayFilter]
+    [pagination.pageSize, searchTerm, weekFilter, dayFilter],
   )
 
   // Refetch on filters or pageSize change
@@ -232,41 +251,132 @@ export function TasksTable() {
     setIsSheetOpen(true)
   }
 
+  // Column resize handlers - completely rewritten to use refs
+  const handleMouseMove = useCallback((e) => {
+    const column = resizingColumnRef.current
+    if (!column) return
+
+    const diff = e.clientX - startXRef.current
+    const newWidth = Math.max(80, startWidthRef.current + diff)
+
+    setColumnWidths((prev) => ({
+      ...prev,
+      [column]: newWidth,
+    }))
+
+    // Prevent text selection
+    e.preventDefault()
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    resizingColumnRef.current = null
+
+    document.removeEventListener("mousemove", handleMouseMove)
+    document.removeEventListener("mouseup", handleMouseUp)
+
+    document.body.style.removeProperty("cursor")
+    document.body.style.removeProperty("user-select")
+  }, [handleMouseMove])
+
+  const handleResizeStart = useCallback(
+    (e, column) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Capture initial values in refs
+      startXRef.current = e.clientX
+      startWidthRef.current = columnWidths[column]
+      resizingColumnRef.current = column
+
+      // Register global listeners
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+
+      // Change cursor & disable selection
+      document.body.style.cursor = "col-resize"
+      document.body.style.userSelect = "none"
+    },
+    [columnWidths, handleMouseMove, handleMouseUp],
+  )
+
+  // Cleanup event listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+      document.body.style.removeProperty("cursor")
+      document.body.style.removeProperty("user-select")
+    }
+  }, [handleMouseMove, handleMouseUp])
+
   const renderSkeletonRows = () =>
     Array(Math.min(pagination.pageSize, 5))
       .fill(0)
       .map((_, i) => <SkeletonRow key={i} />)
 
+  // Custom resizable header component
+  const ResizableHeader = ({ children, column }) => (
+    <div className="relative flex h-full w-full items-center">
+      <span>{children}</span>
+      <div
+        className="absolute right-0 top-0 h-full w-6 cursor-col-resize"
+        onMouseEnter={() => !resizingColumnRef.current && setHoveredResizer(column)}
+        onMouseLeave={() => !resizingColumnRef.current && setHoveredResizer(null)}
+        onMouseDown={(e) => handleResizeStart(e, column)}
+        style={{ zIndex: 10 }}
+      >
+        <div
+          className={cn(
+            "absolute right-0 top-0 h-full w-[1px] bg-border",
+            hoveredResizer === column ? "w-[2px] bg-blue-500" : "",
+          )}
+        />
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
       {/* Search Bar & Filters */}
-      <TableFilters 
-        onSearch={handleSearch} 
-        onSubmit={handleSubmit} 
+      <TableFilters
+        onSearch={handleSearch}
+        onSubmit={handleSubmit}
         isLoading={loading}
         week={weekFilter}
         day={dayFilter}
         onWeekChange={handleWeekChange}
-        onDayChange={handleDayChange} 
-        taskCount={tasks.length} 
+        onDayChange={handleDayChange}
+        taskCount={tasks.length}
       />
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
+      {/* Table - Added table-fixed class to ensure widths are respected */}
+      <div className="rounded-md border" ref={tableRef}>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Week</TableHead>
-              <TableHead>Day</TableHead>
-              <TableHead>Folder</TableHead>
-              <TableHead>Resource</TableHead>
-              <TableHead>Edit</TableHead>
+              <TableHead style={{ width: `${columnWidths.title}px` }}>
+                <ResizableHeader column="title">Title</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.description}px` }}>
+                <ResizableHeader column="description">Description</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.week}px` }}>
+                <ResizableHeader column="week">Week</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.day}px` }}>
+                <ResizableHeader column="day">Day</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.folder}px` }}>
+                <ResizableHeader column="folder">Folder</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.resource}px` }}>
+                <ResizableHeader column="resource">Resource</ResizableHeader>
+              </TableHead>
+              <TableHead style={{ width: `${columnWidths.edit}px` }}>Edit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-          {loading ? (
+            {loading ? (
               renderSkeletonRows()
             ) : error ? (
               <TableRow>
@@ -283,12 +393,20 @@ export function TasksTable() {
             ) : (
               tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.title}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{task.description}</TableCell>
-                  <TableCell>{task.week ? `Week ${task.week}` : "—"}</TableCell>
-                  <TableCell>{task.day ? `Day ${task.day}` : "—"}</TableCell>
-                  <TableCell>{task.folderName ? <FolderBadge name={task.folderName} /> : "—"}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
+                    {task.title}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
+                    {task.description}
+                  </TableCell>
+                  <TableCell style={{ width: `${columnWidths.week}px` }}>
+                    {task.week ? `Week ${task.week}` : "—"}
+                  </TableCell>
+                  <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
+                  <TableCell style={{ width: `${columnWidths.folder}px` }}>
+                    {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                  </TableCell>
+                  <TableCell style={{ width: `${columnWidths.resource}px` }}>
                     {task.resourceUrl ? (
                       <Button
                         size="icon"
@@ -302,7 +420,7 @@ export function TasksTable() {
                       "—"
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell style={{ width: `${columnWidths.edit}px` }}>
                     <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
                       Open
                     </Button>
@@ -339,12 +457,7 @@ export function TasksTable() {
           <ChevronLeft className="h-4 w-4 mr-1" />
           Previous
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleNextPage}
-          disabled={!pagination.hasNextPage || loading}
-        >
+        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
           Next
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
