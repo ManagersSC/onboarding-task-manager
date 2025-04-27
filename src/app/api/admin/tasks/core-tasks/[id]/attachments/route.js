@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { unsealData } from "iron-session";
+import { sealData, unsealData } from "iron-session";
 import Airtable from "airtable";
 import logger from "@/lib/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
