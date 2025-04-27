@@ -60,7 +60,8 @@ export async function PATCH(request, { params }) {
   const { id } = p;
 
   // 1) Authenticate
-  const sessionCookie = (await cookies()).get("session")?.value;
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get("session")?.value;
   if (!sessionCookie) return new Response(null, { status: 401 });
   let session;
   try {
@@ -192,8 +193,8 @@ export async function PATCH(request, { params }) {
       });
 
       return new Response(
-          JSON.stringify({ attachments: updatedAttachments }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ attachments: updatedAttachments }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
       );
   } catch (err) {
       logger.error(`Error updating attachments for task ID ${id}:`, err);
@@ -206,7 +207,7 @@ export async function PATCH(request, { params }) {
         detailedMessage: `File update failed for task ${id}: ${err.message}`
       });
       return new Response(
-          JSON.stringify({ error: "Failed to update attachments" }), // Avoid exposing detailed internal errors
+          JSON.stringify({ error: "Failed to update attachments" }),
           { status: 500, headers: { "Content-Type": "application/json" } }
       );
   }
