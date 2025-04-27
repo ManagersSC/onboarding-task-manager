@@ -50,7 +50,8 @@ const taskFormSchema = z.object({
   attachments: z.array(z.any()).optional(),
 })
 
-export function TaskEditSheet({ taskId, open, onOpenChange }) {
+// Update the component props to include onEditSuccess
+export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [folderOpen, setFolderOpen] = useState(false)
@@ -331,7 +332,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange }) {
     }
   }, [open])
 
-  // Handle form submission
+  // Update the onSubmit function to call onEditSuccess after a successful edit
   async function onSubmit(data) {
     setLoading(true)
     try {
@@ -373,6 +374,11 @@ export function TaskEditSheet({ taskId, open, onOpenChange }) {
         description: "Task details have been saved successfully",
       })
 
+      // Call onEditSuccess callback to refetch data
+      if (typeof onEditSuccess === "function") {
+        onEditSuccess()
+      }
+
       onOpenChange(false) // Close the sheet
     } catch (err) {
       toast({
@@ -384,6 +390,8 @@ export function TaskEditSheet({ taskId, open, onOpenChange }) {
       setLoading(false)
     }
   }
+
+  // ... rest of the component ...
 
   return (
     <>

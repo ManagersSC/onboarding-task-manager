@@ -121,6 +121,7 @@ export async function GET(request) {
       location:     rec.fields['Location'] || '',
       resourceUrl:  rec.fields['Link'] || '',
       createdTime:  rec.fields['Created Time'] || '',
+      attachments:  rec.fields['File(s)'] || [],
     }))
 
     // 8. Return JSON with pagination info

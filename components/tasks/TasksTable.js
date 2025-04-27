@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
-import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2 } from "lucide-react"
+import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -131,6 +131,7 @@ export function TasksTable() {
     week: 100,
     day: 100,
     folder: 150,
+    attachments: 120, // New column for attachments
     resource: 100,
     edit: 100,
   })
@@ -247,6 +248,13 @@ export function TasksTable() {
 
   // Open edit sheet
   const handleOpenEditSheet = (taskId) => {
+    setEditingTaskId(taskId)
+    setIsSheetOpen(true)
+  }
+
+  // View attachments
+  const handleViewAttachments = (taskId) => {
+    // For now, just open the edit sheet which has the attachments
     setEditingTaskId(taskId)
     setIsSheetOpen(true)
   }
@@ -369,6 +377,10 @@ export function TasksTable() {
               <TableHead style={{ width: `${columnWidths.folder}px` }}>
                 <ResizableHeader column="folder">Folder</ResizableHeader>
               </TableHead>
+              {/* New Attachments Column */}
+              <TableHead style={{ width: `${columnWidths.attachments}px` }}>
+                <ResizableHeader column="attachments">Attachments</ResizableHeader>
+              </TableHead>
               <TableHead style={{ width: `${columnWidths.resource}px` }}>
                 <ResizableHeader column="resource">Resource</ResizableHeader>
               </TableHead>
@@ -380,13 +392,13 @@ export function TasksTable() {
               renderSkeletonRows()
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-red-500">
+                <TableCell colSpan={8} className="h-24 text-center text-red-500">
                   Error: {error}
                 </TableCell>
               </TableRow>
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   {searchTerm ? `No tasks found matching \"${searchTerm}\"` : "No tasks found"}
                 </TableCell>
               </TableRow>
@@ -405,6 +417,22 @@ export function TasksTable() {
                   <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
                   <TableCell style={{ width: `${columnWidths.folder}px` }}>
                     {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                  </TableCell>
+                  {/* New Attachments Cell */}
+                  <TableCell style={{ width: `${columnWidths.attachments}px` }}>
+                    {task.attachments && task.attachments.length > 0 ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="flex items-center gap-1"
+                        onClick={() => handleViewAttachments(task.id)}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        <span>{task.attachments.length}</span>
+                      </Button>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell style={{ width: `${columnWidths.resource}px` }}>
                     {task.resourceUrl ? (
@@ -464,7 +492,12 @@ export function TasksTable() {
       </div>
 
       {/* Task Edit Sheet */}
-      <TaskEditSheet taskId={editingTaskId} open={isSheetOpen} onOpenChange={setIsSheetOpen} />
+      <TaskEditSheet
+        taskId={editingTaskId}
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onEditSuccess={() => fetchTasks(pagination.currentCursor)}
+      />
     </div>
   )
 }
