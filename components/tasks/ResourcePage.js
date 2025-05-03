@@ -22,7 +22,7 @@ export function ResourcePage() {
         </Button>
       </div>
 
-      <TasksTable />
+      <TasksTable onOpenCreateTask={() => setIsCreateDialogOpen(true)} />
 
       <CreateTaskDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
     </div>

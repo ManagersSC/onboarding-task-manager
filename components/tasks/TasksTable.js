@@ -14,6 +14,10 @@ import { TaskEditSheet } from "./TaskEditSheet"
 import { cn } from "@components/lib/utils"
 import { FileViewerModal } from "./files/FileViewerModal"
 import { motion, AnimatePresence } from "framer-motion"
+import { PageTransition } from "./table/PageTransition"
+import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
+import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
+import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
 
 // All table filters
 function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
@@ -44,36 +48,19 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
     <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center w-full">
       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
         {/* Search Bar */}
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search tasks..."
-            value={term}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            className="pl-9 pr-10"
-            aria-label="Search tasks"
-          />
-          {term && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-1 top-1 h-7 w-7 p-0"
-              onClick={handleClear}
-              aria-label="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-          {isLoading && <Loader2 className="absolute right-10 top-2.5 h-4 w-4 animate-spin text-primary" />}
-        </div>
+        <AnimatedSearchBar
+          value={term}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onClear={handleClear}
+          isLoading={isLoading}
+        />
 
         {/* Filter Dropdowns */}
         <div className="flex gap-2">
           {/* Week Filter */}
           <Select value={week} onValueChange={onWeekChange}>
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Week" />
             </SelectTrigger>
             <SelectContent>
@@ -111,11 +98,41 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
   )
 }
 
-export function TasksTable() {
+// Custom header component with sorting and resizing
+const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onSort, onResizeStart, isHovered }) => {
+  const isSorted = sortColumn === column
+  const direction = isSorted ? (sortDirection === "asc" ? "up" : "down") : null
+
+  return (
+    <th className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
+      <Button
+        variant="ghost"
+        onClick={() => onSort(column)}
+        className="w-full h-full p-2 font-normal justify-between"
+        style={{ paddingRight: "24px" }} // Space for the sort icon and resizer
+      >
+        {children}
+        {isSorted && <span className="ml-2">{direction === "up" ? "▲" : "▼"}</span>}
+      </Button>
+      <div
+        className={cn(
+          "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
+          isHovered && "opacity-100",
+        )}
+        onMouseDown={onResizeStart}
+      />
+    </th>
+  )
+}
+
+export function TasksTable({ onOpenCreateTask }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
   const [hoveredResizer, setHoveredResizer] = useState(null)
+  // const [sortColumn, setSortColumn] = useState(null)
+  // const [sortDirection, setSortDirection] = useState("asc")
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("")
@@ -154,6 +171,7 @@ export function TasksTable() {
     cursorHistory: [],
     currentCursor: null,
   })
+
   // Track attachment counts for each task
   const [pageSizeInput, setPageSizeInput] = useState(pagination.pageSize.toString())
   const debouncedPageSize = useDebounce(pageSizeInput, 500)
@@ -183,6 +201,40 @@ export function TasksTable() {
     }
   }, [debouncedPageSize, pagination.pageSize])
 
+
+  const [sortColumn, setSortColumn] = useState(null)
+  const [sortDirection, setSortDirection] = useState("asc")
+
+  // Add this function to handle sorting
+  const handleSort = useCallback(
+    (column) => {
+      // Map the column names to the field names expected by the API
+      const columnToFieldMap = {
+        title: "Task",
+        description: "Task Body",
+        week: "Week Number",
+        day: "Day Number",
+        folder: "Folder Name",
+        type: "Type",
+        resource: "Link",
+        // Add other mappings as needed
+      }
+
+      const apiFieldName = columnToFieldMap[column] || column
+
+      if (sortColumn === column) {
+        // Toggle direction if clicking the same column
+        const newDirection = sortDirection === "asc" ? "desc" : "asc"
+        setSortDirection(newDirection)
+      } else {
+        // Set new column and default to ascending
+        setSortColumn(column)
+        setSortDirection("asc")
+      }
+    },
+    [sortColumn, sortDirection],
+  )
+
   const fetchTasks = useCallback(
     async (cursor = null) => {
       setLoading(true)
@@ -194,6 +246,25 @@ export function TasksTable() {
         if (searchTerm) params.append("search", searchTerm)
         if (weekFilter !== "all") params.append("week", weekFilter)
         if (dayFilter !== "all") params.append("day", dayFilter)
+
+        // Add sorting parameters if a column is selected
+        if (sortColumn) {
+          // Map the column names to the field names expected by the API
+          const columnToFieldMap = {
+            title: "Task",
+            description: "Task Body",
+            week: "Week Number",
+            day: "Day Number",
+            folder: "Folder Name",
+            type: "Type",
+            resource: "Link",
+            // Add other mappings as needed
+          }
+
+          const apiFieldName = columnToFieldMap[sortColumn] || sortColumn
+          params.append("sortBy", apiFieldName)
+          params.append("sortDirection", sortDirection)
+        }
 
         const url = `/api/admin/tasks/core-tasks?${params.toString()}`
         console.log("🔍 fetching tasks with:", url)
@@ -217,7 +288,7 @@ export function TasksTable() {
         setLoading(false)
       }
     },
-    [pagination.pageSize, searchTerm, weekFilter, dayFilter],
+    [pagination.pageSize, searchTerm, weekFilter, dayFilter, sortColumn, sortDirection],
   )
 
   // Refetch on filters or pageSize change
@@ -338,23 +409,16 @@ export function TasksTable() {
 
   // Custom resizable header component
   const ResizableHeader = ({ children, column }) => (
-    <div className="relative flex h-full w-full items-center">
-      <span>{children}</span>
-      <div
-        className="absolute right-0 top-0 h-full w-6 cursor-col-resize"
-        onMouseEnter={() => !resizingColumnRef.current && setHoveredResizer(column)}
-        onMouseLeave={() => !resizingColumnRef.current && setHoveredResizer(null)}
-        onMouseDown={(e) => handleResizeStart(e, column)}
-        style={{ zIndex: 10 }}
-      >
-        <div
-          className={cn(
-            "absolute right-0 top-0 h-full w-[1px] bg-border",
-            hoveredResizer === column ? "w-[2px] bg-blue-500" : "",
-          )}
-        />
-      </div>
-    </div>
+    <AnimatedColumnHeader
+      column={column}
+      sortColumn={sortColumn}
+      sortDirection={sortDirection}
+      onSort={handleSort}
+      onResizeStart={(e) => handleResizeStart(e, column)}
+      isHovered={hoveredResizer === column}
+    >
+      {children}
+    </AnimatedColumnHeader>
   )
 
   // Get attachment count text based on count
@@ -365,179 +429,209 @@ export function TasksTable() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Search Bar & Filters */}
-      <TableFilters
-        onSearch={handleSearch}
-        onSubmit={handleSubmit}
-        isLoading={loading}
-        week={weekFilter}
-        day={dayFilter}
-        onWeekChange={handleWeekChange}
-        onDayChange={handleDayChange}
-        taskCount={tasks.length}
-      />
-
-      {/* Table - Added table-fixed class to ensure widths are respected */}
-      <div className="rounded-md border" ref={tableRef}>
-        <Table className="table-fixed w-full">
-          <TableHeader>
-            <TableRow>
-              <TableHead style={{ width: `${columnWidths.title}px` }}>
-                <ResizableHeader column="title">Title</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.description}px` }}>
-                <ResizableHeader column="description">Description</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.week}px` }}>
-                <ResizableHeader column="week">Week</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.day}px` }}>
-                <ResizableHeader column="day">Day</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.folder}px` }}>
-                <ResizableHeader column="folder">Folder</ResizableHeader>
-              </TableHead>
-              {/* Attachments Column */}
-              <TableHead style={{ width: `${columnWidths.attachments}px` }}>
-                <ResizableHeader column="attachments">Attachments</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.resource}px` }}>
-                <ResizableHeader column="resource">Resource</ResizableHeader>
-              </TableHead>
-              <TableHead style={{ width: `${columnWidths.edit}px` }}>Edit</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              renderSkeletonRows()
-            ) : error ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-red-500">
-                  Error: {error}
-                </TableCell>
-              </TableRow>
-            ) : tasks.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
-                  {searchTerm ? `No tasks found matching \"${searchTerm}\"` : "No tasks found"}
-                </TableCell>
-              </TableRow>
-            ) : (
-              <AnimatePresence initial={true}>
-                {tasks.map((task, index) => (
-                  <motion.tr
-                    key={task.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0}}
-                    exit={{ opacity: 0, height: 0}}
-                    transition={{
-                      duration: 0.3,
-                      delay: index * 0.05,
-                      ease: "easeOut",
-                    }}
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                  >
-                    <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
-                      {task.title}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
-                      {task.description}
-                    </TableCell>
-                    <TableCell style={{ width: `${columnWidths.week}px` }}>
-                      {task.week ? `Week ${task.week}` : "—"}
-                    </TableCell>
-                    <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
-                    <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                      {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
-                    </TableCell>
-                    {/* Attachments Cell */}
-                    <TableCell style={{ width: `${columnWidths.attachments}px` }}>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="flex items-center gap-1"
-                        onClick={() => handleOpenFileViewer(task.id)}
-                      >
-                        <Paperclip className="h-4 w-4" />
-                        <span>{getAttachmentText(task.attachmentCount)}</span>
-                      </Button>
-                    </TableCell>
-                    <TableCell style={{ width: `${columnWidths.resource}px` }}>
-                      {task.resourceUrl ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-                          title="Open resource"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell style={{ width: `${columnWidths.edit}px` }}>
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
-                        Open
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground">Items per page:</span>
-          <Input
-            type="text"
-            placeholder={pagination.pageSize.toString()}
-            value={pageSizeInput}
-            onChange={(e) => setPageSizeInput(e.target.value)}
-            className="w-16 h-8"
-            aria-label="Page size"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePreviousPage}
-          disabled={pagination.cursorHistory.length === 0 || loading}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
-          Next
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
-      </div>
-
-      {/* Task Edit Sheet */}
-      <TaskEditSheet
-        taskId={editingTaskId}
-        open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onEditSuccess={() => fetchTasks(pagination.currentCursor)}
-      />
-
-      {/* File Viewer Modal */}
-      {isFileViewerOpen && (
-        <FileViewerModal
-          isOpen={isFileViewerOpen}
-          onClose={() => setIsFileViewerOpen(false)}
-          taskId={currentTaskId}
-          onFilesUpdated={handleFilesUpdated}
+    <PageTransition>
+      <div className="space-y-4">
+        {/* Search Bar & Filters */}
+        <TableFilters
+          onSearch={handleSearch}
+          onSubmit={handleSubmit}
+          isLoading={loading}
+          week={weekFilter}
+          day={dayFilter}
+          onWeekChange={handleWeekChange}
+          onDayChange={handleDayChange}
+          taskCount={tasks.length}
         />
-      )}
-    </div>
+
+        {/* Active Filters */}
+        <AnimatePresence>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {weekFilter !== "all" && (
+              <AnimatedFilterPill 
+                label="Week" 
+                value={`Week ${weekFilter}`} 
+                onRemove={() => setWeekFilter("all")} 
+              />
+            )}
+            {dayFilter !== "all" && (
+              <AnimatedFilterPill 
+                label="Day" 
+                value={`Day ${dayFilter}`} 
+                onRemove={() => setDayFilter("all")} 
+              />
+            )}
+            {searchTerm && (
+              <AnimatedFilterPill 
+                label="Search" 
+                value={searchTerm} 
+                onRemove={() => setSearchTerm("")} 
+              />
+            )}
+          </div>
+        </AnimatePresence>
+
+        {/* Table - Added table-fixed class to ensure widths are respected */}
+        <div className="rounded-md border" ref={tableRef}>
+          <Table className="table-fixed w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead style={{ width: `${columnWidths.title}px` }}>
+                  <ResizableHeader column="title">Title</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.description}px` }}>
+                  <ResizableHeader column="description">Description</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.week}px` }}>
+                  <ResizableHeader column="week">Week</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.day}px` }}>
+                  <ResizableHeader column="day">Day</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.folder}px` }}>
+                  <ResizableHeader column="folder">Folder</ResizableHeader>
+                </TableHead>
+                {/* Attachments Column */}
+                <TableHead style={{ width: `${columnWidths.attachments}px` }}>
+                  <ResizableHeader column="attachments">Attachments</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.resource}px` }}>
+                  <ResizableHeader column="resource">Resource</ResizableHeader>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.edit}px` }}>Edit</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                renderSkeletonRows()
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-24 text-center text-red-500">
+                    Error: {error}
+                  </TableCell>
+                </TableRow>
+              ) : tasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-auto py-8">
+                    <AnimatedEmptyState 
+                      message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No tasks found"} 
+                      actionLabel={searchTerm ? "Clear Search" : "Create Task"}
+                      onClearSearch={() => setSearchTerm("")}
+                      onOpenCreateTask={onOpenCreateTask}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <AnimatePresence initial={true}>
+                  {tasks.map((task, index) => (
+                    <motion.tr
+                      key={task.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0}}
+                      exit={{ opacity: 0, height: 0}}
+                      transition={{
+                        duration: 0.3,
+                        delay: index * 0.05,
+                        ease: "easeOut",
+                      }}
+                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                    >
+                      <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
+                        {task.title}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
+                        {task.description}
+                      </TableCell>
+                      <TableCell style={{ width: `${columnWidths.week}px` }}>
+                        {task.week ? `Week ${task.week}` : "—"}
+                      </TableCell>
+                      <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
+                      <TableCell style={{ width: `${columnWidths.folder}px` }}>
+                        {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                      </TableCell>
+                      {/* Attachments Cell */}
+                      <TableCell style={{ width: `${columnWidths.attachments}px` }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="flex items-center gap-1"
+                          onClick={() => handleOpenFileViewer(task.id)}
+                        >
+                          <Paperclip className="h-4 w-4" />
+                          <span>{getAttachmentText(task.attachmentCount)}</span>
+                        </Button>
+                      </TableCell>
+                      <TableCell style={{ width: `${columnWidths.resource}px` }}>
+                        {task.resourceUrl ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                            title="Open resource"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell style={{ width: `${columnWidths.edit}px` }}>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
+                          Open
+                        </Button>
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">Items per page:</span>
+            <Input
+              type="text"
+              placeholder={pagination.pageSize.toString()}
+              value={pageSizeInput}
+              onChange={(e) => setPageSizeInput(e.target.value)}
+              className="w-16 h-8"
+              aria-label="Page size"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={pagination.cursorHistory.length === 0 || loading}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+        {/* Task Edit Sheet */}
+        <TaskEditSheet
+          taskId={editingTaskId}
+          open={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          onEditSuccess={() => fetchTasks(pagination.currentCursor)}
+        />
+        {/* File Viewer Modal */}
+        {isFileViewerOpen && (
+          <FileViewerModal
+            isOpen={isFileViewerOpen}
+            onClose={() => setIsFileViewerOpen(false)}
+            taskId={currentTaskId}
+            onFilesUpdated={handleFilesUpdated}
+          />
+        )}
+      </div>
+    </PageTransition>
   )
 }
