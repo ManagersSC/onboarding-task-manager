@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TaskEditSheet } from "./TaskEditSheet"
 import { cn } from "@components/lib/utils"
 import { FileViewerModal } from "./files/FileViewerModal"
+import { motion, AnimatePresence } from "framer-motion"
 
 // All table filters
 function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
@@ -423,54 +424,67 @@ export function TasksTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              tasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
-                    {task.title}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
-                    {task.description}
-                  </TableCell>
-                  <TableCell style={{ width: `${columnWidths.week}px` }}>
-                    {task.week ? `Week ${task.week}` : "—"}
-                  </TableCell>
-                  <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
-                  <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                    {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
-                  </TableCell>
-                  {/* Attachments Cell */}
-                  <TableCell style={{ width: `${columnWidths.attachments}px` }}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="flex items-center gap-1"
-                      onClick={() => handleOpenFileViewer(task.id)}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                      <span>{getAttachmentText(task.attachmentCount)}</span>
-                    </Button>
-                  </TableCell>
-                  <TableCell style={{ width: `${columnWidths.resource}px` }}>
-                    {task.resourceUrl ? (
+              <AnimatePresence initial={true}>
+                {tasks.map((task, index) => (
+                  <motion.tr
+                    key={task.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0}}
+                    exit={{ opacity: 0, height: 0}}
+                    transition={{
+                      duration: 0.3,
+                      delay: index * 0.05,
+                      ease: "easeOut",
+                    }}
+                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                  >
+                    <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
+                      {task.title}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
+                      {task.description}
+                    </TableCell>
+                    <TableCell style={{ width: `${columnWidths.week}px` }}>
+                      {task.week ? `Week ${task.week}` : "—"}
+                    </TableCell>
+                    <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
+                    <TableCell style={{ width: `${columnWidths.folder}px` }}>
+                      {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                    </TableCell>
+                    {/* Attachments Cell */}
+                    <TableCell style={{ width: `${columnWidths.attachments}px` }}>
                       <Button
-                        size="icon"
+                        size="sm"
                         variant="ghost"
-                        onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-                        title="Open resource"
+                        className="flex items-center gap-1"
+                        onClick={() => handleOpenFileViewer(task.id)}
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <Paperclip className="h-4 w-4" />
+                        <span>{getAttachmentText(task.attachmentCount)}</span>
                       </Button>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell style={{ width: `${columnWidths.edit}px` }}>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
-                      Open
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell style={{ width: `${columnWidths.resource}px` }}>
+                      {task.resourceUrl ? (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                          title="Open resource"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell style={{ width: `${columnWidths.edit}px` }}>
+                      <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
+                        Open
+                      </Button>
+                    </TableCell>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             )}
           </TableBody>
         </Table>
