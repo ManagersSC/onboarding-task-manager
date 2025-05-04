@@ -8,6 +8,32 @@ import { Textarea } from "@components/ui/textarea"
 import { RefreshCw, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { toast } from "@/hooks/use-toast"
+import { motion } from "framer-motion"
+
+// Animation variants for staggered children
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.07,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+}
 
 export function CreateTaskForm({ onSuccess, onCancel }) {
   // Form state
@@ -176,9 +202,9 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
   }
 
   return (
-    <div className="grid gap-4 py-4">
+    <motion.div className="grid gap-4 py-4" variants={containerVariants} initial="hidden" animate="show">
       {/* Task Function Selection */}
-      <div className="grid gap-2">
+      <motion.div className="grid gap-2" variants={itemVariants}>
         <Label>Task Function</Label>
         <div className="flex gap-2">
           <Button
@@ -198,9 +224,9 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
             Custom
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-2">
+      <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="task-name">Task Name</Label>
         <Input
           id="task-name"
@@ -211,9 +237,9 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
           className={validationErrors.taskName ? "border-red-500" : ""}
         />
         {validationErrors.taskName && <p className="text-xs text-red-500">{validationErrors.taskName}</p>}
-      </div>
+      </motion.div>
 
-      <div className="grid gap-2">
+      <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="task-description">Description</Label>
         <Textarea
           id="task-description"
@@ -221,10 +247,10 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
           value={taskDescription}
           onChange={(e) => setTaskDescription(e.target.value)}
         />
-      </div>
+      </motion.div>
 
       {taskFunction === "Custom" && (
-        <div className="grid gap-2">
+        <motion.div className="grid gap-2" variants={itemVariants} initial="hidden" animate="show" key="urgency">
           <Label htmlFor="task-urgency">Urgency</Label>
           <Select value={taskUrgency} onValueChange={setTaskUrgency}>
             <SelectTrigger id="task-urgency">
@@ -237,13 +263,19 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
               <SelectItem value="Low">Low</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
       )}
 
       {/* Only show these fields for Core tasks */}
       {taskFunction === "Core" && (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <motion.div
+            className="grid grid-cols-2 gap-4"
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+            key="week-day"
+          >
             <div className="grid gap-2">
               <Label htmlFor="task-week">Week</Label>
               <Select value={taskWeek} onValueChange={setTaskWeek}>
@@ -277,9 +309,9 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
               </Select>
               {validationErrors.taskDay && <p className="text-xs text-red-500">{validationErrors.taskDay}</p>}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="grid gap-2">
+          <motion.div className="grid gap-2" variants={itemVariants} initial="hidden" animate="show" key="medium">
             <Label htmlFor="task-medium">Medium</Label>
             <Select value={taskMedium} onValueChange={setTaskMedium}>
               <SelectTrigger id="task-medium" className={validationErrors.taskMedium ? "border-red-500" : ""}>
@@ -291,22 +323,28 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
               </SelectContent>
             </Select>
             {validationErrors.taskMedium && <p className="text-xs text-red-500">{validationErrors.taskMedium}</p>}
-          </div>
+          </motion.div>
         </>
       )}
 
-      <div className="grid gap-2">
+      <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="task-link">Resource Link (Optional)</Label>
         <Input id="task-link" placeholder="https://" value={taskLink} onChange={(e) => setTaskLink(e.target.value)} />
-      </div>
+      </motion.div>
 
-      <div className="grid gap-2">
+      <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="assignee-email">
           Assign to Email {taskFunction === "Custom" ? "(Required)" : "(Optional)"}
         </Label>
         <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
           {assigneeEmails.map((email, index) => (
-            <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+            <motion.div
+              key={index}
+              className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+            >
               <span className="text-sm">{email}</span>
               <button
                 type="button"
@@ -315,7 +353,7 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
               >
                 <X className="h-3 w-3" />
               </button>
-            </div>
+            </motion.div>
           ))}
           <Input
             ref={emailInputRef}
@@ -334,9 +372,9 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
             Add Email
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex justify-end gap-2 mt-4">
+      <motion.div className="flex justify-end gap-2 mt-4" variants={itemVariants}>
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
@@ -350,7 +388,7 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
             "Create Task"
           )}
         </Button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

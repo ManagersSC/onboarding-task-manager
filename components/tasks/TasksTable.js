@@ -105,15 +105,14 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
 
   return (
     <th className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-      <Button
-        variant="ghost"
+      <div
         onClick={() => onSort(column)}
-        className="w-full h-full p-2 font-normal justify-between"
+        className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
         style={{ paddingRight: "24px" }} // Space for the sort icon and resizer
       >
         {children}
         {isSorted && <span className="ml-2">{direction === "up" ? "▲" : "▼"}</span>}
-      </Button>
+      </div>
       <div
         className={cn(
           "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
