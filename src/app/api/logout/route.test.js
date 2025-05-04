@@ -52,7 +52,7 @@ describe("Logout Route (/api/logout)", () => {
 
     // Import the logout route after our mocks are set up.
     ({ logout } = require("./route"));
-    logger = require("@/lib/logger");
+    logger = require("@/lib/utils/logger");
     auditLogger = require("@/lib/auditLogger");
   });
 

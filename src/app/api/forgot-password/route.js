@@ -1,6 +1,6 @@
 import Airtable from "airtable";
 import jwt from "jsonwebtoken";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 
 // Initialize Airtable base.

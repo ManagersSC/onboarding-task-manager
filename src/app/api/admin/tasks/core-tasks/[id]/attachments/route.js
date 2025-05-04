@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { sealData, unsealData } from "iron-session";
 import Airtable from "airtable";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { uploadFileViaJson } from "../route";
 

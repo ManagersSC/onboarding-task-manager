@@ -81,7 +81,7 @@ describe("forgotPassword route", () => {
     auditLogger = require("@/lib/auditLogger");
     // Create a spy on logAuditEvent.
     logAuditEventSpy = jest.spyOn(auditLogger, "logAuditEvent").mockResolvedValue();
-    logger = require("@/lib/logger");
+    logger = require("@/lib/utils/logger");
 
     // Mock global.fetch for the Make.com webhook.
     global.fetch = jest.fn();

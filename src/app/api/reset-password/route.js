@@ -2,7 +2,7 @@
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(

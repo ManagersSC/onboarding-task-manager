@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { sealData } from "iron-session";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auditLogger";

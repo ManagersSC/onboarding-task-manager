@@ -1,5 +1,5 @@
 import Airtable from "airtable";
-import logger from "./logger";
+import logger from "./utils/logger";
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
 

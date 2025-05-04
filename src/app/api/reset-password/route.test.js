@@ -70,7 +70,7 @@ describe("resetPassword route", () => {
 
     // Import our resetPassword route after mocks are in place.
     ({ resetPassword } = require("./route"));
-    logger = require("@/lib/logger");
+    logger = require("@/lib/utils/logger");
   });
 
   afterEach(() => {

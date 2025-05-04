@@ -1,5 +1,5 @@
 import { logAuditEvent } from "@/lib/auditLogger"
-import logger from "@/lib/logger"
+import logger from "@/lib/utils/logger"
 import Airtable from "airtable"
 import { cookies } from "next/headers"
 import { unsealData } from "iron-session"

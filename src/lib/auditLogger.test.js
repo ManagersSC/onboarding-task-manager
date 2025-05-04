@@ -43,7 +43,7 @@ describe("logAuditEvent", () => {
 
     // Import our auditLogger module after our mocks are in place.
     ({ logAuditEvent } = require("./auditLogger"));
-    logger = require("./logger");
+    logger = require("./utils/logger");
   });
 
   afterEach(() => {

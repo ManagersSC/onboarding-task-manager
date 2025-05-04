@@ -1,6 +1,6 @@
 import Airtable from "airtable";
 import { cookies } from "next/headers";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { unsealData } from "iron-session";
 

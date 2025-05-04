@@ -75,7 +75,7 @@ describe("GET /api/get-tasks", () => {
     // Import GET after mocks are set.
     const { GET } = require("./route");
     // Get our logger and auditLogger from mocks.
-    const logger = require("@/lib/logger");
+    const logger = require("@/lib/utils/logger");
     const { logAuditEvent } = require("@/lib/auditLogger");
     return { GET, logger, logAuditEvent, mockApplicantsSelect, mockTaskLogsSelect };
   };
