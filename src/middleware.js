@@ -8,46 +8,52 @@ import { edgeLog } from "./lib/utils/edgeLogger";
 const strictLimiter = rateLimiter(5, 60 * 1000);
 const relaxedLimiter = rateLimiter(60, 60 * 1000);
 
+// List of sensitive endpoints that need strict rate limiting
+const STRICT_RATE_LIMIT_PATHS = [
+  '/api/login',
+  '/api/admin/login',
+  '/api/sign-up',
+  '/api/forgot-password',
+  '/api/reset-password',
+  '/api/logout',
+  '/api/admin/create-admin'
+];
+
 export async function middleware(request) {
-  // Debug: Log every request to middleware
-  edgeLog('[MIDDLEWARE] Path:', request.nextUrl.pathname);
-
   const path = request.nextUrl.pathname;
+  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
 
-  // Strict rate limit for sensitive endpoints
-  if (
-    path === '/api/login' ||
-    path === '/api/admin/login' ||
-    path === '/api/sign-up' ||
-    path === '/api/forgot-password' ||
-    path === '/api/reset-password' ||
-    path === '/api/logout' ||
-    path === '/api/admin/create-admin'
-  ) {
+  // Debug: Log every request to middleware
+  edgeLog('[MIDDLEWARE] Request:', {
+    path,
+    ip,
+    method: request.method
+  });
+
+  // Apply rate limiting based on endpoint type
+  if (STRICT_RATE_LIMIT_PATHS.includes(path)) {
+    edgeLog('[MIDDLEWARE] Applying strict rate limit to:', path);
     const response = strictLimiter(request);
     if (response) {
       edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
       return response;
-    } else {
-      edgeLog('[MIDDLEWARE] Rate limit NOT triggered for:', path);
     }
-  } else {
-    // Relaxed rate limit for all other API endpoints
+  } else if (path.startsWith('/api/')) {
+    edgeLog('[MIDDLEWARE] Applying relaxed rate limit to:', path);
     const response = relaxedLimiter(request);
     if (response) {
       edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
       return response;
-    } else {
-      edgeLog('[MIDDLEWARE] Rate limit NOT triggered for:', path);
     }
   }
 
   const isPublic = ["/", "/signup", "forgot-password"].includes(path);
-  const isAdminRoute = path.startsWith("/admin")
+  const isAdminRoute = path.startsWith("/admin");
 
   // Check session cookie
   const sessionCookie = request.cookies.get("session")?.value;
   if(!isPublic && !sessionCookie){
+    edgeLog('[MIDDLEWARE] No session cookie, redirecting to home');
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
@@ -57,19 +63,26 @@ export async function middleware(request) {
     session = await unsealData(sessionCookie, {
       password: process.env.SESSION_SECRET,
       ttl: 60 * 60 * 8
-    })
+    });
+    edgeLog('[MIDDLEWARE] Session validated for:', session.userEmail);
   } catch (error){
+    edgeLog('[MIDDLEWARE] Invalid session:', error.message);
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
   // Check admin access
   if (isAdminRoute && session.userRole !== "admin") {
-    return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl))
+    edgeLog('[MIDDLEWARE] Non-admin access attempt to admin route:', path);
+    return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl));
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: [
+    '/api/:path*',
+    '/admin/:path*',
+    '/dashboard/:path*'
+  ]
 }
