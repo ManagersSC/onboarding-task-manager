@@ -4,15 +4,14 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
-import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip } from "lucide-react"
+import { ExternalLink, ChevronLeft, ChevronRight, Paperclip } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
 import { SkeletonRow } from "./SkeletonRow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { TaskEditSheet } from "./TaskEditSheet"
+import { DynamicTaskEditSheet } from "./DynamicTaskEditSheet"
 import { cn } from "@components/lib/utils"
-import { FileViewerModal } from "./files/FileViewerModal"
 import { motion, AnimatePresence } from "framer-motion"
 import { PageTransition } from "./table/PageTransition"
 import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
@@ -20,7 +19,18 @@ import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
 import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
 
 // All table filters
-function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
+function TableFilters({
+  onSearch,
+  onSubmit,
+  isLoading,
+  name,
+  folder,
+  assignedDate,
+  onNameChange,
+  onFolderChange,
+  onAssignedDateChange,
+  taskCount,
+}) {
   const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
 
@@ -58,33 +68,25 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
 
         {/* Filter Dropdowns */}
         <div className="flex gap-2">
-          {/* Week Filter */}
-          <Select value={week} onValueChange={onWeekChange}>
+          {/* Name Filter */}
+          <Select value={name} onValueChange={onNameChange}>
             <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Week" />
+              <SelectValue placeholder="Name" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Weeks</SelectItem>
-              {[1, 2, 3, 4, 5].map((w) => (
-                <SelectItem key={w} value={`${w}`}>
-                  Week {w}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All Names</SelectItem>
+              {/* Add dynamic name options here if available */}
             </SelectContent>
           </Select>
 
-          {/* Day Filter */}
-          <Select value={day} onValueChange={onDayChange}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Day" />
+          {/* Folder Filter */}
+          <Select value={folder} onValueChange={onFolderChange}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Folder" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Days</SelectItem>
-              {[1, 2, 3, 4, 5].map((d) => (
-                <SelectItem key={d} value={`${d}`}>
-                  Day {d}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All Folders</SelectItem>
+              {/* Add dynamic folder options here if available */}
             </SelectContent>
           </Select>
         </div>
@@ -104,15 +106,16 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
   const direction = isSorted ? (sortDirection === "asc" ? "up" : "down") : null
 
   return (
-    <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-      <div
+    <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70 w-full h-full">
+      <button
+        type="button"
         onClick={() => onSort(column)}
-        className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
+        className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50 text-left"
         style={{ paddingRight: "24px" }} // Space for the sort icon and resizer
       >
         {children}
         {isSorted && <span className="ml-2">{direction === "up" ? "▲" : "▼"}</span>}
-      </div>
+      </button>
       <div
         className={cn(
           "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
@@ -124,37 +127,32 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
   )
 }
 
-export function TasksTable({ onOpenCreateTask }) {
-  const [tasks, setTasks] = useState([])
+export function AssignedTasksLogsTable({ onOpenCreateTask }) {
+  const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
   const [hoveredResizer, setHoveredResizer] = useState(null)
-  // const [sortColumn, setSortColumn] = useState(null)
-  // const [sortDirection, setSortDirection] = useState("asc")
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("")
-  const [weekFilter, setWeekFilter] = useState("all")
-  const [dayFilter, setDayFilter] = useState("all")
+  const [nameFilter, setNameFilter] = useState("all")
+  const [folderFilter, setFolderFilter] = useState("all")
+  const [assignedDateFilter, setAssignedDateFilter] = useState("")
 
   // Task Editing
-  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [selectedLogId, setSelectedLogId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-
-  // File Viewer Modal
-  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false)
-  const [currentTaskId, setCurrentTaskId] = useState(null)
 
   // Column resizing - using refs instead of state to avoid stale closures
   const [columnWidths, setColumnWidths] = useState({
+    name: 160,
+    email: 200,
     title: 200,
-    description: 200,
-    week: 100,
-    day: 100,
-    folder: 150,
-    attachments: 120,
-    resource: 100,
+    description: 220,
+    folder: 140,
+    attachments: 140,
+    resource: 120,
+    assignedDate: 160,
     edit: 100,
   })
   const startXRef = useRef(0)
@@ -170,10 +168,12 @@ export function TasksTable({ onOpenCreateTask }) {
     cursorHistory: [],
     currentCursor: null,
   })
-
-  // Track attachment counts for each task
   const [pageSizeInput, setPageSizeInput] = useState(pagination.pageSize.toString())
   const debouncedPageSize = useDebounce(pageSizeInput, 500)
+
+  // Sorting
+  const [sortColumn, setSortColumn] = useState("assignedDate")
+  const [sortDirection, setSortDirection] = useState("desc")
 
   // Sync input when pageSize changes
   useEffect(() => {
@@ -200,22 +200,17 @@ export function TasksTable({ onOpenCreateTask }) {
     }
   }, [debouncedPageSize, pagination.pageSize])
 
-
-  const [sortColumn, setSortColumn] = useState(null)
-  const [sortDirection, setSortDirection] = useState("asc")
-
   // Add this function to handle sorting
   const handleSort = useCallback(
     (column) => {
       // Map the column names to the field names expected by the API
       const columnToFieldMap = {
-        title: "Task",
-        description: "Task Body",
-        week: "Week Number",
-        day: "Day Number",
+        name: "Applicant Name",
+        email: "Applicant Email",
+        title: "Display Title",
+        description: "Display Desc",
         folder: "Folder Name",
-        type: "Type",
-        resource: "Link",
+        assignedDate: "Created Date",
         // Add other mappings as needed
       }
 
@@ -234,29 +229,29 @@ export function TasksTable({ onOpenCreateTask }) {
     [sortColumn, sortDirection],
   )
 
-  const fetchTasks = useCallback(
+  // Fetch logs
+  const fetchLogs = useCallback(
     async (cursor = null) => {
       setLoading(true)
       setError(null)
-
       try {
         const params = new URLSearchParams({ pageSize: pagination.pageSize.toString() })
         if (cursor) params.append("cursor", cursor)
         if (searchTerm) params.append("search", searchTerm)
-        if (weekFilter !== "all") params.append("week", weekFilter)
-        if (dayFilter !== "all") params.append("day", dayFilter)
+        if (nameFilter !== "all") params.append("name", nameFilter)
+        if (folderFilter !== "all") params.append("folder", folderFilter)
+        if (assignedDateFilter) params.append("assignedDate", assignedDateFilter)
 
         // Add sorting parameters if a column is selected
         if (sortColumn) {
           // Map the column names to the field names expected by the API
           const columnToFieldMap = {
-            title: "Task",
-            description: "Task Body",
-            week: "Week Number",
-            day: "Day Number",
+            name: "Applicant Name",
+            email: "Applicant Email",
+            title: "Display Title",
+            description: "Display Desc",
             folder: "Folder Name",
-            type: "Type",
-            resource: "Link",
+            assignedDate: "Created Date",
             // Add other mappings as needed
           }
 
@@ -265,21 +260,18 @@ export function TasksTable({ onOpenCreateTask }) {
           params.append("sortDirection", sortDirection)
         }
 
-        const url = `/api/admin/tasks/core-tasks?${params.toString()}`
-        console.log("🔍 fetching tasks with:", url)
+        const url = `/api/admin/tasks/assigned-tasks?${params.toString()}`
+        console.log("🔍 fetching assigned tasks with:", url)
         const res = await fetch(url)
-        if (!res.ok) throw new Error(`Error fetching tasks: ${res.statusText}`)
+        if (!res.ok) throw new Error(`Error fetching logs: ${res.statusText}`)
         const data = await res.json()
-
-        const fetchedTasks = (data.tasks || []).map((t) => ({ ...t, id: t.id.toString() }))
-        setTasks(fetchedTasks)
+        setLogs(data.logs || [])
         setPagination((prev) => ({
           ...prev,
           hasNextPage: data.pagination?.hasNextPage || false,
           nextCursor: data.pagination?.nextCursor || null,
           currentCursor: cursor,
         }))
-
       } catch (err) {
         setError(err.message)
         toast({ title: "Error", description: err.message, variant: "destructive" })
@@ -287,7 +279,7 @@ export function TasksTable({ onOpenCreateTask }) {
         setLoading(false)
       }
     },
-    [pagination.pageSize, searchTerm, weekFilter, dayFilter, sortColumn, sortDirection],
+    [pagination.pageSize, searchTerm, nameFilter, folderFilter, assignedDateFilter, sortColumn, sortDirection],
   )
 
   // Refetch on filters or pageSize change
@@ -298,49 +290,38 @@ export function TasksTable({ onOpenCreateTask }) {
       nextCursor: null,
       cursorHistory: [],
     }))
-    fetchTasks(null)
-  }, [searchTerm, weekFilter, dayFilter, pagination.pageSize, fetchTasks])
+    fetchLogs(null)
+  }, [searchTerm, nameFilter, folderFilter, assignedDateFilter, pagination.pageSize, fetchLogs])
 
-  // Pagination
+  // Pagination handlers
   const handleNextPage = useCallback(() => {
     if (pagination.hasNextPage && pagination.nextCursor) {
       setPagination((prev) => ({
         ...prev,
         cursorHistory: [...prev.cursorHistory, prev.currentCursor],
       }))
-      fetchTasks(pagination.nextCursor)
+      fetchLogs(pagination.nextCursor)
     }
-  }, [pagination, fetchTasks])
+  }, [pagination, fetchLogs])
 
   const handlePreviousPage = useCallback(() => {
     const history = [...pagination.cursorHistory]
     const prevCursor = history.pop() || null
     setPagination((prev) => ({ ...prev, cursorHistory: history }))
-    fetchTasks(prevCursor)
-  }, [pagination.cursorHistory, fetchTasks])
+    fetchLogs(prevCursor)
+  }, [pagination.cursorHistory, fetchLogs])
 
   // Handlers passed to filters
   const handleSearch = useCallback((term) => setSearchTerm(term), [])
   const handleSubmit = useCallback((term) => setSearchTerm(term), [])
-  const handleWeekChange = useCallback((value) => setWeekFilter(value), [])
-  const handleDayChange = useCallback((value) => setDayFilter(value), [])
+  const handleNameChange = useCallback((value) => setNameFilter(value), [])
+  const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
+  const handleAssignedDateChange = useCallback((value) => setAssignedDateFilter(value), [])
 
   // Open edit sheet
-  const handleOpenEditSheet = (taskId) => {
-    setEditingTaskId(taskId)
+  const handleOpenEditSheet = (logId) => {
+    setSelectedLogId(logId)
     setIsSheetOpen(true)
-  }
-
-  // Handle file viewer open
-  const handleOpenFileViewer = (taskId) => {
-    setCurrentTaskId(taskId)
-    setIsFileViewerOpen(true)
-  }
-
-  // Handle file updates
-  const handleFilesUpdated = () => {
-    // Refresh the task list to get updated attachment counts
-    fetchTasks(pagination.currentCursor)
   }
 
   // Column resize handlers - completely rewritten to use refs
@@ -421,11 +402,43 @@ export function TasksTable({ onOpenCreateTask }) {
   )
 
   // Get attachment count text based on count
-  const getAttachmentText = (count) => {
-    if (count === undefined || count === null) return "View Files"
-    if (count === 0) return "No Files"
+  const getAttachmentText = (attachments) => {
+    if (!attachments || attachments.length === 0) return "No Files"
+    const count = attachments.length
     return `View ${count} ${count === 1 ? "File" : "Files"}`
   }
+
+  // DynamicTaskEditSheet config
+  const logFields = [
+    { name: "name", label: "Name", type: "text", required: true },
+    { name: "email", label: "Email", type: "text" },
+    { name: "title", label: "Title", type: "text", required: true },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "folder", label: "Folder", type: "text" },
+    { name: "resource", label: "Resource", type: "url" },
+    { name: "attachments", label: "Attachment", type: "file" },
+    { name: "assignedDate", label: "Assigned Date", type: "date" },
+  ]
+  const mapApiToForm = (log) => ({
+    name: log.name,
+    email: log.email,
+    title: log.title,
+    description: log.description,
+    folder: log.folder,
+    resource: log.resource,
+    attachments: log.attachments,
+    assignedDate: log.assignedDate,
+  })
+  const mapFormToApi = (formData) => ({
+    "Applicant Name": formData.name,
+    "Applicant Email": formData.email,
+    "Display Title": formData.title,
+    "Display Desc": formData.description,
+    "Folder Name": formData.folder,
+    "Display Resource Link": formData.resource,
+    "File(s)": formData.attachments,
+    "Created Date": formData.assignedDate,
+  })
 
   return (
     <PageTransition>
@@ -435,37 +448,32 @@ export function TasksTable({ onOpenCreateTask }) {
           onSearch={handleSearch}
           onSubmit={handleSubmit}
           isLoading={loading}
-          week={weekFilter}
-          day={dayFilter}
-          onWeekChange={handleWeekChange}
-          onDayChange={handleDayChange}
-          taskCount={tasks.length}
+          name={nameFilter}
+          folder={folderFilter}
+          assignedDate={assignedDateFilter}
+          onNameChange={handleNameChange}
+          onFolderChange={handleFolderChange}
+          onAssignedDateChange={handleAssignedDateChange}
+          taskCount={logs.length}
         />
 
         {/* Active Filters */}
         <AnimatePresence>
           <div className="flex flex-wrap gap-2 mt-2">
-            {weekFilter !== "all" && (
-              <AnimatedFilterPill 
-                label="Week" 
-                value={`Week ${weekFilter}`} 
-                onRemove={() => setWeekFilter("all")} 
+            {nameFilter !== "all" && (
+              <AnimatedFilterPill label="Name" value={nameFilter} onRemove={() => setNameFilter("all")} />
+            )}
+            {folderFilter !== "all" && (
+              <AnimatedFilterPill label="Folder" value={folderFilter} onRemove={() => setFolderFilter("all")} />
+            )}
+            {assignedDateFilter && (
+              <AnimatedFilterPill
+                label="Assigned Date"
+                value={assignedDateFilter}
+                onRemove={() => setAssignedDateFilter("")}
               />
             )}
-            {dayFilter !== "all" && (
-              <AnimatedFilterPill 
-                label="Day" 
-                value={`Day ${dayFilter}`} 
-                onRemove={() => setDayFilter("all")} 
-              />
-            )}
-            {searchTerm && (
-              <AnimatedFilterPill 
-                label="Search" 
-                value={searchTerm} 
-                onRemove={() => setSearchTerm("")} 
-              />
-            )}
+            {searchTerm && <AnimatedFilterPill label="Search" value={searchTerm} onRemove={() => setSearchTerm("")} />}
           </div>
         </AnimatePresence>
 
@@ -474,6 +482,44 @@ export function TasksTable({ onOpenCreateTask }) {
           <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
+                <TableHead style={{ width: `${columnWidths.name}px` }}>
+                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
+                    <div
+                      onClick={() => handleSort("name")}
+                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
+                      style={{ paddingRight: "24px" }}
+                    >
+                      Name
+                      {sortColumn === "name" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
+                        hoveredResizer === "name" && "opacity-100",
+                      )}
+                      onMouseDown={(e) => handleResizeStart(e, "name")}
+                    />
+                  </div>
+                </TableHead>
+                <TableHead style={{ width: `${columnWidths.email}px` }}>
+                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
+                    <div
+                      onClick={() => handleSort("email")}
+                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
+                      style={{ paddingRight: "24px" }}
+                    >
+                      Email
+                      {sortColumn === "email" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
+                        hoveredResizer === "email" && "opacity-100",
+                      )}
+                      onMouseDown={(e) => handleResizeStart(e, "email")}
+                    />
+                  </div>
+                </TableHead>
                 <TableHead style={{ width: `${columnWidths.title}px` }}>
                   <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
                     <div
@@ -509,44 +555,6 @@ export function TasksTable({ onOpenCreateTask }) {
                         hoveredResizer === "description" && "opacity-100",
                       )}
                       onMouseDown={(e) => handleResizeStart(e, "description")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.week}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("week")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Week
-                      {sortColumn === "week" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "week" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "week")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.day}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("day")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Day
-                      {sortColumn === "day" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "day" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "day")}
                     />
                   </div>
                 </TableHead>
@@ -607,6 +615,25 @@ export function TasksTable({ onOpenCreateTask }) {
                     />
                   </div>
                 </TableHead>
+                <TableHead style={{ width: `${columnWidths.assignedDate}px` }}>
+                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
+                    <div
+                      onClick={() => handleSort("assignedDate")}
+                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
+                      style={{ paddingRight: "24px" }}
+                    >
+                      Assigned Date
+                      {sortColumn === "assignedDate" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
+                        hoveredResizer === "assignedDate" && "opacity-100",
+                      )}
+                      onMouseDown={(e) => handleResizeStart(e, "assignedDate")}
+                    />
+                  </div>
+                </TableHead>
                 <TableHead style={{ width: `${columnWidths.edit}px` }}>Edit</TableHead>
               </TableRow>
             </TableHeader>
@@ -615,15 +642,15 @@ export function TasksTable({ onOpenCreateTask }) {
                 renderSkeletonRows()
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-red-500">
+                  <TableCell colSpan={9} className="h-24 text-center text-red-500">
                     Error: {error}
                   </TableCell>
                 </TableRow>
-              ) : tasks.length === 0 ? (
+              ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-auto py-8">
-                    <AnimatedEmptyState 
-                      message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No tasks found"} 
+                  <TableCell colSpan={9} className="h-auto py-8">
+                    <AnimatedEmptyState
+                      message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No assigned tasks found"}
                       actionLabel={searchTerm ? "Clear Search" : "Create Task"}
                       onClearSearch={() => setSearchTerm("")}
                       onOpenCreateTask={onOpenCreateTask}
@@ -632,12 +659,12 @@ export function TasksTable({ onOpenCreateTask }) {
                 </TableRow>
               ) : (
                 <AnimatePresence initial={true}>
-                  {tasks.map((task, index) => (
+                  {logs.map((log, index) => (
                     <motion.tr
-                      key={task.id}
+                      key={log.id}
                       initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0}}
-                      exit={{ opacity: 0, height: 0}}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
                       transition={{
                         duration: 0.3,
                         delay: index * 0.05,
@@ -645,37 +672,44 @@ export function TasksTable({ onOpenCreateTask }) {
                       }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                     >
-                      <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
-                        {task.title}
+                      <TableCell className="font-medium" style={{ width: `${columnWidths.name}px` }}>
+                        {log.name}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate" style={{ width: `${columnWidths.description}px` }}>
-                        {task.description}
+                      <TableCell style={{ width: `${columnWidths.email}px` }}>{log.email}</TableCell>
+                      <TableCell style={{ width: `${columnWidths.title}px` }}>{log.title}</TableCell>
+                      <TableCell className="max-w-[220px] truncate" style={{ width: `${columnWidths.description}px` }}>
+                        {log.description}
                       </TableCell>
-                      <TableCell style={{ width: `${columnWidths.week}px` }}>
-                        {task.week ? `Week ${task.week}` : "—"}
-                      </TableCell>
-                      <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
                       <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                        {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                        {log.folder && typeof log.folder === "string" && log.folder.trim() !== "" ? (
+                          <FolderBadge name={log.folder} />
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
-                      {/* Attachments Cell */}
                       <TableCell style={{ width: `${columnWidths.attachments}px` }}>
                         <Button
                           size="sm"
                           variant="ghost"
                           className="flex items-center gap-1"
-                          onClick={() => handleOpenFileViewer(task.id)}
+                          onClick={() => {
+                            // Handle attachment view action
+                            if (log.attachments && log.attachments.length > 0) {
+                              // Open attachment viewer or download
+                            }
+                          }}
+                          disabled={!log.attachments || log.attachments.length === 0}
                         >
                           <Paperclip className="h-4 w-4" />
-                          <span>{getAttachmentText(task.attachmentCount)}</span>
+                          <span>{getAttachmentText(log.attachments)}</span>
                         </Button>
                       </TableCell>
                       <TableCell style={{ width: `${columnWidths.resource}px` }}>
-                        {task.resourceUrl ? (
+                        {log.resource ? (
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                            onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}
                             title="Open resource"
                           >
                             <ExternalLink className="h-4 w-4" />
@@ -684,8 +718,11 @@ export function TasksTable({ onOpenCreateTask }) {
                           "—"
                         )}
                       </TableCell>
+                      <TableCell style={{ width: `${columnWidths.assignedDate}px` }}>
+                        {log.assignedDate ? new Date(log.assignedDate).toLocaleDateString() : "—"}
+                      </TableCell>
                       <TableCell style={{ width: `${columnWidths.edit}px` }}>
-                        <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(task.id)}>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(log.id)}>
                           Open
                         </Button>
                       </TableCell>
@@ -696,6 +733,7 @@ export function TasksTable({ onOpenCreateTask }) {
             </TableBody>
           </Table>
         </div>
+
         {/* Pagination Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -710,6 +748,7 @@ export function TasksTable({ onOpenCreateTask }) {
             />
           </div>
         </div>
+
         <div className="flex items-center justify-end space-x-2">
           <Button
             variant="outline"
@@ -725,22 +764,19 @@ export function TasksTable({ onOpenCreateTask }) {
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
-        {/* Task Edit Sheet */}
-        <TaskEditSheet
-          taskId={editingTaskId}
+
+        {/* Dynamic Task Edit Sheet */}
+        <DynamicTaskEditSheet
           open={isSheetOpen}
           onOpenChange={setIsSheetOpen}
-          onEditSuccess={() => fetchTasks(pagination.currentCursor)}
+          taskId={selectedLogId}
+          getEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+          patchEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+          fields={logFields}
+          mapApiToForm={mapApiToForm}
+          mapFormToApi={mapFormToApi}
+          onEditSuccess={() => fetchLogs(pagination.currentCursor)}
         />
-        {/* File Viewer Modal */}
-        {isFileViewerOpen && (
-          <FileViewerModal
-            isOpen={isFileViewerOpen}
-            onClose={() => setIsFileViewerOpen(false)}
-            taskId={currentTaskId}
-            onFilesUpdated={handleFilesUpdated}
-          />
-        )}
       </div>
     </PageTransition>
   )
