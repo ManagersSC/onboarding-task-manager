@@ -1,6 +1,6 @@
 import { DashboardHeader } from "@components/admin/DashboardHeader"
 import { DashboardMetrics } from "@components/admin/DashboardMetrics"
-import { ActivityFeed } from "@components/admin/ActivityFeed"
+import { ActivityFeed } from "@components/dashboard/ActivityFeed"
 import { QuickActions } from "@components/admin/QuickActions"
 
 import { cookies } from "next/headers"
