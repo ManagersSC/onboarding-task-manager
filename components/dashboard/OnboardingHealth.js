@@ -121,7 +121,7 @@ export function OnboardingHealth() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <svg width="40" height="20" className="text-muted-foreground">
+                    <svg width="40" height="20" className="text-muted-foreground hidden sm:block">
                       <polyline
                         points={pointsString}
                         fill="none"

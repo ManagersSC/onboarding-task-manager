@@ -144,7 +144,7 @@ export function ActivityFeed() {
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback>
                             {activity.user?.name

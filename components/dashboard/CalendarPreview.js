@@ -111,7 +111,7 @@ export function CalendarPreview() {
             ))}
           </div>
 
-          <div className="flex justify-center gap-3 mt-3">
+          <div className="flex justify-center gap-x-3 gap-y-1 mt-3">
             <div className="flex items-center">
               <div className="h-2 w-2 rounded-full bg-green-500 mr-1" />
               <span className="text-xs">Start Date</span>

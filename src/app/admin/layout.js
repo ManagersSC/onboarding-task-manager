@@ -1,4 +1,8 @@
-import { Sidebar } from "@components/admin/Sidebar"
+// import { Sidebar } from "@components/admin/Sidebar"
+import { SidebarProvider } from "@components/ui/sidebar"
+import { MobilePageHeader } from "@components/admin/mobile-page-header"
+import { BottomNavigation } from "@components/admin/bottom-navigation"
+import { AdminSidebar } from "@components/admin/admin-sidebar"
 
 export const metadata = {
   title: "Admin Dashboard | Onboarding Manager",
@@ -7,9 +11,15 @@ export const metadata = {
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">{children}</div>
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen">
+        <AdminSidebar />
+        <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
+          {/* <MobilePageHeader /> */}
+          {children}
+          <BottomNavigation />
+        </main>
+      </div>
+  </SidebarProvider>
   )
 }

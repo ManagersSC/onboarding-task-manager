@@ -108,7 +108,7 @@ export function NewHireTracker() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-4 overflow-x-auto pb-2">
+          <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2">
             {newHires.map((hire, index) => (
               <Dialog key={hire.id}>
                 <DialogTrigger asChild>
@@ -116,7 +116,7 @@ export function NewHireTracker() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="flex-shrink-0 w-60 bg-card rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    className="flex-shrink-0 w-full sm:w-60 bg-card rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
                     whileHover={{ scale: 1.02 }}
                     onClick={() => setSelectedHire(hire)}
                   >

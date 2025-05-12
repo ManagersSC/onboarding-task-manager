@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight, MoreHorizontal, Plus } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
@@ -219,7 +219,8 @@ export function TaskManagement() {
           <div className="flex items-center justify-between">
             <CardTitle>Task Management</CardTitle>
             <Button size="sm">
-              <span className="mr-1">+</span> New Task
+              <Plus className="h-4 w-4" />
+              New Task
             </Button>
           </div>
         </CardHeader>
