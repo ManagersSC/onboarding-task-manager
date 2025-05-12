@@ -12,14 +12,13 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         <AdminSidebar />
-        <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
-          {/* <MobilePageHeader /> */}
+        <main className="flex-1 overflow-x-hidden pb-16 md:pb-0 w-full">
           {children}
           <BottomNavigation />
         </main>
       </div>
-  </SidebarProvider>
+    </SidebarProvider>
   )
 }
