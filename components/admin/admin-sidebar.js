@@ -4,7 +4,17 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut } from "lucide-react"
-
+import { handleLogout } from "@/lib/utils/logout"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@components/ui/alert-dialog"
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +26,7 @@ import {
   useSidebar,
 } from "@components/ui/sidebar"
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 const navItems = [
   {
@@ -42,8 +53,10 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { isMobile } = useSidebar()
   const [isMiddleScreen, setIsMiddleScreen] = useState(false)
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
 
   // Add effect to detect medium screen size
   useEffect(() => {
@@ -119,7 +132,7 @@ export function AdminSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Logout">
-                  <button className={`flex items-center ${isMiddleScreen ? "justify-center" : "gap-3"} w-full`}>
+                  <button className={`flex items-center ${isMiddleScreen ? "justify-center" : "gap-3"} w-full`} onClick={() => setIsLogoutDialogOpen(true)}>
                     <LogOut className="h-5 w-5 shrink-0" />
                     <span className={`truncate ${isMiddleScreen ? "hidden" : "block"}`}>Logout</span>
                   </button>
@@ -174,7 +187,7 @@ export function AdminSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <button className="flex items-center gap-3 w-full">
+                  <button className="flex items-center gap-3 w-full" onClick={() => setIsLogoutDialogOpen(true)}>
                     <LogOut className="h-5 w-5 shrink-0" />
                     <span className="truncate">Logout</span>
                   </button>
@@ -184,6 +197,18 @@ export function AdminSidebar() {
           </SidebarFooter>
         </Sidebar>
       )}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>You will be redirected to the login page.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleLogout(router)}>Logout</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

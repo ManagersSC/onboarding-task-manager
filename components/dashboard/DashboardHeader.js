@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Bell } from 'lucide-react'
 import { useRouter } from "next/navigation"
+import { handleLogout } from "@/lib/utils/logout"
 
 import { Button } from "@components/ui/button"
 import {
@@ -85,7 +86,9 @@ export function DashboardHeader() {
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Log out</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleLogout(router)} className="cursor-pointer">
+            Log out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </motion.div>

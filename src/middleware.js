@@ -4,18 +4,17 @@ import { unsealData } from "iron-session";
 import { rateLimiter } from '@/lib/rateLimiter';
 import { edgeLog } from "./lib/utils/edgeLogger";
 
-// Strict: 5 req/min, Relaxed: 60 req/min
-const strictLimiter = rateLimiter(5, 60 * 1000);
-const relaxedLimiter = rateLimiter(60, 60 * 1000);
+// Internal app rate limits: 30 req/min for sensitive endpoints, 300 req/min for others
+const strictLimiter = rateLimiter(30, 60 * 1000);  // 30 requests per minute
+const relaxedLimiter = rateLimiter(300, 60 * 1000); // 300 requests per minute
 
-// List of sensitive endpoints that need strict rate limiting
+// List of sensitive endpoints that need stricter rate limiting
 const STRICT_RATE_LIMIT_PATHS = [
   '/api/login',
   '/api/admin/login',
   '/api/sign-up',
   '/api/forgot-password',
   '/api/reset-password',
-  '/api/logout',
   '/api/admin/create-admin'
 ];
 
