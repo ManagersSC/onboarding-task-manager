@@ -59,6 +59,7 @@ export async function POST(request) {
         }
 
         const admin = admins[0];
+        const recordID = admin.id;
         
         const storedHashedPassword = admin.fields.Password;
 
@@ -91,7 +92,8 @@ export async function POST(request) {
         const sessionData = {
             userEmail: normalisedEmail,
             userRole: 'admin',
-            userName: admin.fields.Name
+            userName: admin.fields.Name,
+            recordId: recordID
         }
         logger.debug(`Session Data to add: \nemail: ${sessionData.userEmail} \nrole: ${sessionData.userRole}`)
         const sealedSession = await sealData(sessionData, {

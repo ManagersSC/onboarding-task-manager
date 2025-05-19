@@ -135,3 +135,20 @@ export async function getTasksWithCreator() {
 
   return grouped
 }
+
+
+export async function completeStaffTask(taskId){
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Airtable environment variables are missing")
+  }
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+
+  await base("Staff").update([
+    {
+      id: taskId,
+      fields: {
+        "🚀 Status": "Completed"
+      }
+    }
+  ]);
+}

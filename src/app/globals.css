@@ -154,3 +154,14 @@
 [data-sidebar="rail"] {
   @apply h-full;
 }
+
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: var(--primary);
+  --rdp-background-color: var(--primary-foreground);
+  --rdp-accent-color-dark: var(--primary);
+  --rdp-background-color-dark: var(--primary-foreground);
+  --rdp-outline: 2px solid var(--ring);
+  --rdp-outline-offset: 2px;
+  margin: 0;
+}

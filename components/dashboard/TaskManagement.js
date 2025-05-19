@@ -20,6 +20,7 @@ import { Badge } from "@components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
+import { NewTaskModal } from "./subComponents/new-staff-modal"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
@@ -58,8 +59,10 @@ export function TaskManagement() {
   const [tasks, setTasks] = useState({ upcoming: [], overdue: [], blocked: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState("John Doe") // This would come from your auth system
 
-  useEffect(() => {
+  const fetchTasks = () => {
     setLoading(true)
     fetch("/api/dashboard/tasks")
       .then((res) => {
@@ -75,6 +78,22 @@ export function TaskManagement() {
         setError(err.message)
         setLoading(false)
       })
+  }
+
+  const completeTask = async(taskId) => {
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json"},
+      body: JSON.stringify({ action: "complete" })
+    })
+  }
+
+  useEffect(() => {
+    fetchTasks()
+
+    // In a real app, you would fetch the current user here
+    // Example:
+    // fetchCurrentUser().then(user => setCurrentUser(user.name))
   }, [])
 
   const toggleGroup = (group) => {
@@ -89,6 +108,11 @@ export function TaskManagement() {
       ...expandedTasks,
       [taskId]: !expandedTasks[taskId],
     })
+  }
+
+  const handleNewTaskCreated = () => {
+    // Refresh the task list after creating a new task
+    fetchTasks()
   }
 
   const groupTasksByPriority = (taskList) => {
@@ -201,7 +225,7 @@ export function TaskManagement() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => completeTask(task.id)}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
                         <DropdownMenu>
@@ -248,7 +272,7 @@ export function TaskManagement() {
         {tabId === "overdue" && "You don't have any overdue tasks. Great job!"}
         {tabId === "blocked" && "You don't have any blocked tasks right now."}
       </p>
-      <Button size="sm" variant="outline">
+      <Button size="sm" variant="outline" onClick={() => setNewTaskModalOpen(true)}>
         <Plus className="h-4 w-4 mr-1" />
         Create Task
       </Button>
@@ -267,7 +291,7 @@ export function TaskManagement() {
             <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Failed to load tasks</h3>
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
+            <Button onClick={() => fetchTasks()} variant="outline">
               Try Again
             </Button>
           </div>
@@ -286,7 +310,7 @@ export function TaskManagement() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>Task Management</CardTitle>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setNewTaskModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               New Task
             </Button>
@@ -317,30 +341,38 @@ export function TaskManagement() {
 
             <TabsContent value="upcoming" className="mt-0">
               {tasks.upcoming.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.upcoming)).map(([priority, tasks]) =>
-                    renderTaskGroup(tasks, priority, "upcoming"),
-                  )
+                ? sortPriorityGroups(groupTasksByPriority(tasks.upcoming)).map(([priority, tasks]) => (
+                    <div key={`upcoming-${priority}`}>{renderTaskGroup(tasks, priority, "upcoming")}</div>
+                  ))
                 : renderEmptyState("upcoming")}
             </TabsContent>
 
             <TabsContent value="overdue" className="mt-0">
               {tasks.overdue.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.overdue)).map(([priority, tasks]) =>
-                    renderTaskGroup(tasks, priority, "overdue"),
-                  )
+                ? sortPriorityGroups(groupTasksByPriority(tasks.overdue)).map(([priority, tasks]) => (
+                    <div key={`overdue-${priority}`}>{renderTaskGroup(tasks, priority, "overdue")}</div>
+                  ))
                 : renderEmptyState("overdue")}
             </TabsContent>
 
             <TabsContent value="blocked" className="mt-0">
               {tasks.blocked.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.blocked)).map(([priority, tasks]) =>
-                    renderTaskGroup(tasks, priority, "blocked"),
-                  )
+                ? sortPriorityGroups(groupTasksByPriority(tasks.blocked)).map(([priority, tasks]) => (
+                    <div key={`blocked-${priority}`}>{renderTaskGroup(tasks, priority, "blocked")}</div>
+                  ))
                 : renderEmptyState("blocked")}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* New Task Modal */}
+      <NewTaskModal
+        open={newTaskModalOpen}
+        onOpenChange={setNewTaskModalOpen}
+        onTaskCreate={handleNewTaskCreated}
+        userName={currentUser}
+      />
     </motion.div>
   )
 }

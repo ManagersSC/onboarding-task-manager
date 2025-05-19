@@ -1,4 +1,4 @@
-import { getTasksWithCreator } from '@/lib/utils/dashboard/tasks';
+import { completeStaffTask, getTasksWithCreator } from '@/lib/utils/dashboard/tasks';
 
 export async function GET(req) {
   try {
@@ -13,4 +13,4 @@ export async function GET(req) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-} 
+}
