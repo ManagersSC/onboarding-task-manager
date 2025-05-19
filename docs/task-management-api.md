@@ -81,4 +81,83 @@ This document describes the implementation of the dashboard task management API,
 
 - Implement PATCH/POST/DELETE for task management
 - Integrate with a real database or Airtable API
-- Add authentication and authorization as needed 
+- Add authentication and authorization as needed
+
+## GET /api/admin/dashboard/current-user
+
+**Purpose:**
+Returns the current authenticated user's Staff record ID and name, as stored in the session cookie. This is used to pre-fill the "Created By" field when creating a new task, ensuring the correct Airtable linked record is used.
+
+**Authentication:**
+- Requires a valid session cookie (set by the login route).
+- Returns 401 if not authenticated or session is invalid.
+
+**Response:**
+- `200 OK` with JSON body:
+  ```json
+  {
+    "id": "recXXXXXXXXXXXXXX", // Airtable Staff record ID
+    "name": "John Doe"         // Staff name
+  }
+  ```
+- `401 Unauthorized` if not authenticated or session is invalid.
+- `500 Internal Server Error` on unexpected errors.
+
+**Example Usage (Frontend):**
+```js
+fetch('/api/admin/dashboard/current-user')
+  .then(res => {
+    if (!res.ok) throw new Error('Not authenticated');
+    return res.json();
+  })
+  .then(data => {
+    // data.id = Staff record ID
+    // data.name = Staff name
+  });
+```
+
+**Typical Use Case:**
+- When opening the new task modal, call this endpoint to get the current user's Staff record ID and name.
+- Display the name in the UI (uneditable).
+- Use the record ID when creating a new task in Airtable (for the "Created By" linked field).
+
+## PATCH /api/dashboard/tasks/[id]
+
+This endpoint allows updating a task by its ID. Supported actions include marking a task as complete, blocking, or deleting it.
+
+### Completing a Task
+- **Action:** `complete`
+- **Description:** Marks the specified task as completed in Airtable.
+- **Implementation:**
+  - The backend now correctly updates the `Tasks` table in Airtable (previously, it incorrectly updated the `Staff` table).
+  - The PATCH handler awaits the completion of the Airtable update before responding.
+- **Frontend:**
+  - After a task is marked as complete, the task list is automatically refreshed to reflect the change in the UI.
+
+### Example Request
+```js
+fetch('/api/tasks/<taskId>', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'complete' })
+})
+```
+
+### Example Response
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## completeStaffTask(taskId)
+
+- Updates the `🚀 Status` field to `Completed` for the given task in the `Tasks` table in Airtable.
+- Throws an error if Airtable environment variables are missing.
+
+---
+
+## Changelog
+- **2024-06-08:** Fixed bug where task completion updated the wrong table. Now updates the `Tasks` table and refreshes the UI after completion. 

@@ -85,7 +85,7 @@ export async function getTasksWithCreator() {
       const priority = (task.fields["🚨 Urgency"] || "").toLowerCase().trim()
 
       return {
-        id: task.fields["Id"] || task.id,
+        id: task.id,
         title: task.fields["📌 Task"] || "",
         description: task.fields["📖 Task Detail"] || "",
         rawDueDate: rawDueDate, // Keep the original date for sorting
@@ -143,7 +143,15 @@ export async function completeStaffTask(taskId){
   }
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-  await base("Staff").update([
+  logger.info("Completing task:", taskId)
+  try {
+    const record = await base("Tasks").find(taskId);
+    console.log("Found record:", record);
+  } catch (e) {
+    logger.error("Record not found in Tasks table:", e);
+  }
+
+  await base("Tasks").update([
     {
       id: taskId,
       fields: {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { z } from "zod"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
 import { CalendarIcon, Check, ChevronsUpDown, Loader2 } from "lucide-react"
@@ -29,7 +29,7 @@ const taskSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }),
   description: z.string().optional(),
   assignTo: z.string({ required_error: "Please select a staff member" }),
-  urgency: z.string({ required_error: "Please select urgency level" }),
+  urgency: z.string().min(1, "Please select urgency"),
   dueDate: z.date({ required_error: "Please select a due date" }),
   createdBy: z.string(),
 })
@@ -42,9 +42,12 @@ const urgencyOptions = [
   { value: "very-low", label: "Very Low" },
 ]
 
-export function NewTaskModal({ open, onOpenChange, onTaskCreate, userName = "Current User" }) {
+export function NewTaskModal({ open, onOpenChange, onTaskCreate }) {
   const [staff, setStaff] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [currentUser, setCurrentUser] = useState({ id: '', name: '' })
+  const [urgencyOpen, setUrgencyOpen] = useState(false)
+  const [dateOpen, setDateOpen] = useState(false)
 
   const form = useForm({
     resolver: zodResolver(taskSchema),
@@ -52,9 +55,9 @@ export function NewTaskModal({ open, onOpenChange, onTaskCreate, userName = "Cur
       title: "",
       description: "",
       assignTo: "",
-      urgency: "medium",
-      dueDate: new Date(),
-      createdBy: userName,
+      urgency: "",
+      dueDate: undefined,
+      createdBy: "",
     },
   })
 
@@ -72,13 +75,27 @@ export function NewTaskModal({ open, onOpenChange, onTaskCreate, userName = "Cur
       }
     }
 
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch("/api/admin/dashboard/current-user")
+        if (!res.ok) throw new Error("Not authenticated")
+        const data = await res.json()
+        setCurrentUser({ id: data.id, name: data.name })
+        form.setValue("createdBy", data.name)
+      } catch (error) {
+        setCurrentUser({ id: '', name: '' })
+        form.setValue("createdBy", "")
+      }
+    }
+
     if (open) {
       fetchStaff()
+      fetchCurrentUser()
     }
   }, [open])
 
   function onSubmit(values) {
-    onTaskCreate(values)
+    onTaskCreate({ ...values, createdById: currentUser.id })
     form.reset()
     onOpenChange(false)
   }
@@ -182,91 +199,91 @@ export function NewTaskModal({ open, onOpenChange, onTaskCreate, userName = "Cur
                 )}
               />
 
-              <FormField
+              <Controller
                 control={form.control}
                 name="urgency"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <div>
                     <FormLabel>Urgency</FormLabel>
-                    <Popover>
+                    <Popover open={urgencyOpen} onOpenChange={setUrgencyOpen}>
                       <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn("justify-between", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value
-                              ? urgencyOptions.find((option) => option.value === field.value)?.label
-                              : "Select urgency"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {field.value
+                            ? urgencyOptions.find((o) => o.value === field.value)?.label
+                            : "Select urgency"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4" />
+                        </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="p-0">
-                        <Command>
-                          <CommandList>
-                            <CommandGroup>
-                              {urgencyOptions.map((option) => (
-                                <CommandItem
-                                  key={option.value}
-                                  value={option.value}
-                                  onSelect={() => {
-                                    form.setValue("urgency", option.value)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      option.value === field.value ? "opacity-100" : "opacity-0",
-                                    )}
-                                  />
-                                  {option.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
+                      <PopoverContent className="p-0 w-full">
+                        {urgencyOptions.map((option) => (
+                          <div
+                            key={option.value}
+                            className={`flex items-center px-3 py-2 cursor-pointer hover:bg-muted ${
+                              field.value === option.value ? "bg-muted" : ""
+                            }`}
+                            onClick={() => {
+                              field.onChange(option.value)
+                              setUrgencyOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                field.value === option.value ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {option.label}
+                          </div>
+                        ))}
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
-                  </FormItem>
+                    {form.formState.errors.urgency && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {form.formState.errors.urgency.message}
+                      </p>
+                    )}
+                  </div>
                 )}
               />
 
-              <FormField
+              <Controller
                 control={form.control}
                 name="dueDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <div>
                     <FormLabel>Due Date</FormLabel>
-                    <Popover>
+                    <Popover open={dateOpen} onOpenChange={setDateOpen}>
                       <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </FormControl>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "PPP") : "Pick a date"}
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date)
+                            setDateOpen(false)
+                          }}
                           initialFocus
                           className="rounded-md border"
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
-                  </FormItem>
+                    {form.formState.errors.dueDate && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {form.formState.errors.dueDate.message}
+                      </p>
+                    )}
+                  </div>
                 )}
               />
 

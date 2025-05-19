@@ -20,7 +20,7 @@ import { Badge } from "@components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
-import { NewTaskModal } from "./subComponents/new-staff-modal"
+import { NewTaskModal } from "./subComponents/new-staff-task-modal"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
@@ -60,7 +60,7 @@ export function TaskManagement() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
-  const [currentUser, setCurrentUser] = useState("John Doe") // This would come from your auth system
+  const [currentUser, setCurrentUser] = useState("John Doe")
 
   const fetchTasks = () => {
     setLoading(true)
@@ -70,6 +70,7 @@ export function TaskManagement() {
         return res.json()
       })
       .then((data) => {
+        console.log("Fetched tasks:", data.tasks);
         setTasks(data.tasks || { upcoming: [], overdue: [], blocked: [] })
         setLoading(false)
       })
@@ -81,11 +82,15 @@ export function TaskManagement() {
   }
 
   const completeTask = async(taskId) => {
-    const response = await fetch(`/api/tasks/${taskId}`, {
+    console.log("PATCHing taskId:", taskId);
+    const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json"},
       body: JSON.stringify({ action: "complete" })
     })
+    if (response.ok) {
+      fetchTasks(); // Refresh the list after completion
+    }
   }
 
   useEffect(() => {
@@ -225,7 +230,10 @@ export function TaskManagement() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => completeTask(task.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          console.log("Completing task:", task);
+                          completeTask(task.id);
+                        }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
                         <DropdownMenu>
