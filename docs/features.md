@@ -61,6 +61,13 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
   - Deadline notifications
   - Completion verification
 
+- **Task Deletion with Undo**
+  - When a user deletes a task, it is immediately removed from the UI and a notification (toast) appears with an Undo option.
+  - The actual delete request to the backend is delayed until the notification disappears (after a set duration, e.g., 10 seconds).
+  - If the user clicks Undo, the task is restored in the UI and no delete request is sent.
+  - If the notification is dismissed or times out, the task is permanently deleted from the backend.
+  - This pattern prevents accidental data loss and provides a user-friendly experience.
+
 ### 2. Dashboard System
 - **Overview Dashboard**
   - Task completion statistics

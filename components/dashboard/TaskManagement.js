@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   CheckCircle2,
@@ -11,8 +11,11 @@ import {
   MoreHorizontal,
   Plus,
   FileText,
+  Pencil,
+  Trash,
+  X
 } from "lucide-react"
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@components/ui/dialog" 
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Button } from "@components/ui/button"
@@ -48,6 +51,18 @@ const statusColors = {
   blocked: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
 }
 
+function getStatusGroup(status) {
+  const normalizedStatus = (status || "").toLowerCase().trim();
+  if (normalizedStatus === "today" || normalizedStatus === "in-progress") {
+    return "upcoming";
+  } else if (normalizedStatus === "overdue") {
+    return "overdue";
+  } else if (normalizedStatus === "blocked") {
+    return "blocked";
+  }
+  return "upcoming"; // Default fallback
+}
+
 export function TaskManagement() {
   const [expandedGroups, setExpandedGroups] = useState({
     "very high": true,
@@ -64,6 +79,11 @@ export function TaskManagement() {
   const [currentUser, setCurrentUser] = useState("John Doe")
   const [staff, setStaff] = useState([])
 
+  const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState(null)
+  const [recentlyDeletedTask, setRecentlyDeletedTask] = useState(null)
+  const undoTimeoutRef = useRef(null)
+  
   const fetchTasks = () => {
     setLoading(true)
     fetch("/api/dashboard/tasks")
@@ -95,6 +115,50 @@ export function TaskManagement() {
     }
   }
 
+  const deleteTask = (taskId) => {
+    // Find and remove from UI
+    let deletedTask;
+    const newTasks = { ...tasks };
+    for (const key of Object.keys(newTasks)) {
+      const idx = newTasks[key].findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        deletedTask = newTasks[key][idx];
+        newTasks[key] = [
+          ...newTasks[key].slice(0, idx),
+          ...newTasks[key].slice(idx + 1),
+        ];
+        break;
+      }
+    }
+    setTasks(newTasks);
+
+    toast(
+      <div>
+        <span>Task deleted.</span>
+        <Button onClick={() => handleUndoDelete(deletedTask)} size="sm" variant="outline" className="ml-2">Undo</Button>
+      </div>,
+      {
+        duration: 10000,
+        onAutoClose: async () => {
+          if (deletedTask) {
+            console.log("Deleting task:", deletedTask);
+            await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: 'DELETE' });
+          }
+        }
+      }
+    );
+  };
+
+  const handleUndoDelete = (task) => {
+    if (!task) return;
+    const group = getStatusGroup(task.status);
+    setTasks((prev) => ({
+      ...prev,
+      [group]: [task, ...prev[group]]
+    }));
+    toast.dismiss();
+  };
+
   useEffect(() => {
     fetchTasks()
 
@@ -108,6 +172,12 @@ export function TaskManagement() {
       .then((res) => res.json())
       .then((data) => setStaff(data))
       .catch(() => setStaff([]));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    };
   }, []);
 
   const toggleGroup = (group) => {
@@ -273,18 +343,20 @@ export function TaskManagement() {
                         }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Reassign</DropdownMenuItem>
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuItem>Postpone</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                          onClick={() => {
+                            setDeleteTaskDialogOpen(true)
+                            setTaskToDelete(task)
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                     {task.description && (
@@ -418,6 +490,51 @@ export function TaskManagement() {
         onTaskCreate={handleNewTaskCreated}
         userName={currentUser}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteTaskDialogOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0f1729] text-white rounded-lg w-full max-w-md p-6 relative"
+            >
+              <button
+                onClick={() => setDeleteTaskDialogOpen(false)}
+                className="absolute right-4 top-4 text-gray-400 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+
+              <h2 className="text-xl font-semibold mb-2">Delete Task</h2>
+              <p className="text-gray-400 mb-6">Are you sure you want to delete this task?</p>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteTaskDialogOpen(false)}
+                  className="bg-primary text-black border-none"
+                >
+                  No
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (taskToDelete) {
+                      deleteTask(taskToDelete.id)
+                      setDeleteTaskDialogOpen(false)
+                    }
+                  }}
+                  className="bg-[#9e2a2b] hover:bg-[#801f20] text-white border-none"
+                >
+                  Yes
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

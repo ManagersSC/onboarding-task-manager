@@ -160,3 +160,18 @@ export async function completeStaffTask(taskId){
     }
   ]);
 }
+
+export async function deleteStaffTask(taskId) {
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Airtable environment variables are missing");
+  }
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+
+  logger.info("Deleting task:", taskId);
+  try {
+    await base("Tasks").destroy([taskId]);
+  } catch (e) {
+    logger.error("Error deleting task in Tasks table:", e);
+    throw e;
+  }
+}
