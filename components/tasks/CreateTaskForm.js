@@ -7,7 +7,7 @@ import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
 import { RefreshCw, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { motion } from "framer-motion"
 
 // Animation variants for staggered children
@@ -134,11 +134,12 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
   // Handle task creation with assignment
   const handleCreateTask = async () => {
     if (!validateForm()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fix the errors in the form",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Validation Error</div>
+          <div className="text-sm opacity-80">Please fix the errors in the form</div>
+        </div>
+      )
       return
     }
 
@@ -180,10 +181,12 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
         successMessage = `Task "${taskName}" created successfully`
       }
 
-      toast({
-        title: "Success",
-        description: successMessage,
-      })
+      toast.success(
+        <div>
+          <div className="font-semibold">Success</div>
+          <div className="text-sm opacity-80">{successMessage}</div>
+        </div>
+      )
 
       // Call the onSuccess callback with the created task data
       if (onSuccess) {
@@ -191,11 +194,12 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
       }
     } catch (error) {
       console.error("Error creating task:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm opacity-80">{error instanceof Error ? error.message : "An unexpected error occurred"}</div>
+        </div>
+      )
     } finally {
       setIsCreatingTask(false)
     }

@@ -91,14 +91,14 @@ export async function GET(request) {
         "Display Desc", 
         "Display Resource Link", 
         "Last Status Change Time",
-        "Created",
+        "Created Date",
         "Task Week Number",
         "Folder Name",
         "isCustom",
         "Urgency"
       ],
       sort: [
-        { field: "Created", direction: "desc" },
+        { field: "Created Date", direction: "desc" },
       ]
     })
     .all()
@@ -159,7 +159,7 @@ export async function GET(request) {
     })
     logAuditEvent({
       eventType: "User",
-      eventStatus: "Errror",
+      eventStatus: "Error",
       userRole: userRole || "Unknown",
       userName: userName || "Unknown",
       userIdentifier: userEmail,

@@ -21,7 +21,7 @@ import {
 import { useTheme } from "@components/theme-provider"
 import { RadioGroup, RadioGroupItem } from "@components/ui/radio-group"
 import { Label } from "@components/ui/label"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 export function ProfileActions() {
   const router = useRouter()
@@ -171,11 +171,13 @@ function ThemeSelector() {
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme)
-    toast({
-      title: "Theme updated",
-      description: `Theme changed to ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)}`,
-      duration: 2000,
-    })
+    toast(
+      <div>
+        <div className="font-semibold">Theme updated</div>
+        <div className="text-sm opacity-80">Theme changed to {newTheme.charAt(0).toUpperCase() + newTheme.slice(1)}</div>
+      </div>,
+      { duration: 2000 }
+    )
   }
 
   return (

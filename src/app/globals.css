@@ -165,3 +165,37 @@
   --rdp-outline-offset: 2px;
   margin: 0;
 }
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+[data-state="open"][data-radix-toast-root] {
+  animation: slideInFromBottom 0.3s ease-out forwards;
+}
+
+[data-state="closed"][data-radix-toast-root] {
+  animation: slideOutToRight 0.3s ease-in forwards;
+}
+
+[data-radix-toast-viewport] {
+  overflow: hidden !important;
+}

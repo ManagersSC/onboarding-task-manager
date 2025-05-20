@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
+import { toast } from "sonner"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
@@ -61,6 +62,7 @@ export function TaskManagement() {
   const [error, setError] = useState(null)
   const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState("John Doe")
+  const [staff, setStaff] = useState([])
 
   const fetchTasks = () => {
     setLoading(true)
@@ -101,6 +103,13 @@ export function TaskManagement() {
     // fetchCurrentUser().then(user => setCurrentUser(user.name))
   }, [])
 
+  useEffect(() => {
+    fetch("/api/admin/staff")
+      .then((res) => res.json())
+      .then((data) => setStaff(data))
+      .catch(() => setStaff([]));
+  }, []);
+
   const toggleGroup = (group) => {
     setExpandedGroups({
       ...expandedGroups,
@@ -115,10 +124,38 @@ export function TaskManagement() {
     })
   }
 
-  const handleNewTaskCreated = () => {
-    // Refresh the task list after creating a new task
-    fetchTasks()
-  }
+  const handleNewTaskCreated = async (taskData) => {
+    try {
+      const response = await fetch("/api/dashboard/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskData),
+      });
+      if (!response.ok) throw new Error("Failed to create task");
+      fetchTasks(); // Refresh the list after creating
+      // Find staff name
+      let staffName = "Unknown";
+      if (taskData.assignTo) {
+        const staffObj = staff.find((s) => s.id === taskData.assignTo);
+        if (staffObj) staffName = staffObj.name;
+      }
+      toast.success(
+        <div>
+          <div className="font-semibold">Task Created Successfully</div>
+          <div className="text-sm opacity-80">"{taskData.title}" assigned to {staffName}</div>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (err) {
+      toast.error(
+        <div>
+          <div className="font-semibold">Error Creating Task</div>
+          <div className="text-sm opacity-80">{err.message}</div>
+        </div>,
+        { duration: 5000 }
+      );
+    }
+  };
 
   const groupTasksByPriority = (taskList) => {
     return taskList.reduce((acc, task) => {

@@ -232,7 +232,7 @@ describe("GET /api/get-tasks", () => {
     expect(logAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "User",
-        eventStatus: "Errror",
+        eventStatus: "Error",
         userIdentifier: "test@example.com",
         detailedMessage: expect.stringContaining("Airtable error"),
         request: req

@@ -1,7 +1,8 @@
 import { Inter } from "next/font/google"
-import { Toaster } from "@components/ui/toaster"
+import { Toaster } from "sonner"
 import { ThemeProvider } from "@components/theme-provider"
 import "./globals.css"
+import AppToaster from "@components/AppToaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -16,7 +17,7 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} min-h-screen bg-[#f8f9fa]`}>
         <ThemeProvider defaultTheme="dark" storageKey="admin-theme">
           {children}
-          <Toaster />
+          <AppToaster />
         </ThemeProvider>
       </body>
     </html>

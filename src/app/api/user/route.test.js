@@ -164,7 +164,7 @@ describe("User Route (/api/user)", () => {
     expect(logAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "User",
-        eventStatus: "Errror",
+        eventStatus: "Error",
         userIdentifier: "error@example.com",
         detailedMessage: expect.stringContaining("Airtable error"),
         request: req,

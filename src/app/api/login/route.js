@@ -134,7 +134,7 @@ export async function POST(request) {
     });
     logAuditEvent({
       eventType: "Login",
-      eventStatus: "Errror",
+      eventStatus: "Error",
       userIdentifier: normalisedEmail,
       userRole,
       userName,

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui
 import { ScrollArea } from "@components/ui/scroll-area"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { cn } from "@components/lib/utils"
 import {
   Download,
@@ -254,11 +254,12 @@ const RenameDialog = ({ file, isOpen, onClose, onSave }) => {
 
   const handleSave = () => {
     if (newName.trim() === "") {
-      toast({
-        title: "Error",
-        description: "Filename cannot be empty",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm opacity-80">Filename cannot be empty</div>
+        </div>
+      )
       return
     }
 
@@ -391,11 +392,12 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
       setShowUploadArea(false)
     } catch (error) {
       console.error("Error fetching files:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load files",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm opacity-80">Failed to load files</div>
+        </div>
+      )
     } finally {
       setIsLoading(false)
     }
@@ -493,11 +495,12 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
   // Save changes
   const handleSaveChanges = async () => {
     if (!taskId) {
-      toast({
-        title: "Error",
-        description: "Task ID is required",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm opacity-80">Task ID is required</div>
+        </div>
+      )
       return
     }
 
@@ -537,10 +540,12 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
 
       const data = await response.json()
 
-      toast({
-        title: "Success",
-        description: "Changes saved successfully",
-      })
+      toast.success(
+        <div>
+          <div className="font-semibold">Success</div>
+          <div className="text-sm opacity-80">Changes saved successfully</div>
+        </div>
+      )
 
       // Reset state
       setNewFiles([])
@@ -565,11 +570,12 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
       }
     } catch (error) {
       console.error("Error saving changes:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save changes",
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm opacity-80">{error.message || "Failed to save changes"}</div>
+        </div>
+      )
     } finally {
       setIsSaving(false)
     }
@@ -614,11 +620,12 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
       URL.revokeObjectURL(blobUrl)
     } catch (err) {
       console.error(err)
-      toast({
-        title: "Download error",
-        description: err.message,
-        variant: "destructive",
-      })
+      toast.error(
+        <div>
+          <div className="font-semibold">Download error</div>
+          <div className="text-sm opacity-80">{err.message}</div>
+        </div>
+      )
     }
   }
 

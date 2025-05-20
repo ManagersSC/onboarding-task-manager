@@ -100,7 +100,7 @@ describe("Logout Route (/api/logout)", () => {
     expect(logger.error).toHaveBeenCalledWith("Logout Error:", expect.any(Error));
     expect(auditLogger.logAuditEvent).toHaveBeenCalledWith({
       eventType: "Logout",
-      eventStatus: "Errror",
+      eventStatus: "Error",
       userIdentifier: "test@example.com",
       detailedMessage: expect.stringContaining("Delete error"),
       request: req,
