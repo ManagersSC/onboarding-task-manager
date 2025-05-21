@@ -21,21 +21,24 @@ export function ResourceHub() {
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileModalOpen, setFileModalOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(5)
+  const [totalCount, setTotalCount] = useState(0)
 
   // Fetch resources on component mount and when search query changes
   useEffect(() => {
     fetchResources()
   }, [])
 
-  // Handle search with debounce
+  // Fetch when page or search changes
   useEffect(() => {
     if (searchTimeout) {
       clearTimeout(searchTimeout)
     }
 
     const timeout = setTimeout(() => {
-      fetchResources(searchQuery)
-    }, 500) // 500ms debounce
+      fetchResources(searchQuery, page)
+    }, 500)
 
     setSearchTimeout(timeout)
 
@@ -44,12 +47,16 @@ export function ResourceHub() {
         clearTimeout(searchTimeout)
       }
     }
-  }, [searchQuery])
+  }, [searchQuery, page])
 
-  const fetchResources = async (query = "") => {
+  const fetchResources = async (query = "", pageNum = 1) => {
     setLoading(true)
     try {
-      const url = `/api/admin/dashboard/resource-hub/${query ? `?query=${encodeURIComponent(query)}` : ""}`
+      const params = new URLSearchParams()
+      if (query) params.append("query", query)
+      params.append("page", pageNum)
+      params.append("pageSize", pageSize)
+      const url = `/api/admin/dashboard/resource-hub/?${params.toString()}`
       const response = await fetch(url)
 
       if (!response.ok) {
@@ -57,21 +64,15 @@ export function ResourceHub() {
       }
 
       const data = await response.json()
-
-      // Format the data and set state
-      const formattedResources = data.map((resource) => ({
+      const formattedResources = (data.resources || []).map((resource) => ({
         ...resource,
-        // Format the date to a relative time (e.g., "2 days ago")
         formattedDate: formatRelativeTime(resource.updatedAt),
       }))
-
       setResources(formattedResources)
-
-      // If this is the initial load (no search query), also set recent resources
-      if (!query) {
+      setTotalCount(data.totalCount || 0)
+      if (!query && pageNum === 1) {
         setRecentResources(formattedResources)
       }
-
       setError(null)
     } catch (err) {
       console.error("Error fetching resources:", err)
@@ -204,6 +205,28 @@ export function ResourceHub() {
 
             <TabsContent value="templates" className="mt-4 space-y-2">
               {renderResourceList(resources)}
+              {/* Pagination Controls */}
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1 || loading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= Math.ceil(totalCount / pageSize) || loading}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="recent" className="mt-4 space-y-2">

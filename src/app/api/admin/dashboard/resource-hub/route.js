@@ -10,12 +10,17 @@ export async function GET(req){
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
     const searchQuery = req.nextUrl.searchParams.get('query');
+    const page = parseInt(req.nextUrl.searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(req.nextUrl.searchParams.get('pageSize') || '5', 10);
 
     try {
-        const allRecords = await base("Onboarding Tasks")
-            .select({
-                maxRecords: 20
-            }).all();
+        let allRecords = [];
+        await base("Onboarding Tasks")
+            .select({})
+            .eachPage((records, fetchNextPage) => {
+                allRecords = allRecords.concat(records);
+                fetchNextPage();
+            });
 
         let filteredResources = allRecords;
 
@@ -66,9 +71,18 @@ export async function GET(req){
             );
         }
         // Limit to 5 files
-        const resources = filteredFiles.slice(0, 5);
+        // Pagination logic
+        const totalCount = filteredFiles.length;
+        const startIdx = (page - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        const resources = filteredFiles.slice(startIdx, endIdx);
 
-        return NextResponse.json(resources);
+        return NextResponse.json({
+            resources,
+            totalCount,
+            page,
+            pageSize
+        });
 
     } catch (error) {
         logger.error('Error fetching resources from Airtable:', error);
