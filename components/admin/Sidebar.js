@@ -77,11 +77,11 @@ export function Sidebar() {
     <>
       <div
         className={cn(
-          "flex flex-col bg-background border-r transition-all duration-300 ease-in-out dark:bg-gray-900 dark:border-gray-800 h-screen",
+          "flex flex-col bg-primary text-primary-foreground border-r transition-all duration-300 ease-in-out h-screen",
           isCollapsed ? "w-16" : "w-64",
         )}
       >
-        <div className="flex items-center h-14 px-4 border-b dark:border-gray-800 bg-primary/5">
+        <div className="flex items-center h-14 px-4 border-b bg-primary text-primary-foreground">
           {!isCollapsed && (
             <Link href="/admin/dashboard" className="font-semibold text-lg">
               Onboarding Manager
@@ -198,7 +198,7 @@ export function Sidebar() {
           </nav>
         </div>
 
-        <div className="p-3 border-t dark:border-gray-800 space-y-2">
+        <div className="p-3 border-t bg-primary text-primary-foreground space-y-2">
           {/* Theme Toggle */}
           <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
             {isCollapsed ? (

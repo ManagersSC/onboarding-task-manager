@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function AdminTasksPage() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-background">
       <ResourcePage />
     </div>
   )

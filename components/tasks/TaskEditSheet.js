@@ -34,7 +34,7 @@ import {
 } from "@components/ui/alert-dialog"
 import { Check, ChevronsUpDown, Plus, AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip } from "lucide-react"
 import { cn } from "@components/lib/utils"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Badge } from "@components/ui/badge"
 
 // Form validation schema

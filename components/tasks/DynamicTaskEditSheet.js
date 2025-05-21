@@ -21,7 +21,7 @@ import { Skeleton } from "@components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip, Plus, ChevronsUpDown } from "lucide-react"
 import { cn } from "@components/lib/utils"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Badge } from "@components/ui/badge"
 
 export function DynamicTaskEditSheet({

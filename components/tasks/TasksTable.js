@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip } from "lucide-react"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
 import { SkeletonRow } from "./SkeletonRow"
