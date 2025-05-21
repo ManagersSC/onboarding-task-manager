@@ -13,18 +13,26 @@ import {
   FileText,
   Pencil,
   Trash,
-  X
+  X,
+  CalendarIcon
 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@components/ui/dialog" 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Input } from "@components/ui/input"
+import { Label } from "@components/ui/label"
+import { Textarea } from "@components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
+import { Save } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
-import { toast } from "sonner"
+import { toast, Toaster } from "sonner"
+import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
+import { format, parse, isValid } from "date-fns"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
@@ -63,6 +71,14 @@ function getStatusGroup(status) {
   return "upcoming"; // Default fallback
 }
 
+const statusMap = {
+  "in-progress": "In-Progress",
+  "completed": "Completed",
+  "blocked": "Blocked",
+  "overdue": "Overdue",
+  "today": "In-Progress",
+};
+
 export function TaskManagement() {
   const [expandedGroups, setExpandedGroups] = useState({
     "very high": true,
@@ -83,6 +99,11 @@ export function TaskManagement() {
   const [taskToDelete, setTaskToDelete] = useState(null)
   const [recentlyDeletedTask, setRecentlyDeletedTask] = useState(null)
   const undoTimeoutRef = useRef(null)
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [taskToEdit, setTaskToEdit] = useState(null)
+  const [editedTask, setEditedTask] = useState(null)
+  const [hasChanges, setHasChanges] = useState(false)
   
   const fetchTasks = () => {
     setLoading(true)
@@ -104,14 +125,17 @@ export function TaskManagement() {
   }
 
   const completeTask = async(taskId) => {
-    console.log("PATCHing taskId:", taskId);
-    const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json"},
-      body: JSON.stringify({ action: "complete" })
-    })
-    if (response.ok) {
+    try {
+      const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json"},
+        body: JSON.stringify({ action: "complete" })
+      });
+      if (!response.ok) throw new Error("Failed to complete task");
       fetchTasks(); // Refresh the list after completion
+      toast.success("Task marked as complete!");
+    } catch (err) {
+      toast.error("Error completing task: " + err.message);
     }
   }
 
@@ -141,8 +165,13 @@ export function TaskManagement() {
         duration: 10000,
         onAutoClose: async () => {
           if (deletedTask) {
-            console.log("Deleting task:", deletedTask);
-            await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: 'DELETE' });
+            try {
+              const res = await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: 'DELETE' });
+              if (!res.ok) throw new Error("Failed to delete task");
+              toast.success("Task permanently deleted.");
+            } catch (err) {
+              toast.error("Error deleting task: " + err.message);
+            }
           }
         }
       }
@@ -157,14 +186,88 @@ export function TaskManagement() {
       [group]: [task, ...prev[group]]
     }));
     toast.dismiss();
+    toast.success("Task restored.");
+  };
+
+  const openEditDialog = (task) => {
+    const normalizeStatus = (status) => {
+      if (!status) return "";
+      const key = status.toLowerCase().replace(/\s+/g, "-");
+      return statusMap[key];
+    };
+    // Find staff ID from name
+    let staffId = "";
+    if (task.for) {
+      const staffObj = staff.find((s) => s.name === task.for);
+      staffId = staffObj ? staffObj.id : "";
+    }
+    setTaskToEdit(task);
+    setEditedTask({
+      ...task,
+      status: normalizeStatus(task.status),
+      dueDate: task.rawDueDate || task.dueDate,
+      for: staffId,
+    });
+    setEditDialogOpen(true);
+    setHasChanges(false);
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setEditedTask((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    setHasChanges(true)
+  }
+
+  const handleSelectChange = (name, value) => {
+    setEditedTask((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    setHasChanges(true)
+  }
+
+  const saveChanges = async () => {
+    try {
+      const response = await fetch(`/api/dashboard/tasks/${editedTask.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          title: editedTask.title,
+          description: editedTask.description,
+          blockedReason: editedTask.blockedReason,
+          priority: editedTask.priority,
+          status: editedTask.status,
+          dueDate: editedTask.dueDate,
+          for: editedTask.for ? [editedTask.for] : [], // always send array of staff ID
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update task");
+      fetchTasks(); // Refresh the list from backend
+      setEditDialogOpen(false);
+      setHasChanges(false);
+      toast.success("Task updated!");
+    } catch (err) {
+      toast.error("Error updating task: " + err.message);
+    }
   };
 
   useEffect(() => {
-    fetchTasks()
+    if (taskToEdit && editedTask) {
+      const isChanged = Object.keys(taskToEdit).some((key) => {
+        // Skip id and createdBy as they shouldn't trigger change detection
+        if (key === "id" || key === "createdBy") return false
+        return taskToEdit[key] !== editedTask[key]
+      })
+      setHasChanges(isChanged)
+    }
+  }, [editedTask, taskToEdit])
 
-    // In a real app, you would fetch the current user here
-    // Example:
-    // fetchCurrentUser().then(user => setCurrentUser(user.name))
+  useEffect(() => {
+    fetchTasks()
   }, [])
 
   useEffect(() => {
@@ -343,7 +446,12 @@ export function TaskManagement() {
                         }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(task)}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -423,6 +531,7 @@ export function TaskManagement() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
+      <Toaster position="top-right" richColors />
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -529,6 +638,208 @@ export function TaskManagement() {
                   className="bg-[#9e2a2b] hover:bg-[#801f20] text-white border-none"
                 >
                   Yes
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Task Dialog */}
+      <AnimatePresence>
+        {editDialogOpen && editedTask && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#111827] text-white rounded-lg w-full max-w-2xl p-6 relative"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold">Edit Task</h2>
+                  {hasChanges && (
+                    <Badge className="bg-orange-500 text-white font-medium px-3 py-1">Unsaved Changes</Badge>
+                  )}
+                </div>
+                <button
+                  onClick={() => setEditDialogOpen(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className="text-gray-400 italic mb-5 text-sm">ID: {editedTask.id}</p>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title" className="text-gray-300 mb-1.5 block">
+                    Title
+                  </Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    value={editedTask.title}
+                    onChange={handleInputChange}
+                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="description" className="text-gray-300 mb-1.5 block">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={editedTask.description}
+                    onChange={handleInputChange}
+                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="blockedReason" className="text-gray-300 mb-1.5 block">
+                    Blocked Reason (if any)
+                  </Label>
+                  <Input
+                    id="blockedReason"
+                    name="blockedReason"
+                    value={editedTask.blockedReason}
+                    onChange={handleInputChange}
+                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="priority" className="text-gray-300 mb-1.5 block">
+                      Priority
+                    </Label>
+                    <Select
+                      value={editedTask.priority}
+                      onValueChange={(value) => handleSelectChange("priority", value)}
+                    >
+                      <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                        <SelectItem value="Very High">Very High</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Very Low">Very Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="status" className="text-gray-300 mb-1.5 block">
+                      Status
+                    </Label>
+                    <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
+                      <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                        <SelectItem value="In-Progress">In-Progress</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Blocked">Blocked</SelectItem>
+                        <SelectItem value="Overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="dueDate" className="text-gray-300 mb-1.5 block">
+                    Due Date
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editedTask.dueDate && isValid(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()))
+                          ? format(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()), "PPP")
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+                      <div className="rounded-md border">
+                        <CustomCalendar
+                          selected={editedTask.dueDate ? parse(editedTask.dueDate, "yyyy-MM-dd", new Date()) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const localStr = format(date, "yyyy-MM-dd");
+                              setEditedTask((prev) => ({
+                                ...prev,
+                                dueDate: localStr,
+                              }));
+                              setHasChanges(true);
+                            }
+                          }}
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label htmlFor="for" className="text-gray-300 mb-1.5 block">
+                    Assigned To
+                  </Label>
+                  <Select
+                    value={editedTask.for || ""}
+                    onValueChange={(value) => handleSelectChange("for", value)}
+                  >
+                    <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                      <SelectValue placeholder="Select staff" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                      {staff.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="createdBy" className="text-gray-300 mb-1.5 block">
+                    Created By
+                  </Label>
+                  <Input
+                    id="createdBy"
+                    value={editedTask.createdBy}
+                    disabled
+                    className="bg-[#1E293B] border-[#334155] text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                  className="bg-transparent hover:bg-gray-700 text-white border-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveChanges}
+                  disabled={!hasChanges}
+                  className={`flex items-center gap-2 ${
+                    hasChanges
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  }`}
+                >
+                  <Save size={16} />
+                  Save Changes
                 </Button>
               </div>
             </motion.div>

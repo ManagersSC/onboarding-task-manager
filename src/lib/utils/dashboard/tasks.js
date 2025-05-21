@@ -175,3 +175,33 @@ export async function deleteStaffTask(taskId) {
     throw e;
   }
 }
+
+export async function editStaffTask(taskId, fields) {
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Airtable environment variables are missing");
+  }
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+
+  // Map fields to Airtable columns
+  const airtableFields = {};
+  if (fields.title !== undefined) airtableFields["📌 Task"] = fields.title;
+  if (fields.description !== undefined) airtableFields["📖 Task Detail"] = fields.description;
+  if (fields.blockedReason !== undefined) airtableFields["Blocked Reason"] = fields.blockedReason;
+  if (fields.priority !== undefined) airtableFields["🚨 Urgency"] = fields.priority;
+  if (fields.status !== undefined) airtableFields["🚀 Status"] = fields.status;
+  if (fields.dueDate !== undefined) airtableFields["📆 Due Date"] = fields.dueDate;
+  if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
+  // createdBy is not editable
+
+  try {
+    const updated = await base("Tasks").update([
+      {
+        id: taskId,
+        fields: airtableFields,
+      },
+    ]);
+    return updated[0];
+  } catch (e) {
+    throw e;
+  }
+}
