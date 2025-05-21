@@ -14,7 +14,8 @@ import {
   Pencil,
   Trash,
   X,
-  CalendarIcon
+  CalendarIcon,
+  RefreshCw
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
@@ -536,10 +537,16 @@ export function TaskManagement() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>Task Management</CardTitle>
-            <Button size="sm" onClick={() => setNewTaskModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              New Task
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={fetchTasks} title="Refresh tasks">
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={() => setNewTaskModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                New Task
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

@@ -204,6 +204,21 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 - System health checks
 - Backup procedures
 
+## Task Management: Refresh Button
+
+**Feature Added:** Refresh Button in Task Management UI
+
+- **Location:** In the Task Management component header, to the left of the "New Task" button.
+- **Icon:** Uses the `RefreshCw` icon from lucide-react.
+- **Purpose:** Allows users to manually refresh and refetch the latest tasks from the backend without reloading the page.
+- **Usage:**
+  - Click the "Refresh" button to reload the task list.
+  - The button is styled as an outlined button for clear distinction.
+
+**Developer Note:**
+- The button calls the `fetchTasks` function, which re-fetches tasks from `/api/dashboard/tasks` and updates the UI accordingly.
+- This improves user experience by providing a quick way to sync the task list with backend changes.
+
 ---
 
 This documentation is a living document and will be updated as new features are added or existing ones are modified. For the latest changes, please refer to the [changelog](./changelog/README.md). 
