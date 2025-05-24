@@ -115,7 +115,7 @@ export function NewTaskModal({ open, onOpenChange, onTaskCreate }) {
       fetchStaff()
       fetchCurrentUser()
     }
-  }, [open])
+  }, [open, form])
 
   function onSubmit(values) {
     const payload = {

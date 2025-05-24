@@ -26,6 +26,7 @@ import {
   Loader2,
   Pencil,
 } from "lucide-react"
+import Image from "next/image"
 
 // File type icons mapping
 const fileTypeIcons = {
@@ -164,10 +165,12 @@ const FileContentViewer = ({ file, content, isLoading }) => {
   if (fileType === "image") {
     return (
       <div className="flex items-center justify-center h-full">
-        <img
+        <Image
           src={file.url || "/placeholder.svg"}
           alt={file.filename}
           className="max-w-full max-h-full object-contain"
+          width={400}
+          height={400}
         />
       </div>
     )
@@ -349,7 +352,7 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
         if (file.objectUrl) URL.revokeObjectURL(file.objectUrl)
       })
     }
-  }, [isOpen, taskId])
+  }, [isOpen, taskId, fetchFiles, newFiles])
 
   // Fetch file content when selected file changes
   useEffect(() => {

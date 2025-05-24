@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Download, ExternalLink, FileText, ImageIcon, File, AlertCircle, Loader2 } from "lucide-react"
 import { formatBytes } from "@/lib/utils/format"
+import Image from "next/image"
 
 import {
   Dialog,
@@ -103,10 +104,12 @@ export function FileViewerModal({ file, open, onOpenChange }) {
     if (file.mimeType.startsWith("image/")) {
       return (
         <div className="flex items-center justify-center h-[400px] bg-muted/30 rounded-md overflow-hidden">
-          <img
+          <Image
             src={file.url || "/placeholder.svg"}
             alt={file.title}
             className="max-w-full max-h-full object-contain"
+            width={400}
+            height={400}
             onError={() => setError("Failed to load image")}
           />
         </div>

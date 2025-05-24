@@ -28,7 +28,7 @@ export function ResourceHub() {
   // Fetch resources on component mount and when search query changes
   useEffect(() => {
     fetchResources()
-  }, [])
+  }, [pageSize])
 
   // Fetch when page or search changes
   useEffect(() => {
@@ -47,7 +47,7 @@ export function ResourceHub() {
         clearTimeout(searchTimeout)
       }
     }
-  }, [searchQuery, page])
+  }, [searchQuery, page, fetchResources, searchTimeout])
 
   const fetchResources = async (query = "", pageNum = 1) => {
     setLoading(true)

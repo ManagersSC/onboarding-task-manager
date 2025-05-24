@@ -309,7 +309,8 @@ export function TaskManagement() {
 
   useEffect(() => {
     return () => {
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current)
+      const timeout = undoTimeoutRef.current
+      if (timeout) clearTimeout(timeout)
     }
   }, [])
 
@@ -346,7 +347,7 @@ export function TaskManagement() {
         <div>
           <div className="font-semibold">Task Created Successfully</div>
           <div className="text-sm opacity-80">
-            "{taskData.title}" assigned to {staffName}
+            &quot;{taskData.title}&quot; assigned to {staffName}
           </div>
         </div>,
         { duration: 5000 },
