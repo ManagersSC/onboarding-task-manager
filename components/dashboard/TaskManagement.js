@@ -8,14 +8,13 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  MoreHorizontal,
   Plus,
   FileText,
   Pencil,
   Trash,
   X,
   CalendarIcon,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
@@ -26,7 +25,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
 import { Save } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
@@ -61,24 +59,86 @@ const statusColors = {
 }
 
 function getStatusGroup(status) {
-  const normalizedStatus = (status || "").toLowerCase().trim();
+  const normalizedStatus = (status || "").toLowerCase().trim()
   if (normalizedStatus === "today" || normalizedStatus === "in-progress") {
-    return "upcoming";
+    return "upcoming"
   } else if (normalizedStatus === "overdue") {
-    return "overdue";
+    return "overdue"
   } else if (normalizedStatus === "blocked") {
-    return "blocked";
+    return "blocked"
   }
-  return "upcoming"; // Default fallback
+  return "upcoming" // Default fallback
 }
 
 const statusMap = {
   "in-progress": "In-Progress",
-  "completed": "Completed",
-  "blocked": "Blocked",
-  "overdue": "Overdue",
-  "today": "In-Progress",
-};
+  completed: "Completed",
+  blocked: "Blocked",
+  overdue: "Overdue",
+  today: "In-Progress",
+}
+
+// Shared normalization functions
+const normalizeStatus = (status) => {
+  if (!status) return ""
+  const key = status.toLowerCase().replace(/\s+/g, "-")
+  return statusMap[key] || status
+}
+
+const normalizeStaffId = (val, staff) => {
+  if (!val) return ""
+  // If already an ID, return as is
+  if (staff.some((s) => s.id === val)) return val
+  // Otherwise, try to find by name
+  const found = staff.find((s) => s.name === val)
+  return found ? found.id : val
+}
+
+const normalizeDueDate = (date) => {
+  if (!date) return ""
+  try {
+    // If it's already in yyyy-MM-dd format, keep it
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date
+    return format(parse(date, "yyyy-MM-dd", new Date()), "yyyy-MM-dd")
+  } catch {
+    return date
+  }
+}
+
+// Helper to normalize a task object
+const normalizeTask = (task, staff) => {
+  return {
+    ...task,
+    title: task.title || "",
+    description: task.description || "",
+    blockedReason: task.blockedReason || "",
+    priority: task.priority || "",
+    status: normalizeStatus(task.status),
+    dueDate: normalizeDueDate(task.rawDueDate || task.dueDate),
+    for: normalizeStaffId(task.for, staff),
+  }
+}
+
+// Helper to compare only editable fields
+function isTaskChanged(original, edited, staff) {
+  if (!original || !edited) return false
+
+  // Normalize both tasks using the same logic
+  const normalizedOriginal = normalizeTask(original, staff)
+  const normalizedEdited = normalizeTask(edited, staff)
+
+  const fields = ["title", "description", "blockedReason", "priority", "status", "dueDate", "for"]
+
+  for (const key of fields) {
+    const origVal = (normalizedOriginal[key] ?? "").toString().trim()
+    const editVal = (normalizedEdited[key] ?? "").toString().trim()
+    if (origVal !== editVal) {
+      console.log(`Field ${key} changed: "${origVal}" -> "${editVal}"`)
+      return true
+    }
+  }
+  return false
+}
 
 export function TaskManagement() {
   const [expandedGroups, setExpandedGroups] = useState({
@@ -105,7 +165,7 @@ export function TaskManagement() {
   const [taskToEdit, setTaskToEdit] = useState(null)
   const [editedTask, setEditedTask] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
-  
+
   const fetchTasks = () => {
     setLoading(true)
     fetch("/api/dashboard/tasks")
@@ -114,7 +174,7 @@ export function TaskManagement() {
         return res.json()
       })
       .then((data) => {
-        console.log("Fetched tasks:", data.tasks);
+        console.log("Fetched tasks:", data.tasks)
         setTasks(data.tasks || { upcoming: [], overdue: [], blocked: [] })
         setLoading(false)
       })
@@ -125,92 +185,68 @@ export function TaskManagement() {
       })
   }
 
-  const completeTask = async(taskId) => {
+  const completeTask = async (taskId) => {
     try {
       const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ action: "complete" })
-      });
-      if (!response.ok) throw new Error("Failed to complete task");
-      fetchTasks(); // Refresh the list after completion
-      toast.success("Task marked as complete!");
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "complete" }),
+      })
+      if (!response.ok) throw new Error("Failed to complete task")
+      fetchTasks() // Refresh the list after completion
+      toast.success("Task marked as complete!")
     } catch (err) {
-      toast.error("Error completing task: " + err.message);
+      toast.error("Error completing task: " + err.message)
     }
   }
 
   const deleteTask = (taskId) => {
     // Find and remove from UI
-    let deletedTask;
-    const newTasks = { ...tasks };
+    let deletedTask
+    const newTasks = { ...tasks }
     for (const key of Object.keys(newTasks)) {
-      const idx = newTasks[key].findIndex((t) => t.id === taskId);
+      const idx = newTasks[key].findIndex((t) => t.id === taskId)
       if (idx !== -1) {
-        deletedTask = newTasks[key][idx];
-        newTasks[key] = [
-          ...newTasks[key].slice(0, idx),
-          ...newTasks[key].slice(idx + 1),
-        ];
-        break;
+        deletedTask = newTasks[key][idx]
+        newTasks[key] = [...newTasks[key].slice(0, idx), ...newTasks[key].slice(idx + 1)]
+        break
       }
     }
-    setTasks(newTasks);
+    setTasks(newTasks)
 
     toast(
       <div>
         <span>Task deleted.</span>
-        <Button onClick={() => handleUndoDelete(deletedTask)} size="sm" variant="outline" className="ml-2">Undo</Button>
+        <Button onClick={() => handleUndoDelete(deletedTask)} size="sm" variant="outline" className="ml-2">
+          Undo
+        </Button>
       </div>,
       {
         duration: 10000,
         onAutoClose: async () => {
           if (deletedTask) {
             try {
-              const res = await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: 'DELETE' });
-              if (!res.ok) throw new Error("Failed to delete task");
-              toast.success("Task permanently deleted.");
+              const res = await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: "DELETE" })
+              if (!res.ok) throw new Error("Failed to delete task")
+              toast.success("Task permanently deleted.")
             } catch (err) {
-              toast.error("Error deleting task: " + err.message);
+              toast.error("Error deleting task: " + err.message)
             }
           }
-        }
-      }
-    );
-  };
+        },
+      },
+    )
+  }
 
   const handleUndoDelete = (task) => {
-    if (!task) return;
-    const group = getStatusGroup(task.status);
+    if (!task) return
+    const group = getStatusGroup(task.status)
     setTasks((prev) => ({
       ...prev,
-      [group]: [task, ...prev[group]]
-    }));
-    toast.dismiss();
-    toast.success("Task restored.");
-  };
-
-  const openEditDialog = (task) => {
-    const normalizeStatus = (status) => {
-      if (!status) return "";
-      const key = status.toLowerCase().replace(/\s+/g, "-");
-      return statusMap[key];
-    };
-    // Find staff ID from name
-    let staffId = "";
-    if (task.for) {
-      const staffObj = staff.find((s) => s.name === task.for);
-      staffId = staffObj ? staffObj.id : "";
-    }
-    setTaskToEdit(task);
-    setEditedTask({
-      ...task,
-      status: normalizeStatus(task.status),
-      dueDate: task.rawDueDate || task.dueDate,
-      for: staffId,
-    });
-    setEditDialogOpen(true);
-    setHasChanges(false);
+      [group]: [task, ...prev[group]],
+    }))
+    toast.dismiss()
+    toast.success("Task restored.")
   }
 
   const handleInputChange = (e) => {
@@ -219,7 +255,6 @@ export function TaskManagement() {
       ...prev,
       [name]: value,
     }))
-    setHasChanges(true)
   }
 
   const handleSelectChange = (name, value) => {
@@ -227,7 +262,6 @@ export function TaskManagement() {
       ...prev,
       [name]: value,
     }))
-    setHasChanges(true)
   }
 
   const saveChanges = async () => {
@@ -245,27 +279,22 @@ export function TaskManagement() {
           dueDate: editedTask.dueDate,
           for: editedTask.for ? [editedTask.for] : [], // always send array of staff ID
         }),
-      });
-      if (!response.ok) throw new Error("Failed to update task");
-      fetchTasks(); // Refresh the list from backend
-      setEditDialogOpen(false);
-      setHasChanges(false);
-      toast.success("Task updated!");
+      })
+      if (!response.ok) throw new Error("Failed to update task")
+      fetchTasks() // Refresh the list from backend
+      setEditDialogOpen(false)
+      setHasChanges(false)
+      toast.success("Task updated!")
     } catch (err) {
-      toast.error("Error updating task: " + err.message);
+      toast.error("Error updating task: " + err.message)
     }
-  };
+  }
 
   useEffect(() => {
-    if (taskToEdit && editedTask) {
-      const isChanged = Object.keys(taskToEdit).some((key) => {
-        // Skip id and createdBy as they shouldn't trigger change detection
-        if (key === "id" || key === "createdBy") return false
-        return taskToEdit[key] !== editedTask[key]
-      })
-      setHasChanges(isChanged)
+    if (taskToEdit && editedTask && staff.length > 0) {
+      setHasChanges(isTaskChanged(taskToEdit, editedTask, staff))
     }
-  }, [editedTask, taskToEdit])
+  }, [editedTask, taskToEdit, staff])
 
   useEffect(() => {
     fetchTasks()
@@ -275,14 +304,14 @@ export function TaskManagement() {
     fetch("/api/admin/staff")
       .then((res) => res.json())
       .then((data) => setStaff(data))
-      .catch(() => setStaff([]));
-  }, []);
+      .catch(() => setStaff([]))
+  }, [])
 
   useEffect(() => {
     return () => {
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-    };
-  }, []);
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current)
+    }
+  }, [])
 
   const toggleGroup = (group) => {
     setExpandedGroups({
@@ -304,32 +333,34 @@ export function TaskManagement() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskData),
-      });
-      if (!response.ok) throw new Error("Failed to create task");
-      fetchTasks(); // Refresh the list after creating
+      })
+      if (!response.ok) throw new Error("Failed to create task")
+      fetchTasks() // Refresh the list after creating
       // Find staff name
-      let staffName = "Unknown";
+      let staffName = "Unknown"
       if (taskData.assignTo) {
-        const staffObj = staff.find((s) => s.id === taskData.assignTo);
-        if (staffObj) staffName = staffObj.name;
+        const staffObj = staff.find((s) => s.id === taskData.assignTo)
+        if (staffObj) staffName = staffObj.name
       }
       toast.success(
         <div>
           <div className="font-semibold">Task Created Successfully</div>
-          <div className="text-sm opacity-80">"{taskData.title}" assigned to {staffName}</div>
+          <div className="text-sm opacity-80">
+            "{taskData.title}" assigned to {staffName}
+          </div>
         </div>,
-        { duration: 5000 }
-      );
+        { duration: 5000 },
+      )
     } catch (err) {
       toast.error(
         <div>
           <div className="font-semibold">Error Creating Task</div>
           <div className="text-sm opacity-80">{err.message}</div>
         </div>,
-        { duration: 5000 }
-      );
+        { duration: 5000 },
+      )
     }
-  };
+  }
 
   const groupTasksByPriority = (taskList) => {
     return taskList.reduce((acc, task) => {
@@ -424,7 +455,7 @@ export function TaskManagement() {
                             <span className="mx-2">•</span>
                             <span>Created by: {task.createdBy || "Unknown"}</span>
                           </div>
-                          {task.blockedReason && (
+                          {tabId === "blocked" && task.blockedReason && (
                             <div className="flex items-center mt-1 text-amber-500">
                               <AlertCircle className="h-3 w-3 mr-1" />
                               <span>{task.blockedReason}</span>
@@ -441,23 +472,23 @@ export function TaskManagement() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                          console.log("Completing task:", task);
-                          completeTask(task.id);
-                        }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            console.log("Completing task:", task)
+                            completeTask(task.id)
+                          }}
+                        >
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(task)}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                           onClick={() => {
                             setDeleteTaskDialogOpen(true)
@@ -524,6 +555,16 @@ export function TaskManagement() {
         </CardContent>
       </Card>
     )
+  }
+
+  const openEditDialog = (task) => {
+    setTaskToEdit(task)
+    setEditedTask({
+      ...task,
+      dueDate: task.dueDate || "",
+      for: task.for || "",
+    })
+    setEditDialogOpen(true)
   }
 
   return (
@@ -660,7 +701,7 @@ export function TaskManagement() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#111827] text-white rounded-lg w-full max-w-2xl p-6 relative"
+              className="bg-background text-white rounded-lg w-full max-w-2xl p-6 relative"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -669,10 +710,7 @@ export function TaskManagement() {
                     <Badge className="bg-orange-500 text-white font-medium px-3 py-1">Unsaved Changes</Badge>
                   )}
                 </div>
-                <button
-                  onClick={() => setEditDialogOpen(false)}
-                  className="text-gray-400 hover:text-white"
-                >
+                <button onClick={() => setEditDialogOpen(false)} className="text-gray-400 hover:text-white">
                   <X size={18} />
                 </button>
               </div>
@@ -689,7 +727,7 @@ export function TaskManagement() {
                     name="title"
                     value={editedTask.title}
                     onChange={handleInputChange}
-                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                   />
                 </div>
 
@@ -702,7 +740,7 @@ export function TaskManagement() {
                     name="description"
                     value={editedTask.description}
                     onChange={handleInputChange}
-                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                     rows={3}
                   />
                 </div>
@@ -716,7 +754,7 @@ export function TaskManagement() {
                     name="blockedReason"
                     value={editedTask.blockedReason}
                     onChange={handleInputChange}
-                    className="bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                   />
                 </div>
 
@@ -729,10 +767,10 @@ export function TaskManagement() {
                       value={editedTask.priority}
                       onValueChange={(value) => handleSelectChange("priority", value)}
                     >
-                      <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                      <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                      <SelectContent className="bg-background border-[#334155] text-white">
                         <SelectItem value="Very High">Very High</SelectItem>
                         <SelectItem value="High">High</SelectItem>
                         <SelectItem value="Medium">Medium</SelectItem>
@@ -747,10 +785,10 @@ export function TaskManagement() {
                       Status
                     </Label>
                     <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
-                      <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                      <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                      <SelectContent className="bg-background border-[#334155] text-white">
                         <SelectItem value="In-Progress">In-Progress</SelectItem>
                         <SelectItem value="Completed">Completed</SelectItem>
                         <SelectItem value="Blocked">Blocked</SelectItem>
@@ -768,7 +806,7 @@ export function TaskManagement() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full justify-start text-left font-normal bg-[#1E293B] border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                        className="w-full justify-start text-left font-normal bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {editedTask.dueDate && isValid(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()))
@@ -776,18 +814,23 @@ export function TaskManagement() {
                           : "Pick a date"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+                    <PopoverContent
+                      align="start"
+                      className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50"
+                    >
                       <div className="rounded-md border">
                         <CustomCalendar
-                          selected={editedTask.dueDate ? parse(editedTask.dueDate, "yyyy-MM-dd", new Date()) : undefined}
+                          selected={
+                            editedTask.dueDate ? parse(editedTask.dueDate, "yyyy-MM-dd", new Date()) : undefined
+                          }
                           onSelect={(date) => {
                             if (date) {
-                              const localStr = format(date, "yyyy-MM-dd");
+                              const localStr = format(date, "yyyy-MM-dd")
                               setEditedTask((prev) => ({
                                 ...prev,
                                 dueDate: localStr,
-                              }));
-                              setHasChanges(true);
+                              }))
+                              setHasChanges(true)
                             }
                           }}
                         />
@@ -800,16 +843,15 @@ export function TaskManagement() {
                   <Label htmlFor="for" className="text-gray-300 mb-1.5 block">
                     Assigned To
                   </Label>
-                  <Select
-                    value={editedTask.for || ""}
-                    onValueChange={(value) => handleSelectChange("for", value)}
-                  >
-                    <SelectTrigger className="bg-[#1E293B] border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
+                  <Select value={editedTask.for || ""} onValueChange={(value) => handleSelectChange("for", value)}>
+                    <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
                       <SelectValue placeholder="Select staff" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1E293B] border-[#334155] text-white">
+                    <SelectContent className="bg-background border-[#334155] text-white">
                       {staff.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -823,7 +865,7 @@ export function TaskManagement() {
                     id="createdBy"
                     value={editedTask.createdBy}
                     disabled
-                    className="bg-[#1E293B] border-[#334155] text-gray-400 cursor-not-allowed"
+                    className="bg-background border-[#334155] text-gray-400 cursor-not-allowed"
                   />
                 </div>
               </div>
