@@ -308,11 +308,11 @@ export function TaskManagement() {
   }, [])
 
   useEffect(() => {
+    const timeout = undoTimeoutRef.current;
     return () => {
-      const timeout = undoTimeoutRef.current
-      if (timeout) clearTimeout(timeout)
-    }
-  }, [])
+      if (timeout) clearTimeout(timeout);
+    };
+  }, []);
 
   const toggleGroup = (group) => {
     setExpandedGroups({

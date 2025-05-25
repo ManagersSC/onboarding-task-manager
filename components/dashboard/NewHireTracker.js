@@ -19,7 +19,7 @@ const newHires = [
     department: "Engineering",
     startDate: "May 15, 2023",
     progress: 75,
-    avatar: "/stylized-initials-sc.png",
+    avatar: "/file.svg",
     tasks: {
       completed: 9,
       total: 12,
@@ -33,7 +33,7 @@ const newHires = [
     department: "Design",
     startDate: "May 22, 2023",
     progress: 40,
-    avatar: "/medical-resonance-image.png",
+    avatar: "/globe.svg",
     tasks: {
       completed: 4,
       total: 10,
@@ -47,7 +47,7 @@ const newHires = [
     department: "Marketing",
     startDate: "June 1, 2023",
     progress: 20,
-    avatar: "/abstract-letter-aj.png",
+    avatar: "/next.svg",
     tasks: {
       completed: 2,
       total: 10,
@@ -61,7 +61,7 @@ const newHires = [
     department: "Sales",
     startDate: "June 5, 2023",
     progress: 10,
-    avatar: "/intertwined-letters.png",
+    avatar: "/vercel.svg",
     tasks: {
       completed: 1,
       total: 10,
@@ -75,7 +75,7 @@ const newHires = [
     department: "Finance",
     startDate: "June 12, 2023",
     progress: 5,
-    avatar: "/abstract-geometric-ep.png",
+    avatar: "/window.svg",
     tasks: {
       completed: 0,
       total: 8,

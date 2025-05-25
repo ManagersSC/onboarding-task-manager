@@ -2,6 +2,7 @@
   "name": "onboarding-task-manager",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -60,7 +61,7 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
-    "eslint": "^9.25.0",
+    "eslint": "^8.57.0",
     "eslint-config-next": "^15.1.6",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",

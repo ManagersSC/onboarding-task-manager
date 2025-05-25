@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { ScrollArea } from "@components/ui/scroll-area"
 import { Button } from "@components/ui/button"
@@ -341,30 +341,7 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
   }
 
   // Fetch files when modal opens
-  useEffect(() => {
-    if (isOpen && taskId) {
-      fetchFiles()
-    }
-
-    // Cleanup object URLs when component unmounts
-    return () => {
-      newFiles.forEach((file) => {
-        if (file.objectUrl) URL.revokeObjectURL(file.objectUrl)
-      })
-    }
-  }, [isOpen, taskId, fetchFiles, newFiles])
-
-  // Fetch file content when selected file changes
-  useEffect(() => {
-    if (selectedFile) {
-      fetchFileContent(selectedFile)
-    } else {
-      setFileContent("")
-    }
-  }, [selectedFile])
-
-  // Fetch files from API
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/admin/tasks/core-tasks/${taskId}/attachments`)
@@ -404,7 +381,29 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [taskId, selectedFile])
+
+  useEffect(() => {
+    if (isOpen && taskId) {
+      fetchFiles()
+    }
+
+    // Cleanup object URLs when component unmounts
+    return () => {
+      newFiles.forEach((file) => {
+        if (file.objectUrl) URL.revokeObjectURL(file.objectUrl)
+      })
+    }
+  }, [isOpen, taskId, fetchFiles, newFiles])
+
+  // Fetch file content when selected file changes
+  useEffect(() => {
+    if (selectedFile) {
+      fetchFileContent(selectedFile)
+    } else {
+      setFileContent("")
+    }
+  }, [selectedFile])
 
   // Fetch file content
   const fetchFileContent = async (file) => {

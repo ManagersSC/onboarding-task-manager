@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { FileText, FolderOpen, Clock, Search, FileImage, FileCode, FileIcon as FilePdf } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/format"
+import { useDebounce } from "@/hooks/use-debounce"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Input } from "@components/ui/input"
@@ -18,38 +19,14 @@ export function ResourceHub() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchTimeout, setSearchTimeout] = useState(null)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500)
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileModalOpen, setFileModalOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(5)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Fetch resources on component mount and when search query changes
-  useEffect(() => {
-    fetchResources()
-  }, [pageSize])
-
-  // Fetch when page or search changes
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
-    }
-
-    const timeout = setTimeout(() => {
-      fetchResources(searchQuery, page)
-    }, 500)
-
-    setSearchTimeout(timeout)
-
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout)
-      }
-    }
-  }, [searchQuery, page, fetchResources, searchTimeout])
-
-  const fetchResources = async (query = "", pageNum = 1) => {
+  const fetchResources = useCallback(async (query = "", pageNum = 1) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -80,7 +57,17 @@ export function ResourceHub() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pageSize])
+
+  // Fetch resources on component mount and when search query changes
+  useEffect(() => {
+    fetchResources()
+  }, [pageSize])
+
+  // Fetch when page or search changes
+  useEffect(() => {
+    fetchResources(debouncedSearchQuery, page)
+  }, [debouncedSearchQuery, page, fetchResources])
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value)
