@@ -1,34 +1,358 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+  Clock,
+  MapPin,
+  Trash2,
+  Save,
+  Loader2,
+  Plus,
+  Users,
+  MoreHorizontal,
+  Check,
+  Calendar,
+} from "lucide-react"
+import { format, parse } from "date-fns"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@components/ui/dialog"
+import { Input } from "@components/ui/input"
+import { Label } from "@components/ui/label"
+import { Textarea } from "@components/ui/textarea"
+import { Switch } from "@components/ui/switch"
+import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { CalendarPreviewSkeleton } from "./skeletons/calendar-preview-skeleton"
+// Add these imports at the top
+import { DayView } from "./subComponents/day-view"
+import { CustomCalendar } from "./subComponents/custom-calendar"
 
-// Demo data
-const calendarData = {
-  month: "May",
-  year: 2023,
-  days: Array.from({ length: 31 }, (_, i) => ({
-    day: i + 1,
-    events: [],
-  })),
+// Event categories with colors
+const eventCategories = {
+  meeting: {
+    color: "#a855f7",
+    bgColor: "rgba(168, 85, 247, 0.15)",
+    borderColor: "rgba(168, 85, 247, 0.3)",
+    label: "Meeting",
+  },
+  appointment: {
+    color: "#3b82f6",
+    bgColor: "rgba(59, 130, 246, 0.15)",
+    borderColor: "rgba(59, 130, 246, 0.3)",
+    label: "Appointment",
+  },
+  deadline: {
+    color: "#ef4444",
+    bgColor: "rgba(239, 68, 68, 0.15)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    label: "Deadline",
+  },
+  event: {
+    color: "#22c55e",
+    bgColor: "rgba(34, 197, 94, 0.15)",
+    borderColor: "rgba(34, 197, 94, 0.3)",
+    label: "Event",
+  },
+  default: {
+    color: "#6b7280",
+    bgColor: "rgba(107, 114, 128, 0.15)",
+    borderColor: "rgba(107, 114, 128, 0.3)",
+    label: "Other",
+  },
 }
 
-// Add some events
-calendarData.days[14].events.push({ type: "start", count: 1 }) // May 15
-calendarData.days[21].events.push({ type: "start", count: 1 }) // May 22
-calendarData.days[16].events.push({ type: "training", count: 2 }) // May 17
-calendarData.days[23].events.push({ type: "training", count: 1 }) // May 24
-calendarData.days[24].events.push({ type: "meeting", count: 3 }) // May 25
-calendarData.days[28].events.push({ type: "deadline", count: 2 }) // May 29
+// Time presets for quick selection
+const timePresets = [
+  { label: "Morning", start: "09:00", end: "10:00" },
+  { label: "Lunch", start: "12:00", end: "13:00" },
+  { label: "Afternoon", start: "14:00", end: "15:00" },
+  { label: "Evening", start: "18:00", end: "19:00" },
+]
 
-const eventColors = {
-  start: "bg-green-500",
-  training: "bg-blue-500",
-  meeting: "bg-purple-500",
-  deadline: "bg-red-500",
+// Generate time options for dropdowns (15 min intervals)
+const generateTimeOptions = () => {
+  const options = []
+  for (let hour = 0; hour < 24; hour++) {
+    for (const minute of [0, 15, 30, 45]) {
+      const h = hour.toString().padStart(2, "0")
+      const m = minute.toString().padStart(2, "0")
+      const time = `${h}:${m}`
+
+      // Format for display (12-hour with AM/PM)
+      let displayHour = hour % 12
+      if (displayHour === 0) displayHour = 12
+      const period = hour < 12 ? "AM" : "PM"
+      const displayTime = `${displayHour}:${m === "00" ? "00" : m} ${period}`
+
+      options.push({ value: time, label: displayTime })
+    }
+  }
+  return options
+}
+
+const timeOptions = generateTimeOptions()
+
+// Helper function to determine event type from Google Calendar data
+const getEventType = (event) => {
+  const summary = event.summary?.toLowerCase() || ""
+  if (summary.includes("meeting") || summary.includes("call")) return "meeting"
+  if (summary.includes("appointment") || summary.includes("doctor")) return "appointment"
+  if (summary.includes("deadline") || summary.includes("due")) return "deadline"
+  return "event"
+}
+
+// Format date for display
+const formatDate = (date, format = "full") => {
+  if (format === "full") {
+    return new Date(date).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  } else if (format === "short") {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })
+  } else if (format === "day") {
+    return new Date(date).getDate()
+  } else if (format === "weekday") {
+    return new Date(date).toLocaleDateString("en-US", { weekday: "short" })
+  }
+}
+
+// Transform Google Calendar event to component format
+const transformGoogleEvent = (googleEvent) => {
+  const startDate = new Date(googleEvent.start?.dateTime || googleEvent.start?.date)
+  const endDate = new Date(googleEvent.end?.dateTime || googleEvent.end?.date)
+
+  // Format time for display
+  let formattedTime = "All day"
+  if (googleEvent.start?.dateTime) {
+    formattedTime = startDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+  }
+
+  // Format time for input
+  let timeValue = ""
+  if (googleEvent.start?.dateTime) {
+    timeValue = startDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  }
+
+  let endTimeValue = ""
+  if (googleEvent.end?.dateTime) {
+    endTimeValue = endDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  }
+
+  return {
+    id: googleEvent.id,
+    title: googleEvent.summary || "Untitled Event",
+    type: getEventType(googleEvent),
+    time: formattedTime,
+    timeValue: timeValue,
+    endTimeValue: endTimeValue,
+    location: googleEvent.location || "",
+    description: googleEvent.description || "",
+    attendees: googleEvent.attendees?.map((a) => a.email) || [],
+    startDateTime: googleEvent.start?.dateTime || googleEvent.start?.date,
+    endDateTime: googleEvent.end?.dateTime || googleEvent.end?.date,
+    googleEvent: googleEvent, // Keep original for reference
+  }
+}
+
+// Transform component event to Google Calendar format
+const transformToGoogleEvent = (componentEvent, selectedDate) => {
+  // Format the date and times for Google Calendar
+  const [year, month, day] = selectedDate.split("-")
+
+  // Start time
+  let startDateTime
+  if (componentEvent.timeValue) {
+    const [hours, minutes] = componentEvent.timeValue.split(":")
+    startDateTime = `${selectedDate}T${hours}:${minutes}:00`
+  } else {
+    startDateTime = `${selectedDate}` // All day event
+  }
+
+  // End time
+  let endDateTime
+  if (componentEvent.endTimeValue) {
+    const [hours, minutes] = componentEvent.endTimeValue.split(":")
+    endDateTime = `${selectedDate}T${hours}:${minutes}:00`
+  } else if (componentEvent.timeValue) {
+    // Default to 1 hour later if no end time specified
+    const [hours, minutes] = componentEvent.timeValue.split(":")
+    const endHour = Number.parseInt(hours) + 1
+    endDateTime = `${selectedDate}T${endHour.toString().padStart(2, "0")}:${minutes}:00`
+  } else {
+    // All day event, end date is next day
+    const nextDay = new Date(`${year}-${month}-${day}`)
+    nextDay.setDate(nextDay.getDate() + 1)
+    const nextDayStr = nextDay.toISOString().split("T")[0]
+    endDateTime = nextDayStr
+  }
+
+  return {
+    summary: componentEvent.title,
+    description: componentEvent.description,
+    location: componentEvent.location,
+    start: {
+      dateTime: componentEvent.timeValue ? startDateTime : undefined,
+      date: !componentEvent.timeValue ? startDateTime : undefined,
+      timeZone: "Europe/London",
+    },
+    end: {
+      dateTime: componentEvent.timeValue ? endDateTime : undefined,
+      date: !componentEvent.timeValue ? endDateTime : undefined,
+      timeZone: "Europe/London",
+    },
+    attendees: componentEvent.attendees?.map((email) => ({ email })) || [],
+  }
+}
+
+// Check if a date is today
+const isToday = (date) => {
+  const today = new Date()
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  )
+}
+
+// Calendar date picker component
+function CalendarDatePicker({ selectedDate, onDateChange }) {
+  const [pickerDate, setPickerDate] = useState(() => {
+    const date = selectedDate ? new Date(selectedDate) : new Date()
+    return date
+  })
+
+  const year = pickerDate.getFullYear()
+  const month = pickerDate.getMonth()
+  const monthName = pickerDate.toLocaleString("default", { month: "long" })
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const firstDayOfMonth = new Date(year, month, 1).getDay()
+
+  // Generate calendar grid
+  const calendarDays = []
+
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    calendarDays.push({ day: null, date: null })
+  }
+
+  // Add cells for each day of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day)
+    const dateString = date.toISOString().split("T")[0]
+    calendarDays.push({ day, date: dateString })
+  }
+
+  const navigateMonth = (direction) => {
+    setPickerDate((prev) => {
+      const newDate = new Date(prev)
+      newDate.setMonth(prev.getMonth() + direction)
+      return newDate
+    })
+  }
+
+  const goToToday = () => {
+    setPickerDate(new Date())
+  }
+
+  const handleDateClick = (dateString) => {
+    // Make sure we call onDateChange with the correct date string format
+    if (dateString && onDateChange) {
+      onDateChange(dateString)
+    }
+  }
+
+  return (
+    <div className="p-2">
+      <div className="flex justify-between items-center mb-2">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateMonth(-1)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="text-sm font-medium">
+          {monthName} {year}
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateMonth(1)}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+          <div key={i} className="text-center text-xs text-gray-500">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {calendarDays.map((day, i) => {
+          if (!day.day) {
+            return <div key={`empty-${i}`} className="h-7 w-7" />
+          }
+
+          const isSelected = day.date === selectedDate
+          const isTodayDate = isToday(new Date(day.date))
+
+          return (
+            <Button
+              key={day.date}
+              variant="ghost"
+              size="sm"
+              className={`h-7 w-7 p-0 ${
+                isSelected
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : isTodayDate
+                    ? "border border-gray-700"
+                    : "hover:bg-gray-800"
+              }`}
+              onClick={() => handleDateClick(day.date)}
+            >
+              {day.day}
+            </Button>
+          )
+        })}
+      </div>
+
+      <div className="mt-2 pt-2 border-t border-gray-800 flex justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs"
+          onClick={() => {
+            const today = new Date().toISOString().split("T")[0]
+            handleDateClick(today)
+            goToToday()
+          }}
+        >
+          Today
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function CalendarPreview() {
@@ -61,9 +385,8 @@ export function CalendarPreview() {
       const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
 
       const response = await fetch(`/api/admin/dashboard/calendar?start=${startOfMonth}&end=${endOfMonth}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch events")
-      }
+      if (!response.ok) throw new Error("Failed to fetch events")
+
       const googleEvents = await response.json()
 
       // Initialize calendar data structure
@@ -76,16 +399,9 @@ export function CalendarPreview() {
       // Group events by day
       googleEvents.forEach((googleEvent) => {
         const transformedEvent = transformGoogleEvent(googleEvent)
-        let eventDate;
-        if (googleEvent.start?.dateTime) {
-          eventDate = new Date(googleEvent.start.dateTime);
-        } else if (googleEvent.start?.date) {
-          const [y, m, d] = googleEvent.start.date.split('-');
-          eventDate = new Date(Number(y), Number(m) - 1, Number(d));
-        } else {
-          return;
-        }
+        const eventDate = new Date(googleEvent.start?.dateTime || googleEvent.start?.date)
         const dayOfMonth = eventDate.getDate()
+
         if (dayOfMonth >= 1 && dayOfMonth <= daysInMonth && eventDate.getMonth() === month) {
           days[dayOfMonth - 1].events.push(transformedEvent)
         }
@@ -105,14 +421,15 @@ export function CalendarPreview() {
   }, [currentDate])
 
   // Generate calendar grid
-  const daysInMonth = calendarData.days.length
-  const firstDayOfMonth = new Date(calendarData.year, 4, 1).getDay() // 0 = Sunday
+  const firstDayOfMonth = new Date(year, month, 1).getDay()
   const totalCells = Math.ceil((daysInMonth + firstDayOfMonth) / 7) * 7
 
   const calendarCells = Array.from({ length: totalCells }, (_, i) => {
     const dayIndex = i - firstDayOfMonth
     if (dayIndex < 0 || dayIndex >= daysInMonth) {
-      return { isEmpty: true }
+      // Previous or next month
+      const date = new Date(year, month, dayIndex + 1)
+      return { isEmpty: true, date, day: date.getDate() }
     }
     return { ...calendarData.days[dayIndex], isEmpty: false }
   })
@@ -194,10 +511,8 @@ export function CalendarPreview() {
           body: JSON.stringify(googleEventData),
         })
 
-        if (!response.ok) {
-          toast.error("Failed to create event")
-          throw new Error("Failed to create event")
-        }
+        if (!response.ok) throw new Error("Failed to create event")
+
         toast.success("Event created successfully")
       } else {
         // Update existing event
@@ -211,10 +526,8 @@ export function CalendarPreview() {
           }),
         })
 
-        if (!response.ok) {
-          toast.error("Failed to update event")
-          throw new Error("Failed to update event")
-        }
+        if (!response.ok) throw new Error("Failed to update event")
+
         toast.success("Event updated successfully")
       }
 
@@ -225,10 +538,7 @@ export function CalendarPreview() {
       setIsModalOpen(false)
     } catch (error) {
       console.error("Error saving event:", error)
-      // Only show toast if not already shown for this error
-      if (!error.message?.includes("Failed to create event") && !error.message?.includes("Failed to update event")) {
-        toast.error("Failed to save event")
-      }
+      toast.error("Failed to save event")
     } finally {
       setSaving(false)
     }
@@ -241,33 +551,18 @@ export function CalendarPreview() {
         method: "DELETE",
       })
 
-      if (!response.ok) {
-        toast.error("Failed to delete event")
-        throw new Error("Failed to delete event")
-      }
+      if (!response.ok) throw new Error("Failed to delete event")
+
       toast.success("Event deleted successfully")
 
-      // Remove the deleted event from the selectedDay.events array
-      if (selectedDay && selectedDay.events) {
-        setSelectedDay({
-          ...selectedDay,
-          events: selectedDay.events.filter(event => event.id !== eventId),
-        });
-      }
-
-      // Refresh events in the main calendar grid
+      // Refresh events
       await fetchEvents()
       setEditingEvent(null)
     } catch (error) {
       console.error("Error deleting event:", error)
-      // Only show toast if not already shown for this error
-      if (!error.message?.includes("Failed to delete event")) {
-        toast.error("Failed to delete event")
-      }
+      toast.error("Failed to delete event")
     } finally {
       setSaving(false)
-      setShowDeleteConfirm(false)
-      setPendingDeleteId(null)
     }
   }
 
@@ -369,18 +664,14 @@ export function CalendarPreview() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-    >
-      <Card>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <Card className="border-none shadow-lg bg-black text-white overflow-hidden">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Calendar</CardTitle>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <ChevronLeft className="h-4 w-4" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg font-bold">Calendar</CardTitle>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={goToToday}>
+                Today
               </Button>
             </div>
 
@@ -472,7 +763,7 @@ export function CalendarPreview() {
                               cell.isEmpty
                                 ? "text-gray-600"
                                 : "hover:cursor-pointer border border-transparent hover:border-gray-700"
-                            } ${isCurrentDay ? "bg-background border-gray-700" : ""}`}
+                            } ${isCurrentDay ? "bg-gray-800 border-gray-700" : ""}`}
                             onClick={() => !cell.isEmpty && handleDayClick(cell)}
                           >
                             <div
@@ -482,7 +773,7 @@ export function CalendarPreview() {
                                 <span
                                   className={`text-xs font-medium ${
                                     isCurrentDay
-                                      ? "bg-background text-white rounded-full w-5 h-5 flex items-center justify-center"
+                                      ? "bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
                                       : ""
                                   }`}
                                 >
@@ -543,6 +834,24 @@ export function CalendarPreview() {
                       year === currentDate.getFullYear(),
                   )?.events || []
                 }
+                onEventClick={(event) => {
+                  // When an event is clicked in day view, we need to:
+                  // 1. Set the selected day to the current day
+                  const currentDay = calendarData.days.find(
+                    (day) =>
+                      day.day === currentDate.getDate() &&
+                      month === currentDate.getMonth() &&
+                      year === currentDate.getFullYear(),
+                  )
+                  if (currentDay) {
+                    setSelectedDay(currentDay)
+                    setSelectedDate(
+                      `${year}-${String(month + 1).padStart(2, "0")}-${String(currentDay.day).padStart(2, "0")}`,
+                    )
+                    setIsModalOpen(true)
+                    handleEditEvent(event)
+                  }
+                }}
               />
             )}
           </AnimatePresence>
@@ -573,7 +882,7 @@ export function CalendarPreview() {
                 </div>
 
                 {/* Modal Content */}
-                <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="max-h-[70vh] overflow-y-auto event-modal-content">
                   {/* Events List */}
                   {selectedDay && !editingEvent && (
                     <div className="p-4">
@@ -686,7 +995,7 @@ export function CalendarPreview() {
                               })
                             }
                             placeholder="Event title"
-                            className="bg-background border-gray-800 focus:border-gray-700"
+                            className="bg-gray-900 border-gray-800 focus:border-gray-700"
                           />
                         </div>
 
@@ -829,19 +1138,16 @@ export function CalendarPreview() {
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
-                                  className="w-full justify-start bg-background border-gray-800 text-left"
+                                  className="w-full justify-start text-left font-normal bg-background border-gray-800"
                                 >
-                                  <Calendar className="mr-2 h-4 w-4" />
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
                                   {selectedDate
                                     ? format(parse(selectedDate, 'yyyy-MM-dd', new Date()), "PPP")
                                     : "Pick a date"}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent
-                                align="start"
-                                className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50 bg-background border-gray-800"
-                              >
-                                <div className="rounded-md border bg-background">
+                              <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50 bg-background border-gray-800">
+                                <div className="rounded-md border">
                                   <CustomCalendar
                                     selected={selectedDate ? parse(selectedDate, 'yyyy-MM-dd', new Date()) : undefined}
                                     onSelect={(date) => {
@@ -922,7 +1228,7 @@ export function CalendarPreview() {
                           setIsCreatingEvent(false)
                         }}
                         disabled={saving}
-                        className="bg-gray-800 border-gray-600 hover:bg-gray-900"
+                        className="bg-gray-800 border-gray-700 hover:bg-gray-700"
                       >
                         Cancel
                       </Button>
@@ -935,31 +1241,19 @@ export function CalendarPreview() {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="max-w-sm">
           <DialogTitle>Delete Event?</DialogTitle>
           <div className="py-2 text-gray-300">Are you sure you want to delete this event? This action cannot be undone.</div>
           <div className="flex gap-2 justify-end mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-              disabled={saving}
-              className="bg-gray-800 border-gray-600 hover:bg-gray-900"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleDeleteEvent(pendingDeleteId)}
-              disabled={saving}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Delete
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={saving} className="bg-gray-800 border-gray-600 hover:bg-background">Cancel</Button>
+            <Button onClick={() => handleDeleteEvent(pendingDeleteId)} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white">
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}Delete
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }
