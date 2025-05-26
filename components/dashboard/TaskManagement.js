@@ -28,7 +28,7 @@ import { Save } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
-import { toast, Toaster } from "sonner"
+import { toast } from "sonner"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import { format, parse, isValid } from "date-fns"
@@ -574,7 +574,6 @@ export function TaskManagement() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      <Toaster position="top-right" richColors />
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
