@@ -15,7 +15,8 @@ import {
   Users,
   MoreHorizontal,
   Check,
-  Calendar,
+  Mail,
+  UserPlus
 } from "lucide-react"
 import { format, parse } from "date-fns"
 
@@ -127,6 +128,12 @@ const formatDate = (date, format = "full") => {
   } else if (format === "weekday") {
     return new Date(date).toLocaleDateString("en-US", { weekday: "short" })
   }
+}
+
+// Email validation function
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 
 // Transform Google Calendar event to component format
@@ -355,6 +362,18 @@ function CalendarDatePicker({ selectedDate, onDateChange }) {
   )
 }
 
+// Attendee component for displaying and removing attendees
+function AttendeeItem({ email, onRemove }) {
+  return (
+    <div className="flex items-center justify-between bg-gray-800 rounded-md px-2 py-1 text-sm">
+      <div className="flex items-center gap-1.5">
+        <Mail className="h-3 w-3 text-gray-400" />
+        <span className="text-gray-200">{email}</span>
+      </div>
+    </div>
+  )
+}
+
 export function CalendarPreview() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarData, setCalendarData] = useState({ days: [] })
@@ -369,13 +388,30 @@ export function CalendarPreview() {
   const [activeView, setActiveView] = useState("month")
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const modalRef = useRef(null)
+  const [newAttendee, setNewAttendee] = useState("")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
+  const [meetToggle, setMeetToggle] = useState(false)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
   const monthName = currentDate.toLocaleString("default", { month: "long" })
   const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  // Helper: Determine if attendees are required for current event type
+  const attendeesRequired = editingEvent && (editingEvent.type === "meeting" || editingEvent.type === "appointment")
+  // Helper: Determine if Meet toggle should be shown
+  const showMeetToggle = editingEvent && ["meeting", "appointment", "event"].includes(editingEvent.type)
+  // Helper: Default Meet toggle ON for meeting/appointment, OFF for event
+  useEffect(() => {
+    if (editingEvent) {
+      if (editingEvent.type === "meeting" || editingEvent.type === "appointment") {
+        setMeetToggle(true)
+      } else if (editingEvent.type === "event") {
+        setMeetToggle(false)
+      }
+    }
+  }, [editingEvent && editingEvent.type])
 
   // Fetch events from Google Calendar API
   const fetchEvents = async () => {
@@ -454,6 +490,12 @@ export function CalendarPreview() {
     setEditingEvent({ ...event })
     setIsCreatingEvent(false)
     setIsAllDay(!event.timeValue)
+    // Set meetToggle based on event type
+    if (event.type === "meeting" || event.type === "appointment") {
+      setMeetToggle(true)
+    } else if (event.type === "event") {
+      setMeetToggle(false)
+    }
   }
 
   const handleCreateEvent = () => {
@@ -468,6 +510,7 @@ export function CalendarPreview() {
     })
     setIsCreatingEvent(true)
     setIsAllDay(false)
+    setMeetToggle(true) // Default for meeting
   }
 
   const handleSaveEvent = async () => {
@@ -478,45 +521,43 @@ export function CalendarPreview() {
       toast.error("Event title is required")
       return
     }
-
+    // Attendee requirement logic
+    if (attendeesRequired && (!editingEvent.attendees || editingEvent.attendees.length === 0)) {
+      toast.error("At least one attendee is required for this event type")
+      return
+    }
     if (!isAllDay && (!editingEvent.timeValue || !editingEvent.endTimeValue)) {
       toast.error("Start and end times are required")
       return
     }
-
-    // Validate that end time is after start time
     if (!isAllDay && editingEvent.timeValue && editingEvent.endTimeValue) {
       if (editingEvent.endTimeValue <= editingEvent.timeValue) {
         toast.error("End time must be after start time")
         return
       }
     }
-
     try {
       setSaving(true)
-
-      // If all-day event, remove time values
       const eventToSave = { ...editingEvent }
       if (isAllDay) {
         eventToSave.timeValue = null
         eventToSave.endTimeValue = null
       }
-
+      // Add createMeet flag
+      eventToSave.createMeet = showMeetToggle ? meetToggle : false
       if (isCreatingEvent) {
-        // Create new event
         const googleEventData = transformToGoogleEvent(eventToSave, selectedDate)
+        googleEventData.createMeet = eventToSave.createMeet
         const response = await fetch("/api/admin/dashboard/calendar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(googleEventData),
         })
-
         if (!response.ok) throw new Error("Failed to create event")
-
         toast.success("Event created successfully")
       } else {
-        // Update existing event
         const googleEventData = transformToGoogleEvent(eventToSave, selectedDate)
+        googleEventData.createMeet = eventToSave.createMeet
         const response = await fetch("/api/admin/dashboard/calendar", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -525,13 +566,9 @@ export function CalendarPreview() {
             ...googleEventData,
           }),
         })
-
         if (!response.ok) throw new Error("Failed to update event")
-
         toast.success("Event updated successfully")
       }
-
-      // Refresh events
       await fetchEvents()
       setEditingEvent(null)
       setIsCreatingEvent(false)
@@ -588,6 +625,41 @@ export function CalendarPreview() {
       timeValue: preset.start,
       endTimeValue: preset.end,
     })
+  }
+
+  const handleAddAttendee = () => {
+    if (!newAttendee.trim()) return
+
+    if (!isValidEmail(newAttendee)) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+
+    // Check if attendee already exists
+    if (editingEvent.attendees.includes(newAttendee)) {
+      toast.error("This attendee is already added")
+      return
+    }
+
+    setEditingEvent({
+      ...editingEvent,
+      attendees: [...editingEvent.attendees, newAttendee],
+    })
+    setNewAttendee("")
+  }
+
+  const handleRemoveAttendee = (email) => {
+    setEditingEvent({
+      ...editingEvent,
+      attendees: editingEvent.attendees.filter((a) => a !== email),
+    })
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddAttendee()
+    }
   }
 
   // Modal animations
@@ -695,7 +767,7 @@ export function CalendarPreview() {
                 </Button>
               </div>
 
-              <div className="flex rounded-md bg-gray-900 border border-gray-800">
+              <div className="flex rounded-md bg-background border border-gray-800">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1129,6 +1201,72 @@ export function CalendarPreview() {
                           </div>
                         </div>
 
+                        {/* Attendees Section */}
+                        <div className="space-y-2">
+                          <Label htmlFor="attendees" className="text-gray-400">
+                            Attendees{attendeesRequired && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                  <Mail className="h-4 w-4 text-gray-500" />
+                                </div>
+                                <Input
+                                  id="attendees"
+                                  value={newAttendee}
+                                  onChange={(e) => setNewAttendee(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  placeholder="Add attendee email"
+                                  className="bg-background border-gray-800 focus:border-gray-700 pl-10"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={handleAddAttendee}
+                                className="h-10 w-10 bg-background border-gray-800 hover:bg-gray-800"
+                              >
+                                <UserPlus className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {editingEvent.attendees && editingEvent.attendees.length > 0 ? (
+                              <div className="flex flex-wrap gap-2 p-2 bg-background rounded-md border border-gray-800">
+                                {editingEvent.attendees.map((email) => (
+                                  <AttendeeItem key={email} email={email} onRemove={handleRemoveAttendee} />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-3 text-sm text-gray-500 bg-background rounded-md">
+                                No attendees added
+                              </div>
+                            )}
+                            {/* Show attendee requirement warning if needed */}
+                            {attendeesRequired && (!editingEvent.attendees || editingEvent.attendees.length === 0) && (
+                              <div className="text-xs text-red-500">At least one attendee is required for this event type.</div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Google Meet Toggle Section */}
+                        {showMeetToggle && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Switch
+                              id="meet-toggle"
+                              checked={meetToggle}
+                              onCheckedChange={setMeetToggle}
+                              disabled={editingEvent.type === "meeting" || editingEvent.type === "appointment"}
+                            />
+                            <Label htmlFor="meet-toggle" className="text-gray-400">
+                              Google Meet link
+                            </Label>
+                            {(editingEvent.type === "meeting" || editingEvent.type === "appointment") && (
+                              <span className="text-xs text-blue-400 ml-2">Will be added to this event</span>
+                            )}
+                          </div>
+                        )}
+
                         {!isCreatingEvent && (
                           <div className="space-y-2">
                             <Label htmlFor="moveDate" className="text-gray-400">
@@ -1203,7 +1341,7 @@ export function CalendarPreview() {
                       <Button
                         onClick={handleSaveEvent}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={saving}
+                        disabled={saving || (attendeesRequired && (!editingEvent.attendees || editingEvent.attendees.length === 0))}
                       >
                         {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                         Save

@@ -44,12 +44,30 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
+    const { createMeet, ...eventBody } = body;
+    const eventType = (body.type || '').toLowerCase();
+    if ((eventType === 'meeting' || eventType === 'appointment')) {
+      if (!Array.isArray(eventBody.attendees) || eventBody.attendees.length === 0) {
+        return NextResponse.json({ error: 'At least one attendee is required for this event type.' }, { status: 400 });
+      }
+    }
+    if (createMeet) {
+      eventBody.conferenceData = {
+        createRequest: {
+          requestId: Math.random().toString(36).substring(2),
+          conferenceSolutionKey: { type: 'hangoutsMeet' }
+        }
+      };
+    }
     const oauth2Client = getOAuth2Client();
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    const event = await calendar.events.insert({
+    const insertParams = {
       calendarId: 'primary',
-      requestBody: body,
-    });
+      requestBody: eventBody,
+    };
+    if (createMeet) insertParams.conferenceDataVersion = 1;
+    if (eventBody.attendees && eventBody.attendees.length > 0) insertParams.sendUpdates = 'all';
+    const event = await calendar.events.insert(insertParams);
     return NextResponse.json(event.data);
   } catch (err) {
     console.error(err);
@@ -60,17 +78,34 @@ export async function POST(req) {
 export async function PATCH(req) {
   try {
     const body = await req.json();
-    const { eventId, ...eventData } = body;
+    const { eventId, createMeet, ...eventData } = body;
     if (!eventId) {
       return NextResponse.json({ error: 'Missing eventId' }, { status: 400 });
     }
+    const eventType = (eventData.type || '').toLowerCase();
+    if ((eventType === 'meeting' || eventType === 'appointment')) {
+      if (!Array.isArray(eventData.attendees) || eventData.attendees.length === 0) {
+        return NextResponse.json({ error: 'At least one attendee is required for this event type.' }, { status: 400 });
+      }
+    }
+    if (createMeet) {
+      eventData.conferenceData = {
+        createRequest: {
+          requestId: Math.random().toString(36).substring(2),
+          conferenceSolutionKey: { type: 'hangoutsMeet' }
+        }
+      };
+    }
     const oauth2Client = getOAuth2Client();
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    const event = await calendar.events.patch({
+    const patchParams = {
       calendarId: 'primary',
       eventId,
       requestBody: eventData,
-    });
+    };
+    if (createMeet) patchParams.conferenceDataVersion = 1;
+    if (eventData.attendees && eventData.attendees.length > 0) patchParams.sendUpdates = 'all';
+    const event = await calendar.events.patch(patchParams);
     return NextResponse.json(event.data);
   } catch (err) {
     console.error(err);
