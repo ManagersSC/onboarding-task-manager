@@ -12,7 +12,8 @@ const scopes = ['https://www.googleapis.com/auth/calendar'];
 const url = oauth2Client.generateAuthUrl({
   access_type: 'offline',
   scope: scopes,
-  prompt: 'consent',
+  // Always prompt for account selection to allow using a different Google account
+  prompt: 'select_account',
 });
 
 console.log('Authorize this app by visiting this url:', url);
