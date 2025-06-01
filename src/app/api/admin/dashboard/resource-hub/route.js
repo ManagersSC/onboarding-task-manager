@@ -2,6 +2,10 @@ import Airtable from "airtable";
 import logger from "@/lib/utils/logger";
 import { NextResponse } from "next/server";
 
+// --- Server-side cache ---
+let resourceHubCache = {};
+const CACHE_TTL = 60 * 1000; // 60 seconds
+
 export async function GET(req){
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
         logger.error("Airtable environment variables are missing");
@@ -12,6 +16,16 @@ export async function GET(req){
     const searchQuery = req.nextUrl.searchParams.get('query');
     const page = parseInt(req.nextUrl.searchParams.get('page') || '1', 10);
     const pageSize = parseInt(req.nextUrl.searchParams.get('pageSize') || '5', 10);
+
+    // Cache key based on query, page, and pageSize
+    const cacheKey = JSON.stringify({ searchQuery, page, pageSize });
+    const now = Date.now();
+    if (
+        resourceHubCache[cacheKey] &&
+        (now - resourceHubCache[cacheKey].time < CACHE_TTL)
+    ) {
+        return NextResponse.json(resourceHubCache[cacheKey].data);
+    }
 
     try {
         let allRecords = [];
@@ -77,12 +91,17 @@ export async function GET(req){
         const endIdx = startIdx + pageSize;
         const resources = filteredFiles.slice(startIdx, endIdx);
 
-        return NextResponse.json({
+        const responseData = {
             resources,
             totalCount,
             page,
             pageSize
-        });
+        };
+
+        // Update cache
+        resourceHubCache[cacheKey] = { data: responseData, time: now };
+
+        return NextResponse.json(responseData);
 
     } catch (error) {
         logger.error('Error fetching resources from Airtable:', error);

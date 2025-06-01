@@ -4,39 +4,63 @@ import { motion } from "framer-motion"
 import { ArrowUpRight, ArrowDownRight, Users, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
 
 import { Card, CardContent } from "@components/ui/card"
+import { useQuickMetrics } from "@/hooks/dashboard/useQuickMetrics"
 
-const metrics = [
-  {
-    title: "Active Onboardings",
-    value: 12,
-    change: 2,
-    icon: Users,
-    color: "bg-blue-500/10 text-blue-500",
-  },
-  {
-    title: "Tasks Due This Week",
-    value: 28,
-    change: -5,
-    icon: Clock,
-    color: "bg-amber-500/10 text-amber-500",
-  },
-  {
-    title: "Completion Rate",
-    value: "87%",
-    change: 4,
-    icon: CheckCircle,
-    color: "bg-green-500/10 text-green-500",
-  },
-  {
-    title: "Blocked Items",
-    value: 3,
-    change: -2,
-    icon: AlertTriangle,
-    color: "bg-red-500/10 text-red-500",
-  },
-]
+function formatPercent(val) {
+  if (val === null || val === undefined) return "N/A";
+  return `${Math.abs(val).toFixed(0)}%`;
+}
+
+function formatValue(val, isPercent = false, isCompletionRate = false, isTasksDue = false) {
+  if (val === null || val === undefined) return "N/A";
+  // Only use placeholder for completion rate and tasks due this week
+  if (isCompletionRate && val === 11.11) return "11.11%";
+  if (isTasksDue && val === 11.11) return "11.11";
+  if (isPercent) return `${(val * 100).toFixed(0)}%`;
+  return val;
+}
 
 export function QuickMetrics() {
+  const { metrics, isLoading, isError } = useQuickMetrics();
+
+  if (isLoading) {
+    return <div className="h-24">Loading...</div>;
+  }
+  if (isError || !metrics) {
+    return <div className="h-24 text-red-500">Error loading metrics</div>;
+  }
+
+  const cards = [
+    {
+      title: "Active Onboardings",
+      value: formatValue(metrics.activeOnboardings),
+      change: metrics.activeOnboardingsMonthlyChange,
+      icon: Users,
+      color: "bg-blue-500/10 text-blue-500",
+    },
+    {
+      title: "Tasks Due This Week",
+      value: formatValue(metrics.tasksDueThisWeek, false, false, true),
+      change: metrics.tasksDueThisWeekMonthlyChange,
+      icon: Clock,
+      color: "bg-amber-500/10 text-amber-500",
+    },
+    {
+      title: "Completion Rate",
+      value: formatValue(metrics.completionRate, true, true),
+      change: metrics.completionRateMonthlyChange,
+      icon: CheckCircle,
+      color: "bg-green-500/10 text-green-500",
+    },
+    {
+      title: "Blocked Items",
+      value: formatValue(metrics.blockedItems),
+      change: metrics.blockedItemsMonthlyChange,
+      icon: AlertTriangle,
+      color: "bg-red-500/10 text-red-500",
+    },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -44,7 +68,7 @@ export function QuickMetrics() {
       transition={{ duration: 0.5 }}
       className="grid grid-cols-2 md:grid-cols-4 gap-4"
     >
-      {metrics.map((metric, index) => (
+      {cards.map((metric, index) => (
         <motion.div
           key={metric.title}
           initial={{ opacity: 0, y: 20 }}
@@ -61,13 +85,15 @@ export function QuickMetrics() {
                   {metric.change > 0 ? (
                     <>
                       <ArrowUpRight className="mr-1 h-3 w-3 text-green-500" />
-                      <span className="text-green-500">{metric.change}%</span>
+                      <span className="text-green-500">{formatPercent(metric.change)}</span>
                     </>
-                  ) : (
+                  ) : metric.change < 0 ? (
                     <>
                       <ArrowDownRight className="mr-1 h-3 w-3 text-red-500" />
-                      <span className="text-red-500">{Math.abs(metric.change)}%</span>
+                      <span className="text-red-500">{formatPercent(metric.change)}</span>
                     </>
+                  ) : (
+                    <span className="text-muted-foreground">{formatPercent(metric.change)}</span>
                   )}
                 </div>
               </div>

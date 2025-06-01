@@ -1,5 +1,48 @@
 # Smile Clinique Onboarding Task Manager
 
+> **A modern onboarding and workflow automation platform for dental clinics.**
+
+---
+
+**Live URL:** [https://onboarding-task-manager.vercel.app](https://onboarding-task-manager.vercel.app)
+
+---
+
+## What is this project?
+
+Smile Clinique Onboarding Task Manager is a web application that streamlines the onboarding process for dental clinics. It automates task management, document handling, and communication between admins, managers, and team members, providing a single source of truth for onboarding workflows.
+
+**Who is it for?**
+- Dental clinic owners and managers
+- Admin staff
+- New hires and team members
+- Technical/development teams
+
+---
+
+## Table of Contents
+- [Client Overview](./CLIENT_OVERVIEW.md)
+- [Features](./FEATURES.md)
+- [Setup & Installation](./SETUP.md)
+- [Configuration](./CONFIGURATION.md)
+- [Workflows](./WORKFLOWS.md)
+- [Usage Guide](./USAGE_GUIDE.md)
+- [FAQ](./FAQ.md)
+- [Development Guide](./DEVELOPMENT.md)
+- [API Reference](./API_REFERENCE.md)
+- [Security](./SECURITY.md)
+- [Changelog](./CHANGELOG.md)
+
+---
+
+## How to use this documentation
+
+This documentation is designed for both clients and developers. Start with the [Client Overview](./CLIENT_OVERVIEW.md) for a high-level summary, then explore [Features](./FEATURES.md) and [Workflows](./WORKFLOWS.md) for business processes. Technical users should see [Setup](./SETUP.md), [Configuration](./CONFIGURATION.md), and [API Reference](./API_REFERENCE.md). Use the navigation links above to jump to any section.
+
+---
+
+For the latest updates, see the [Changelog](./CHANGELOG.md).
+
 ## Project Structure
 
 ```

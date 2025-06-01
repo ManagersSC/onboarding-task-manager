@@ -49,51 +49,39 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 ## Core Features
 
 ### 1. Task Management
-- **Task Creation & Assignment**
-  - Create custom tasks
-  - Assign to team members
-  - Set deadlines and priorities
-  - Add attachments and comments
+- **What:** Create, assign, track, and complete onboarding tasks
+- **Who:** Admins, Managers, Team Members
+- **Example:** Admin assigns a checklist to a new hire; team member marks tasks as complete; manager reviews progress
 
-- **Task Tracking**
-  - Real-time status updates
-  - Progress monitoring
-  - Deadline notifications
-  - Completion verification
-
-- **Task Deletion with Undo**
-  - When a user deletes a task, it is immediately removed from the UI and a notification (toast) appears with an Undo option.
-  - The actual delete request to the backend is delayed until the notification disappears (after a set duration, e.g., 10 seconds).
-  - If the user clicks Undo, the task is restored in the UI and no delete request is sent.
-  - If the notification is dismissed or times out, the task is permanently deleted from the backend.
-  - This pattern prevents accidental data loss and provides a user-friendly experience.
-
-### 2. Dashboard System
-- **Overview Dashboard**
-  - Task completion statistics
-  - Recent activities
-  - Pending items
-  - Performance metrics
-
-- **Analytics Dashboard**
-  - Task completion rates
-  - Time tracking
-  - Team performance
-  - Custom reports
+### 2. Dashboard & Analytics
+- **What:** Visual overview of onboarding status, completion rates, overdue tasks, and team performance
+- **Who:** Admins, Managers
+- **Example:** Manager views dashboard to see which hires are behind schedule
 
 ### 3. Document Management
-- **File Handling**
-  - Secure file uploads
-  - Document versioning
-  - Access control
-  - File categorization
+- **What:** Upload, categorize, and review onboarding documents
+- **Who:** Team Members (upload), Admins/Managers (review)
+- **Example:** New hire uploads ID; admin verifies and marks as received
 
-### 4. Communication System
-- **Internal Messaging**
-  - Task-specific comments
-  - Team notifications
-  - Status updates
-  - Mention system
+### 4. Calendar & Scheduling
+- **What:** Schedule onboarding events, meetings, and deadlines (Google Calendar integration)
+- **Who:** Admins, Managers
+- **Example:** Manager schedules orientation session; team receives calendar invite
+
+### 5. Communication & Notifications
+- **What:** Internal messaging, task comments, and real-time notifications (toast system)
+- **Who:** All users
+- **Example:** Team member comments on a task; admin receives notification
+
+### 6. Audit Logging & Compliance
+- **What:** All key actions are logged for compliance and troubleshooting
+- **Who:** Admins (view logs)
+- **Example:** Admin reviews audit log to see who completed a task
+
+### 7. Role-Based Access Control
+- **What:** Different permissions for Admin, Manager, Team Member
+- **Who:** All users
+- **Example:** Only admins can create templates; team members can only see their own tasks
 
 ## Page Structure
 
@@ -221,4 +209,14 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 
 ---
 
-This documentation is a living document and will be updated as new features are added or existing ones are modified. For the latest changes, please refer to the [changelog](./changelog/README.md). 
+This documentation is a living document and will be updated as new features are added or existing ones are modified. For the latest changes, please refer to the [changelog](./changelog/README.md).
+
+## Example Workflows
+- [See Workflows](./WORKFLOWS.md)
+
+## Screenshots
+*Add screenshots here as the project evolves.*
+
+---
+
+[Setup & Installation →](./SETUP.md) 

@@ -8,6 +8,10 @@ const {
   GOOGLE_REFRESH_TOKEN,
 } = process.env;
 
+// --- Server-side cache ---
+let calendarCache = {};
+const CALENDAR_CACHE_TTL = 60 * 1000; // 60 seconds
+
 function getOAuth2Client() {
   const oauth2Client = new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
@@ -23,6 +27,15 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const timeMin = searchParams.get('start') || new Date().toISOString();
     const timeMax = searchParams.get('end');
+    // Cache key based on timeMin and timeMax
+    const cacheKey = JSON.stringify({ timeMin, timeMax });
+    const now = Date.now();
+    if (
+      calendarCache[cacheKey] &&
+      (now - calendarCache[cacheKey].time < CALENDAR_CACHE_TTL)
+    ) {
+      return NextResponse.json(calendarCache[cacheKey].data);
+    }
     const oauth2Client = getOAuth2Client();
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const params = {
@@ -34,6 +47,8 @@ export async function GET(req) {
     };
     if (timeMax) params.timeMax = timeMax;
     const response = await calendar.events.list(params);
+    // Update cache
+    calendarCache[cacheKey] = { data: response.data.items, time: now };
     return NextResponse.json(response.data.items);
   } catch (err) {
     console.error(err);
