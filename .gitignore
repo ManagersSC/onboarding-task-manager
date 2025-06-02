@@ -42,3 +42,6 @@ next-env.d.ts
 
 # ATS schema
 ATS_schema.json
+
+#Cursor
+.cursor/rules*

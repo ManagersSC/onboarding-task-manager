@@ -392,6 +392,7 @@ export function CalendarPreview() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const [meetToggle, setMeetToggle] = useState(false)
+  const [currentUserEmail, setCurrentUserEmail] = useState("")
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -412,6 +413,22 @@ export function CalendarPreview() {
       }
     }
   }, [editingEvent && editingEvent.type])
+
+  // Fetch current user email on mount
+  useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const res = await fetch("/api/admin/dashboard/current-user");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.email) setCurrentUserEmail(data.email);
+        }
+      } catch (e) {
+        // Optionally handle error
+      }
+    }
+    fetchCurrentUser();
+  }, []);
 
   // Fetch events from Google Calendar API
   const fetchEvents = async () => {
@@ -499,6 +516,10 @@ export function CalendarPreview() {
   }
 
   const handleCreateEvent = () => {
+    let defaultAttendees = [];
+    if (currentUserEmail && isValidEmail(currentUserEmail)) {
+      defaultAttendees = [currentUserEmail];
+    }
     setEditingEvent({
       title: "",
       type: "meeting",
@@ -506,11 +527,11 @@ export function CalendarPreview() {
       endTimeValue: "10:00",
       location: "",
       description: "",
-      attendees: [],
-    })
-    setIsCreatingEvent(true)
-    setIsAllDay(false)
-    setMeetToggle(true) // Default for meeting
+      attendees: defaultAttendees,
+    });
+    setIsCreatingEvent(true);
+    setIsAllDay(false);
+    setMeetToggle(true); // Default for meeting
   }
 
   const handleSaveEvent = async () => {

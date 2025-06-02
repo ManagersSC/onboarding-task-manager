@@ -13,12 +13,12 @@ export async function GET() {
       password: process.env.SESSION_SECRET,
     });
 
-    if (!session || !session.recordId || !session.userName) {
+    if (!session || !session.recordId || !session.userName || !session.userEmail) {
       return new Response(JSON.stringify({ error: "Invalid session" }), { status: 401 });
     }
 
     return new Response(
-      JSON.stringify({ id: session.recordId, name: session.userName }),
+      JSON.stringify({ id: session.recordId, name: session.userName, email: session.userEmail }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
