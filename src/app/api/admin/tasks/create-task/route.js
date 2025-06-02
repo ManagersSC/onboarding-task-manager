@@ -3,6 +3,7 @@ import logger from "@/lib/utils/logger"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { createNotification } from "@/lib/notifications"
 
 export async function POST(request) {
   let userEmail
@@ -195,6 +196,17 @@ export async function POST(request) {
             userIdentifier: userEmail,
             detailedMessage: `Admin: ${userName}. ${taskFunction} task created: "${taskName}", Assigned to ${email}`,
             request,
+          })
+
+          // Send notification to applicant
+          await createNotification({
+            title: "New Task Assigned",
+            body: `You have been assigned the task: "${taskName}".`,
+            type: "Task",
+            severity: "Info",
+            recipientId: applicantRecord.id,
+            actionUrl: `https://yourapp.com/tasks/${logRecord.id}`,
+            source: "System"
           })
         } catch (error) {
             logger.error(`Error assigning task to ${email}:`, error)

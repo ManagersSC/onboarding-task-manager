@@ -3,6 +3,7 @@ import { sealData, unsealData } from "iron-session";
 import Airtable from "airtable";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { createNotification } from "@/lib/notifications";
 
 // GET: Fetch attachments for a log record
 export async function GET(request, { params }) {
@@ -106,6 +107,26 @@ export async function PATCH(request, { params }) {
       for (const file of newFiles) {
         await uploadFileViaJson(id, "File(s)", file);
       }
+      // Fetch all admins
+      const admins = await base("Staff")
+        .select({
+          filterByFormula: "{IsAdmin}=TRUE()",
+          fields: ["Name", "Email"],
+        })
+        .firstPage();
+      const fileNames = newFiles.map(f => f.name).join(", ");
+      await Promise.all(admins.map(admin =>
+        createNotification({
+          title: "Document Uploaded",
+          body: `New document(s) uploaded: ${fileNames}.
+`,
+          type: "Document",
+          severity: "Info",
+          recipientId: admin.id,
+          actionUrl: `https://yourapp.com/onboarding-tasks-logs/${id}`,
+          source: "System"
+        })
+      ));
     }
 
     // Fetch the final state after all operations

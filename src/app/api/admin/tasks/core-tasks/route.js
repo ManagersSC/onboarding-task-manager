@@ -3,6 +3,7 @@ import logger from "@/lib/utils/logger"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { createNotification } from "@/lib/notifications"
 
 // Core Tasks Route
 export async function GET(request) {
@@ -207,6 +208,16 @@ export async function DELETE(request) {
       try {
         await base('Onboarding Tasks').destroy(id)
         deletedIds.push(id)
+
+        // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
+        await createNotification({
+          title: "Task Deleted",
+          body: `A task you were assigned (ID: ${id}) has been deleted.`,
+          type: "Task",
+          severity: "Warning",
+          recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
+          source: "System"
+        });
       } catch (err) {
         logger.error(`Error deleting task ${id}:`, err)
         failedIds.push(id)

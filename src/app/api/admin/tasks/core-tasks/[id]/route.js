@@ -3,6 +3,7 @@ import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { createNotification } from "@/lib/notifications"
 
 // For Task Edit Sheet 
 export async function GET(request, { params }) {
@@ -131,6 +132,16 @@ export async function PATCH(request, { params }) {
     // 5. Update record metadata & strip attachments if you support removal
     if (Object.keys(fieldsToUpdate).length) {
       await base("Onboarding Tasks").update([{ id: recordId, fields: fieldsToUpdate }])
+
+      // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
+      await createNotification({
+        title: "Task Updated",
+        body: `A task you were assigned ("${formData.get("title")}") has been updated.`,
+        type: "Task",
+        severity: "Info",
+        recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
+        source: "System"
+      });
     }
 
     // 6. Upload new files

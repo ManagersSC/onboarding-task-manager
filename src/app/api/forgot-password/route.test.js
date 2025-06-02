@@ -143,7 +143,7 @@ describe("forgotPassword route", () => {
     expect(logger.error).toHaveBeenCalledWith("JWT_SECRET is not configured");
   });
 
-  it("should return 500 if MAKE_WEBHOOK_URL is missing", async () => {
+  it("should return 500 if MAKE_WEBHOOK_URL_RESET_PASSWORD is missing", async () => {
     process.env.MAKE_WEBHOOK_URL = "";
     // Simulate that a user exists.
     applicantsFirstPageMock = async () => [{ id: "applicant1", fields: {} }];

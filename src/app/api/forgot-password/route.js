@@ -45,7 +45,7 @@ export async function POST(request) {
     const resetToken = jwt.sign(payload, process.env.JWT_SECRET, tokenOptions);
 
     // Ensure Make.com webhook URL is configured.
-    if (!process.env.MAKE_WEBHOOK_URL) {
+    if (!process.env.MAKE_WEBHOOK_URL_RESET_PASSWORD) {
       logger.error("Make.com webhook URL is not configured");
       await logAuditEvent({
         eventType: "Server",
