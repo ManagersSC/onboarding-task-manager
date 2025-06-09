@@ -209,15 +209,23 @@ export async function DELETE(request) {
         await base('Onboarding Tasks').destroy(id)
         deletedIds.push(id)
 
-        // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
-        await createNotification({
-          title: "Task Deleted",
-          body: `A task you were assigned (ID: ${id}) has been deleted.`,
-          type: "Task",
-          severity: "Warning",
-          recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
-          source: "System"
-        });
+        // Find all logs for this task
+        const logs = await base("Onboarding Tasks Logs")
+          .select({ filterByFormula: `ARRAYJOIN({Task},',') = '${id}'` })
+          .firstPage();
+        for (const log of logs) {
+          const assigned = log.fields["Assigned"] || [];
+          for (const recipientId of assigned) {
+            await createNotification({
+              title: "Task Deleted",
+              body: `A task you were assigned (ID: ${id}) has been deleted.`,
+              type: "Task Deletion",
+              severity: "Warning",
+              recipientId,
+              source: "System"
+            });
+          }
+        }
       } catch (err) {
         logger.error(`Error deleting task ${id}:`, err)
         failedIds.push(id)

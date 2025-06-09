@@ -201,8 +201,8 @@ export async function POST(request) {
           // Send notification to applicant
           await createNotification({
             title: "New Task Assigned",
-            body: `You have been assigned the task: "${taskName}".`,
-            type: "Task",
+            body: `You have been assigned the task: \"${taskName}\".`,
+            type: "Task Assignment",
             severity: "Info",
             recipientId: applicantRecord.id,
             actionUrl: `https://yourapp.com/tasks/${logRecord.id}`,

@@ -133,15 +133,23 @@ export async function PATCH(request, { params }) {
     if (Object.keys(fieldsToUpdate).length) {
       await base("Onboarding Tasks").update([{ id: recordId, fields: fieldsToUpdate }])
 
-      // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
-      await createNotification({
-        title: "Task Updated",
-        body: `A task you were assigned ("${formData.get("title")}") has been updated.`,
-        type: "Task",
-        severity: "Info",
-        recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
-        source: "System"
-      });
+      // Find all logs for this task
+      const logs = await base("Onboarding Tasks Logs")
+        .select({ filterByFormula: `ARRAYJOIN({Task},',') = '${recordId}'` })
+        .firstPage();
+      for (const log of logs) {
+        const assigned = log.fields["Assigned"] || [];
+        for (const recipientId of assigned) {
+          await createNotification({
+            title: "Task Updated",
+            body: `A task you were assigned (\"${formData.get("title") || "Untitled Task"}\") has been updated.`,
+            type: "Task Update",
+            severity: "Info",
+            recipientId,
+            source: "System"
+          });
+        }
+      }
     }
 
     // 6. Upload new files

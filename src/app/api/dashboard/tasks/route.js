@@ -3,6 +3,7 @@ import Airtable from 'airtable';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(req) {
   try {
@@ -74,6 +75,17 @@ export async function POST(req) {
     // Create the record in Airtable
     const createdRecords = await base('Tasks').create([{ fields: airtableFields }]);
     const createdRecord = createdRecords[0];
+
+    // Send notification to assigned staff
+    await createNotification({
+      title: 'New Task Assigned',
+      body: `You have been assigned the task: "${title}".`,
+      type: 'Task Assignment',
+      severity: 'Info',
+      recipientId: assignTo,
+      actionUrl: '',
+      source: 'System',
+    });
 
     // Audit log
     await logAuditEvent({

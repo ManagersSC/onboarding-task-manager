@@ -118,9 +118,8 @@ export async function PATCH(request, { params }) {
       await Promise.all(admins.map(admin =>
         createNotification({
           title: "Document Uploaded",
-          body: `New document(s) uploaded: ${fileNames}.
-`,
-          type: "Document",
+          body: `New document(s) uploaded: ${fileNames}.\n`,
+          type: "Document Upload",
           severity: "Info",
           recipientId: admin.id,
           actionUrl: `https://yourapp.com/onboarding-tasks-logs/${id}`,

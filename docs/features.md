@@ -215,8 +215,69 @@ This documentation is a living document and will be updated as new features are 
 - [See Workflows](./WORKFLOWS.md)
 
 ## Screenshots
-*Add screenshots here as the project evolves.*
+*Screenshots here as the project evolves.*
 
 ---
 
-[Setup & Installation →](./SETUP.md) 
+[Setup & Installation →](./SETUP.md)
+
+## Notification System & Task Completion Logic
+
+### Overview
+The notification system ensures users are promptly informed about important events in the onboarding workflow, such as task assignments, completions, updates, deletions, and document uploads. Notifications are delivered in-app and, based on user preferences, via Email and Slack (integrated through Make.com).
+
+### Notification Types
+- **Task Assignment:** When a user is assigned a new task.
+- **Task Completion:** When a task is completed.
+- **Task Update:** When a task is edited/updated.
+- **Task Deletion:** When a task is deleted.
+- **Document Upload:** When new documents are uploaded to a task.
+
+### Delivery Channels
+- **In-App:** All notifications are stored in the Airtable `Notifications` table and shown in the app UI.
+- **Email & Slack:** If enabled in the user's notification preferences, notifications are also sent to Make.com, which relays them to Email and/or Slack.
+
+### User Preferences
+- Each staff user can configure which notification types and channels they wish to receive (see the `Notification Preferences` and `Notification Channels` fields in the Staff table).
+- The backend respects these preferences and only delivers notifications accordingly.
+
+### Task Completion Notification Logic
+
+When a task is marked as complete, the following business rules apply:
+
+- **Task Creator:** Always notified when their task is completed (unless they are the one completing it).
+- **Assigned Staff:** Notified if someone else completes their assigned task.
+- **No duplicate notifications** are sent to the same person for a single event.
+
+#### Notification Flow Table
+| Recipient      | When Notified                                      | Message Example                                      |
+|---------------|----------------------------------------------------|------------------------------------------------------|
+| Task Creator   | When their assigned task is completed by someone else | "Your task 'X' assigned to staff has been completed by [User]" |
+| Assigned Staff | If someone else completes their task               | "Task 'X' was marked complete by [User]"             |
+
+#### Example JSON Payload to Make.com
+```json
+{
+  "title": "Task Completed",
+  "body": "Your task 'X' assigned to staff has been completed by John Doe.",
+  "type": "Task Completion",
+  "severity": "Success",
+  "actionUrl": "",
+  "source": "System",
+  "recipientId": "recXXXXXXXX",
+  "channels": ["Email", "Slack"]
+}
+```
+
+### Backend Implementation
+- **API Endpoint:** `PATCH /api/dashboard/tasks/[id]` with `{ action: "complete" }` triggers the notification logic.
+- **Logic Location:** See [`src/app/api/dashboard/tasks/[id]/route.js`](../src/app/api/dashboard/tasks/[id]/route.js).
+- **Notification Utility:** See [`src/lib/notifications.js`](../src/lib/notifications.js) for delivery and preference handling.
+- **Airtable Integration:** All notification records are stored in the `Notifications` table, and user preferences are read from the `Staff` table.
+
+### Extensibility & Best Practices
+- The notification system is designed to be extensible for new event types and delivery channels.
+- All notification types should be added to both the `Notifications` table and the `Notification Preferences` field in the `Staff` table for consistency.
+- The system respects user preferences and avoids notification spam by preventing duplicate notifications for the same event.
+
+--- 

@@ -141,23 +141,23 @@ export async function POST(request) {
     }).catch((err) => logger.error("Audit log error: ", err));
 
     // Send notification to admin/manager (replace 'ADMIN_RECORD_ID' with actual logic)
-    const admins = await base("Staff")
-      .select({
-        filterByFormula: "{IsAdmin}=TRUE()",
-        fields: ["Name", "Email"],
-      })
-      .firstPage();
-    await Promise.all(admins.map(admin =>
-      createNotification({
-        title: "Task Completed",
-        body: `${applicantName} has completed the task: \"${taskTitle}\".`,
-        type: "Task",
-        severity: "Success",
-        recipientId: admin.id,
-        actionUrl: `https://yourapp.com/tasks/${taskId}`,
-        source: "System"
-      })
-    ));
+    // const admins = await base("Staff")
+    //   .select({
+    //     filterByFormula: "{IsAdmin}=TRUE()",
+    //     fields: ["Name", "Email"],
+    //   })
+    //   .firstPage();
+    // await Promise.all(admins.map(admin =>
+    //   createNotification({
+    //     title: "Task Completed",
+    //     body: `${applicantName} has completed the task: \"${taskTitle}\".`,
+    //     type: "Task Completion",
+    //     severity: "Success",
+    //     recipientId: admin.id,
+    //     actionUrl: `https://yourapp.com/tasks/${taskId}`,
+    //     source: "System"
+    //   })
+    // ));
 
     return response;
   } catch (error) {
