@@ -35,6 +35,9 @@ export async function createNotification({
     }
     if (!recipientId) throw new Error("Recipient ID is required")
 
+    logger.info(`[createNotification] Attempting to create notification for recipientId: ${recipientId}`);
+    logger.info(`[createNotification] Payload: title='${title}', body='${body}', type='${type}', severity='${severity}', recipientId='${recipientId}', actionUrl='${actionUrl}', source='${source}'`);
+
     // Fetch recipient's preferences from Staff table
     const staffRecords = await base("Staff")
       .select({ filterByFormula: `RECORD_ID() = '${recipientId}'`, maxRecords: 1 })
@@ -47,12 +50,12 @@ export async function createNotification({
 
     // Only notify if the type is enabled in preferences
     if (!preferences.includes(type)) {
-      logger.info(`Notification type '${type}' not enabled for user ${recipientId}`)
+      logger.info(`[createNotification] Notification type '${type}' not enabled for user ${recipientId}. Preferences: ${JSON.stringify(preferences)}`)
       return
     }
 
     // Always create notification in Notifications table (in-app)
-    await base("Notifications").create([
+    const createResult = await base("Notifications").create([
       {
         fields: {
           "Title": title,
@@ -66,6 +69,7 @@ export async function createNotification({
         }
       }
     ])
+    logger.info(`[createNotification] Notification created in Airtable. Record ID(s): ${createResult.map(r => r.id).join(", ")}`);
 
     // If Email or Slack is enabled, send to Make.com webhook
     const enabledChannels = channels.filter(c => c === "Email" || c === "Slack")

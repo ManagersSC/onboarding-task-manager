@@ -123,15 +123,15 @@ export async function GET() {
     errors.general = e.message;
   }
 
-  // --- Blocked Items (from Tasks table) ---
-  let blockedItems = 0, blockedItemsLastMonth = 0, blockedItemsMonthlyChange = null;
+  // --- Flagged Items (from Tasks table) ---
+  let flaggedItems = 0, flaggedItemsLastMonth = 0, flaggedItemsMonthlyChange = null;
   try {
-    blockedItems = tasks.filter(t => (t.fields["🚀 Status"] || "").toLowerCase() === "blocked").length;
+    flaggedItems = tasks.filter(t => (t.fields["🚀 Status"] || "").toLowerCase() === "flagged").length;
     // For monthly change, you would need a created/updated time field in Tasks. Placeholder for now:
-    blockedItemsLastMonth = null;
-    blockedItemsMonthlyChange = null;
+    flaggedItemsLastMonth = null;
+    flaggedItemsMonthlyChange = null;
   } catch (e) {
-    errors.blockedItems = e.message;
+    errors.flaggedItems = e.message;
   }
 
   // --- Metric helpers for easy future swap ---
@@ -193,9 +193,9 @@ export async function GET() {
     completionRate,
     completionRateLastMonth,
     completionRateMonthlyChange,
-    blockedItems,
-    blockedItemsLastMonth,
-    blockedItemsMonthlyChange,
+    flaggedItems,
+    flaggedItemsLastMonth,
+    flaggedItemsMonthlyChange,
     // Existing metrics
     totalApplicants: applicants?.length ?? null,
     applicantsByStage: applicants?.length ? groupAndCount(applicants, "Stage") : null,

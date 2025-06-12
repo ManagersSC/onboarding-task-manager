@@ -9,8 +9,8 @@ function getStatusGroup(status) {
     return "upcoming"
   } else if (normalizedStatus === "overdue") {
     return "overdue"
-  } else if (normalizedStatus === "blocked") {
-    return "blocked"
+  } else if (normalizedStatus === "flagged") {
+    return "flagged"
   }
 
   return "upcoming" // Default fallback
@@ -94,13 +94,13 @@ export async function getTasksWithCreator() {
         status: (task.fields["🚀 Status"] || "").toLowerCase().trim(),
         createdBy: creatorName,
         for: assignedStaffName,
-        blockedReason: task.fields["Blocked Reason"] || "",
+        flaggedReason: task.fields["Flagged Reason"] || "",
       }
     }),
   )
 
   // Group by status (excluding completed)
-  const grouped = { upcoming: [], overdue: [], blocked: [] }
+  const grouped = { upcoming: [], overdue: [], flagged: [] }
   for (const task of taskObjs) {
     const group = getStatusGroup(task.status)
     grouped[group].push(task)
@@ -186,7 +186,7 @@ export async function editStaffTask(taskId, fields) {
   const airtableFields = {};
   if (fields.title !== undefined) airtableFields["📌 Task"] = fields.title;
   if (fields.description !== undefined) airtableFields["📖 Task Detail"] = fields.description;
-  if (fields.blockedReason !== undefined) airtableFields["Blocked Reason"] = fields.blockedReason;
+  if (fields.flaggedReason !== undefined) airtableFields["Flagged Reason"] = fields.flaggedReason;
   if (fields.priority !== undefined) airtableFields["🚨 Urgency"] = fields.priority;
   if (fields.status !== undefined) airtableFields["🚀 Status"] = fields.status;
   if (fields.dueDate !== undefined) airtableFields["📆 Due Date"] = fields.dueDate;

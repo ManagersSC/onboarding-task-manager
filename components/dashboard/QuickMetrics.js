@@ -53,9 +53,9 @@ export function QuickMetrics() {
       color: "bg-green-500/10 text-green-500",
     },
     {
-      title: "Blocked Items",
-      value: formatValue(metrics.blockedItems),
-      change: metrics.blockedItemsMonthlyChange,
+      title: "Flagged Items",
+      value: formatValue(metrics.flaggedItems),
+      change: metrics.flaggedItemsMonthlyChange,
       icon: AlertTriangle,
       color: "bg-red-500/10 text-red-500",
     },

@@ -30,21 +30,21 @@ export async function middleware(request) {
   });
 
   // Apply rate limiting based on endpoint type
-  if (STRICT_RATE_LIMIT_PATHS.includes(path)) {
-    edgeLog('[MIDDLEWARE] Applying strict rate limit to:', path);
-    const response = strictLimiter(request);
-    if (response) {
-      edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
-      return response;
-    }
-  } else if (path.startsWith('/api/')) {
-    edgeLog('[MIDDLEWARE] Applying relaxed rate limit to:', path);
-    const response = relaxedLimiter(request);
-    if (response) {
-      edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
-      return response;
-    }
-  }
+  // if (STRICT_RATE_LIMIT_PATHS.includes(path)) {
+  //   edgeLog('[MIDDLEWARE] Applying strict rate limit to:', path);
+  //   const response = strictLimiter(request);
+  //   if (response) {
+  //     edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
+  //     return response;
+  //   }
+  // } else if (path.startsWith('/api/')) {
+  //   edgeLog('[MIDDLEWARE] Applying relaxed rate limit to:', path);
+  //   const response = relaxedLimiter(request);
+  //   if (response) {
+  //     edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
+  //     return response;
+  //   }
+  // }
 
   const isPublic = ["/", "/signup", "forgot-password"].includes(path);
   const isAdminRoute = path.startsWith("/admin");
@@ -52,7 +52,7 @@ export async function middleware(request) {
   // Check session cookie
   const sessionCookie = request.cookies.get("session")?.value;
   if(!isPublic && !sessionCookie){
-    edgeLog('[MIDDLEWARE] No session cookie, redirecting to home');
+    // edgeLog('[MIDDLEWARE] No session cookie, redirecting to home');
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
@@ -63,15 +63,15 @@ export async function middleware(request) {
       password: process.env.SESSION_SECRET,
       ttl: 60 * 60 * 8
     });
-    edgeLog('[MIDDLEWARE] Session validated for:', session.userEmail);
+    // edgeLog('[MIDDLEWARE] Session validated for:', session.userEmail);
   } catch (error){
-    edgeLog('[MIDDLEWARE] Invalid session:', error.message);
+    // edgeLog('[MIDDLEWARE] Invalid session:', error.message);
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
   // Check admin access
   if (isAdminRoute && session.userRole !== "admin") {
-    edgeLog('[MIDDLEWARE] Non-admin access attempt to admin route:', path);
+    // edgeLog('[MIDDLEWARE] Non-admin access attempt to admin route:', path);
     return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl));
   }
 

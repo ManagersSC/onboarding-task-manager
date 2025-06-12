@@ -241,39 +241,72 @@ The notification system ensures users are promptly informed about important even
 - Each staff user can configure which notification types and channels they wish to receive (see the `Notification Preferences` and `Notification Channels` fields in the Staff table).
 - The backend respects these preferences and only delivers notifications accordingly.
 
-### Task Completion Notification Logic
+### Notification Scenarios
 
-When a task is marked as complete, the following business rules apply:
+The system uses the `createNotification` utility to deliver notifications to users based on their preferences and actions in the system. Below are all the main scenarios where notifications are triggered:
 
-- **Task Creator:** Always notified when their task is completed (unless they are the one completing it).
-- **Assigned Staff:** Notified if someone else completes their assigned task.
-- **No duplicate notifications** are sent to the same person for a single event.
+#### 1. New Task Assignment (Staff/Applicant)
+- **When:** A new task is created and assigned to a staff member or applicant (including onboarding and custom tasks).
+- **Who is Notified:** The assigned staff member or applicant.
+- **Notification Example:**
+  - Title: "New Task Assigned"
+  - Body: `You have been assigned the task: "<Task Name>".`
+  - Type: `Task Assignment`
+  - Severity: `Info`
 
-#### Notification Flow Table
-| Recipient      | When Notified                                      | Message Example                                      |
-|---------------|----------------------------------------------------|------------------------------------------------------|
-| Task Creator   | When their assigned task is completed by someone else | "Your task 'X' assigned to staff has been completed by [User]" |
-| Assigned Staff | If someone else completes their task               | "Task 'X' was marked complete by [User]"             |
+#### 2. Task Completion
+- **When:** A task is marked as complete.
+- **Who is Notified:**
+  - The **task creator** (if someone else completes their task).
+  - The **assigned staff** (if someone else marks their task as complete).
+- **Notification Example:**
+  - Title: "Task Completed"
+  - Body (to creator): `Your task '<Task Name>' assigned to staff has been completed by <User>.`
+  - Body (to assignee): `Task '<Task Name>' was marked complete by <User>.`
+  - Type: `Task Completion`
+  - Severity: `Success`
 
-#### Example JSON Payload to Make.com
-```json
-{
-  "title": "Task Completed",
-  "body": "Your task 'X' assigned to staff has been completed by John Doe.",
-  "type": "Task Completion",
-  "severity": "Success",
-  "actionUrl": "",
-  "source": "System",
-  "recipientId": "recXXXXXXXX",
-  "channels": ["Email", "Slack"]
-}
-```
+#### 3. Core Task Deletion
+- **When:** A core onboarding task is deleted.
+- **Who is Notified:** All users who were assigned to the deleted task.
+- **Notification Example:**
+  - Title: "Task Deleted"
+  - Body: `A task you were assigned (ID: <Task ID>) has been deleted.`
+  - Type: `Task Deletion`
+  - Severity: `Warning`
+
+#### 4. Custom Task Assignment
+- **When:** An custom task is assigned to an applicant.
+- **Who is Notified:** The applicant.
+- **Notification Example:**
+  - Title: "New Task Assigned"
+  - Body: `You have been assigned the task: "<Task Name>".`
+  - Type: `Task Assignment`
+  - Severity: `Info`
+
+---
+
+### Notification Flow Table
+| Scenario                        | Trigger/Event                | Recipient(s)         | Notification Type      |
+|----------------------------------|------------------------------|----------------------|-----------------------|
+| New task assigned (staff/applicant) | Task creation/assignment     | Assigned staff/user  | Task Assignment       |
+| Task marked as complete         | Task completion              | Creator, Assignee    | Task Completion       |
+| Onboarding/custom task assigned | Onboarding/custom assignment | Applicant            | Task Assignment       |
+| Core task deleted               | Task deletion                | All assigned users   | Task Deletion         |
+
+---
+
+- Each staff user can configure which notification types and channels they wish to receive (see the `Notification Preferences` and `Notification Channels` fields in the Staff table).
+- The backend respects these preferences and only delivers notifications accordingly.
 
 ### Backend Implementation
-- **API Endpoint:** `PATCH /api/dashboard/tasks/[id]` with `{ action: "complete" }` triggers the notification logic.
-- **Logic Location:** See [`src/app/api/dashboard/tasks/[id]/route.js`](../src/app/api/dashboard/tasks/[id]/route.js).
+- **API Endpoints:**
+  - `POST /api/dashboard/tasks` (task assignment)
+  - `PATCH /api/dashboard/tasks/[id]` with `{ action: "complete" }` (task completion)
+  - `POST /api/admin/tasks/create-task` (onboarding/custom task assignment)
+  - `DELETE /api/admin/tasks/core-tasks` (core task deletion)
+- **Logic Location:** See [`src/app/api/dashboard/tasks/[id]/route.js`](../src/app/api/dashboard/tasks/[id]/route.js), [`src/app/api/admin/tasks/create-task/route.js`](../src/app/api/admin/tasks/create-task/route.js), [`src/app/api/admin/tasks/core-tasks/route.js`](../src/app/api/admin/tasks/core-tasks/route.js).
 - **Notification Utility:** See [`src/lib/notifications.js`](../src/lib/notifications.js) for delivery and preference handling.
-- **Airtable Integration:** All notification records are stored in the `Notifications` table, and user preferences are read from the `Staff` table.
 
 ### Extensibility & Best Practices
 - The notification system is designed to be extensible for new event types and delivery channels.

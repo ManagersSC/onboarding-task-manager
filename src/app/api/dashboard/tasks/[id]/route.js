@@ -207,7 +207,7 @@ export async function GET(req, { params }) {
       status: (record.fields["🚀 Status"] || "").toLowerCase().trim(),
       createdBy: record.fields["👩 Created By"] || "",
       for: record.fields["👨 Assigned Staff"] || "",
-      blockedReason: record.fields["Blocked Reason"] || "",
+      flaggedReason: record.fields["Flagged Reason"] || "",
     };
     return new Response(JSON.stringify({ task }), { status: 200 });
   } catch (e) {
