@@ -25,6 +25,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Label } from "@components/ui/label"
+import Link from "next/link"
 
 // Determines the status of a folder
 function getFolderStatus(subtasks) {
@@ -70,14 +71,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await fetch("/api/get-tasks")
-        if (!response.ok) {
-          const data = await response.json()
+        const [tasksRes, quizzesRes] = await Promise.all([
+          fetch("/api/get-tasks"),
+          fetch("/api/user/quizzes"),
+        ])
+        if (!tasksRes.ok) {
+          const data = await tasksRes.json()
           throw new Error(data.error || "Failed to load tasks")
         }
-        const data = await response.json()
-        const tasksFromBackend = Array.isArray(data) ? data : data.tasks || []
-
+        if (!quizzesRes.ok) {
+          const data = await quizzesRes.json()
+          throw new Error(data.error || "Failed to load quizzes")
+        }
+        const tasksData = await tasksRes.json()
+        const quizzesData = await quizzesRes.json()
+        const tasksFromBackend = Array.isArray(tasksData) ? tasksData : tasksData.tasks || []
         // Transform backend data to match frontend structure
         const tasksArray = tasksFromBackend.map((task) => ({
           id: task.id,
@@ -92,15 +100,29 @@ export default function DashboardPage() {
           isCustom: task.isCustom || false,
           urgency: task.urgency, // No default urgency
         }))
-
-        setTasks(tasksArray)
+        // Add quiz tasks as special tasks
+        const quizTasks = quizzesData.map((quiz) => ({
+          id: `quiz-${quiz.quizId}`,
+          title: quiz.title,
+          description: quiz.status === "completed" ? `Quiz completed. Score: ${quiz.score}` : "Weekly Quiz - Special Task!",
+          completed: quiz.status === "completed",
+          overdue: false,
+          resourceUrl: `/quizzes/${quiz.quizId}`,
+          lastStatusChange: null,
+          week: quiz.week,
+          folder: null,
+          isQuiz: true,
+          quizId: quiz.quizId,
+          score: quiz.score,
+          passed: quiz.passed,
+        }))
+        setTasks([...quizTasks, ...tasksArray])
       } catch (e) {
         setError(e.message)
       } finally {
         setLoading(false)
       }
     }
-
     fetchTasks()
   }, [])
 

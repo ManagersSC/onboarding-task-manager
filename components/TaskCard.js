@@ -8,6 +8,7 @@ import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
 import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
 import { cn } from "@components/lib/utils"
+import Link from "next/link"
 
 // Urgency configuration
 const urgencyConfig = {
@@ -78,10 +79,15 @@ export function TaskCard({ task, onComplete }) {
   }
 
   return (
-    <Card className={cn("overflow-hidden", statusInfo.accentClass)}>
+    <Card className={cn("overflow-hidden", statusInfo.accentClass, task.isQuiz && "border-2 border-blue-500 shadow-lg")}>
       <CardContent className="p-4">
         <div className="flex justify-between items-start gap-2 mb-2">
-          <h3 className="font-medium text-foreground">{task.title}</h3>
+          <h3 className="font-medium text-foreground">
+            {task.title}
+            {task.isQuiz && (
+              <Badge variant="default" className="ml-2 bg-blue-600 text-white">Quiz</Badge>
+            )}
+          </h3>
           <div className="flex flex-wrap gap-1">
             <Badge variant="outline" className={statusInfo.badgeClass}>
               <span className="flex items-center gap-1">
@@ -123,19 +129,27 @@ export function TaskCard({ task, onComplete }) {
       </CardContent>
 
       <CardFooter className="p-4 pt-0 flex justify-between">
-        {task.resourceUrl && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-            onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-          >
-            <ExternalLink className="h-4 w-4 mr-1.5" />
-            Resource
-          </Button>
+        {task.isQuiz ? (
+          <Link href={task.resourceUrl} passHref legacyBehavior>
+            <Button as="a" variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+              {task.completed ? "View Quiz" : "Start Quiz"}
+            </Button>
+          </Link>
+        ) : (
+          task.resourceUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+            >
+              <ExternalLink className="h-4 w-4 mr-1.5" />
+              Resource
+            </Button>
+          )
         )}
 
-        {!task.completed ? (
+        {!task.isQuiz && (!task.completed ? (
           <Button
             variant={task.overdue ? "default" : "outline"}
             size="sm"
@@ -159,7 +173,7 @@ export function TaskCard({ task, onComplete }) {
           <div className="text-xs text-muted-foreground">
             Completed {task.lastStatusChange ? new Date(task.lastStatusChange).toLocaleDateString() : ""}
           </div>
-        )}
+        ))}
       </CardFooter>
     </Card>
   )

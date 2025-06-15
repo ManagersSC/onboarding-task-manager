@@ -12,14 +12,19 @@ const ONBOARDING_QUIZZES = 'Onboarding Quizzes';
 const ONBOARDING_QUIZ_ITEMS = 'Onboarding Quiz Items';
 const ONBOARDING_QUIZ_SUBMISSIONS = 'Onboarding Quiz Submissions';
 
-async function getSessionUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get(process.env.SESSION_COOKIE_NAME);
-  if (!session) throw new Error("Not authenticated");
-  const user = await unsealData(session.value, { password: process.env.SESSION_PASSWORD });
-  if (!user?.email) throw new Error("No user email in session");
-  return user;
-}
+// async function getSessionUser() {
+//   try{
+//     const cookieStore = await cookies();
+//     const session = cookieStore.get(process.env.SESSION_COOKIE_NAME);
+//     if (!session) throw new Error("Not authenticated");
+//     const user = await unsealData(session.value, { password: process.env.SESSION_PASSWORD });
+//     if (!user?.email) throw new Error("No user email in session");
+//     return user;
+//   } catch (error) {
+//     logger.error("Error getting session user:", error);
+//     throw new Error("Internal server error");
+//   }
+// }
 
 async function getApplicantRecord(userEmail) {
   const records = await base(APPLICANTS).select({ filterByFormula: `{Email} = '${userEmail}'`, maxRecords: 1 }).firstPage();
@@ -42,46 +47,90 @@ function parseCorrectAnswer(correctRaw, questionType) {
 
 export async function GET(req, { params }) {
   try {
-    const user = await getSessionUser();
-    await getApplicantRecord(user.email); // Ensures user is an applicant
-    const quizId = params.quizId;
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const user = await unsealData(sessionCookie, { password: process.env.SESSION_SECRET });
+    await getApplicantRecord(user.userEmail);
+    const p = await params;
+    const quizId = p.quizId;
+
     // Fetch quiz metadata
-    const quizRec = await base(ONBOARDING_QUIZZES).find(quizId);
-    if (!quizRec) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    let quizRec;
+    try {
+      quizRec = await base(ONBOARDING_QUIZZES).find(quizId);
+    } catch (e) {
+      logger.error(`Quiz not found for id: ${quizId}`, e);
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
+    if (!quizRec || !quizRec.fields) {
+      logger.error(`Quiz record missing fields for id: ${quizId}`, { quizRec });
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
     const quiz = quizRec.fields;
+
     // Fetch all quiz items (info and questions)
-    const items = await base(ONBOARDING_QUIZ_ITEMS)
-      .select({ filterByFormula: `FIND('${quizId}', ARRAYJOIN({Quiz ID}))`, sort: [{field: 'Order', direction: 'asc'}] })
-      .all();
-    const parsedItems = items.map(item => {
+    let items = [];
+    const filterFormula = `{Quiz ID} = '${quizId}'`;
+    // const filterFormula = `FIND('${quizId}', ARRAYJOIN({Quiz ID}))`;
+    logger.info(`[DEBUG] Fetching quiz items for quizId: ${quizId} with formula: ${filterFormula}`);
+    try {
+      items = await base(ONBOARDING_QUIZ_ITEMS)
+        .select({ filterByFormula: filterFormula, sort: [{field: 'Order', direction: 'asc'}] })
+        .all();
+      logger.info(`[DEBUG] Raw quiz items from Airtable:`, items.map(i => ({id: i.id, fields: i.fields})));
+    } catch (e) {
+      logger.error(`[DEBUG] Error fetching quiz items for quizId: ${quizId}`, e);
+    }
+    const parsedItems = Array.isArray(items) ? items.map(item => {
+      if (!item.fields) {
+        logger.error("Quiz item missing fields", { item });
+        return null;
+      }
       const type = item.fields["Type"] === "Information" ? "info" : "question";
       if (type === "info") {
         return {
           type: "info",
-          title: item.fields["Content"] || "Information",
           text: item.fields["Content"] || "",
           order: item.fields["Order"] || 0,
         };
       } else {
         const questionType = (item.fields["Q.Type"] || "radio").toLowerCase();
+        if (!item.id || !item.fields["Content"]) {
+          logger.error("Quiz question missing id or content", { item });
+          return null;
+        }
+        // Parse options into a clean array
+        let optionsArr = [];
+        if (item.fields["Options"]) {
+          optionsArr = item.fields["Options"].split('&lt;br>').map(opt => opt.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+        }
         return {
           type: "question",
           id: item.id,
           questionText: item.fields["Content"] || "",
           questionType,
-          options: parseOptions(item.fields["Options"]),
+          options: optionsArr,
           points: item.fields["Points"] || 0,
           order: item.fields["Order"] || 0,
           correctAnswer: parseCorrectAnswer(item.fields["Correct Answer"], questionType),
         };
       }
-    });
-    return NextResponse.json({
+    }).filter(Boolean) : [];
+    if (parsedItems.length === 0) {
+      logger.warn(`[DEBUG] No quiz items found after parsing for quizId: ${quizId}`);
+    }
+
+    const responseObj = {
       quizId,
       title: quiz["Quiz Title"],
       passingScore: quiz["Passing Score"],
       items: parsedItems,
-    });
+    };
+    logger.warn(`[DEBUG] API response for quizId ${quizId}: ${JSON.stringify(responseObj, null, 2)}`);
+    return NextResponse.json(responseObj);
   } catch (error) {
     logger.error("Error fetching quiz details:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -90,8 +139,13 @@ export async function GET(req, { params }) {
 
 export async function POST(req, { params }) {
   try {
-    const user = await getSessionUser();
-    const applicant = await getApplicantRecord(user.email);
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const user = await unsealData(sessionCookie, { password: process.env.SESSION_SECRET });
+    await getApplicantRecord(user.email); // Ensures user is an applicant
     const quizId = params.quizId;
     const body = await req.json();
     const { answers } = body; // { [questionId]: answer or [answers] }

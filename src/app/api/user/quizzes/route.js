@@ -48,12 +48,14 @@ export async function GET(request) {
     // Fetch quiz metadata and submission status for each
     const quizzes = await Promise.all(
       quizLogs.map(async (log) => {
-        const quizId = log.fields['Onboarding Quizzes'][0];
+        const onboardingQuizzes = log.fields['Onboarding Quizzes'];
+        if (!Array.isArray(onboardingQuizzes) || onboardingQuizzes.length === 0) return null;
+        const quizId = onboardingQuizzes[0];
         let quizRec = null;
         try {
           quizRec = await base(ONBOARDING_QUIZZES).find(quizId);
         } catch (e) {}
-        if (!quizRec) return null;
+        if (!quizRec || !quizRec.fields) return null;
         // Find submission for this quiz/applicant
         const submissions = await base(ONBOARDING_QUIZ_SUBMISSIONS)
           .select({
