@@ -4,6 +4,7 @@ import Airtable from "airtable";
 import { unsealData } from "iron-session";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { NextResponse } from 'next/server';
+import { createNotification } from "@/lib/notifications";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -199,6 +200,40 @@ export async function POST(req, { params }) {
       "Submission Timestamp": new Date().toISOString(),
       "Answers": JSON.stringify(answers),
     });
+
+    // Notify all Admins
+    try {
+      const staffRecords = await base('Staff').select({ filterByFormula: `{IsAdmin}`, maxRecords: 20 }).firstPage();
+      for (const admin of staffRecords) {
+        await createNotification({
+          title: `Quiz Completed: ${quiz.fields["Quiz Title"] || quizId}`,
+          body: `Applicant ${applicant.fields["Name"] || user.userEmail} has completed the quiz '${quiz.fields["Quiz Title"] || quizId}' with a score of ${score}/${total} (${Math.round(percent)}%).`,
+          type: "Quiz Completion",
+          severity: "Info",
+          recipientId: admin.id,
+          actionUrl: `/admin/quizzes/${quizId}/submissions`,
+          source: "System"
+        });
+      }
+    } catch (err) {
+      logger.error("Failed to notify admins of quiz completion:", err);
+    }
+
+    // Audit log
+    try {
+      await logAuditEvent({
+        eventType: "Quiz Completed",
+        eventStatus: passed ? "Success" : "Failure",
+        userRole: user.userRole || "Applicant",
+        userName: applicant.fields["Name"] || user.userEmail,
+        userIdentifier: user.userEmail,
+        detailedMessage: `Applicant ${applicant.fields["Name"] || user.userEmail} (${user.userEmail}) completed quiz '${quiz.fields["Quiz Title"] || quizId}' (ID: ${quizId}) with score ${score}/${total} (${Math.round(percent)}%). Pass: ${passed}.`,
+        request: req
+      });
+    } catch (err) {
+      logger.error("Failed to log audit event for quiz completion:", err);
+    }
+
     return NextResponse.json({ score, total, passed });
   } catch (error) {
     logger.error("Error submitting quiz:", error);
