@@ -83,6 +83,94 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 - **Who:** All users
 - **Example:** Only admins can create templates; team members can only see their own tasks
 
+### 8. Onboarding Quiz Feature
+- **What:** Assign, deliver, and score onboarding quizzes as part of the applicant onboarding journey.
+- **Who:** Admins (create/assign), Applicants (take quizzes), Managers (review results)
+- **Example:** Applicant is assigned a weekly quiz, completes it via the dashboard, and receives instant feedback on their score and pass/fail status.
+
+#### How It Works
+- Quizzes are assigned to applicants as special onboarding tasks.
+- Quizzes appear in the applicant dashboard with a prominent badge and link.
+- The quiz UI loads real quiz data and any previous submission, allowing applicants to complete or review quizzes.
+- Upon submission, answers are scored automatically, and results (score, percentage, pass/fail) are shown instantly.
+- All quiz data, submissions, and results are stored in Airtable for audit and analytics.
+
+#### Data Flow Diagram
+*This diagram shows the end-to-end data flow for the quiz feature, from user interaction to backend storage:*
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant API
+  participant Airtable
+
+  User->>Frontend: Login & view dashboard
+  Frontend->>API: GET /api/user/quizzes
+  API->>Airtable: Query assigned quizzes
+  Airtable-->>API: Quiz assignments
+  API-->>Frontend: Quiz list
+  User->>Frontend: Clicks on Quiz
+  Frontend->>API: GET /api/quizzes/[quizId]
+  API->>Airtable: Fetch quiz metadata & items
+  Airtable-->>API: Quiz data
+  API-->>Frontend: Quiz data
+  Frontend->>API: GET /api/quizzes/[quizId]/submission
+  API->>Airtable: Fetch previous submission
+  Airtable-->>API: Submission data
+  API-->>Frontend: Submission data
+  User->>Frontend: Answers questions & submits
+  Frontend->>API: POST /api/quizzes/[quizId] (answers)
+  API->>Airtable: Store submission, score quiz
+  Airtable-->>API: Store result
+  API-->>Frontend: Pass/fail, score, feedback
+  Frontend-->>User: Show results
+```
+
+#### Architectural Overview
+*This flowchart illustrates the main components and their interactions in the quiz feature stack:*
+
+```mermaid
+flowchart TD
+  F1[Dashboard Page] -- fetch quizzes --> A1[GET /api/user/quizzes]
+  A1 -- assigned quizzes --> F1
+  F1 -- user clicks quiz --> F2[Quiz UI Page]
+  F2 -- fetch quiz data --> A2[GET quiz metadata/items]
+  A2 -- quiz metadata/items --> F2
+  F2 -- fetch submission --> A3[GET previous submission]
+  A3 -- previous submission --> F2
+  F2 -- render quiz --> F3[QuizClient Component]
+  F3 -- submit answers --> A4[POST answers]
+  A4 -- store & score --> DB3[Quiz Submissions]
+  A4 -- result --> F3
+  A2 -- reads from --> DB1[Onboarding Quizzes]
+  A2 -- reads from --> DB2[Onboarding Quiz Items]
+  A3 -- reads from --> DB3
+  A4 -- writes to --> DB3
+```
+
+#### Key API Endpoints
+- `GET /api/user/quizzes` — List all quizzes assigned to the user, with status and score.
+- `GET /api/quizzes/[quizId]` — Fetch quiz metadata and all items (info blocks and questions).
+- `POST /api/quizzes/[quizId]` — Submit answers, auto-score, and store the submission.
+- `GET /api/quizzes/[quizId]/submission` — Fetch the user's previous submission for that quiz.
+
+#### Data Model
+- See [ATS_schema.txt](./ATS_schema.txt) for full Airtable schema.
+- Key tables: **Onboarding Quizzes**, **Onboarding Quiz Items**, **Onboarding Quiz Submissions**.
+- Each quiz item can be an info block or a question (radio/checkbox, with options and correct answers).
+- Passing score is set as a percentage (e.g., 60 means 60%).
+
+#### UX Details
+- Quizzes are visually distinct in the dashboard (blue border, "Quiz" badge).
+- Quiz UI supports info blocks, single/multi-select questions, and instant feedback.
+- Users see their score, percentage, and pass/fail status after submission.
+- Only one submission per quiz per applicant is allowed (see [FAQ](./FAQ.md)).
+
+#### Developer Notes
+- Quiz logic is robust to handle missing/malformed data and various passing score formats (see [API Reference](./API_REFERENCE.md)).
+- For workflows and edge cases, see [WORKFLOWS.md](./WORKFLOWS.md).
+
 ## Page Structure
 
 ### 1. Authentication Pages

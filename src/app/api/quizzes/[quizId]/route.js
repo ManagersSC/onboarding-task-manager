@@ -145,8 +145,9 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
     const user = await unsealData(sessionCookie, { password: process.env.SESSION_SECRET });
-    await getApplicantRecord(user.email); // Ensures user is an applicant
-    const quizId = params.quizId;
+    const applicant = await getApplicantRecord(user.userEmail);
+    const p = await params;
+    const quizId = p.quizId;
     const body = await req.json();
     const { answers } = body; // { [questionId]: answer or [answers] }
     // Fetch quiz items (questions only)
@@ -176,14 +177,23 @@ export async function POST(req, { params }) {
     }
     // Fetch quiz metadata for passing score
     const quiz = await base(ONBOARDING_QUIZZES).find(quizId);
-    const passingScore = quiz.fields["Passing Score"];
-    const passed = score >= passingScore;
+    let passingScoreRaw = quiz.fields["Passing Score"] ?? 0;
+    let passingScore = Number(passingScoreRaw);
+    if (typeof passingScoreRaw === 'string' && passingScoreRaw.endsWith('%')) {
+      passingScore = Number(passingScoreRaw.replace('%', '').trim());
+    }
+    if (passingScore <= 1) {
+      passingScore = passingScore * 100;
+    }
+    const percent = total > 0 ? (score / total) * 100 : 0;
+    logger.warn(`[QUIZ SUBMIT DEBUG] percent: ${percent}, passingScore: ${passingScore}, raw: ${passingScoreRaw}`);
+    const passed = percent >= passingScore;
     // Store submission
     await base(ONBOARDING_QUIZ_SUBMISSIONS).create({
       "Score": score,
       "Total Form Score": total,
       "Passed?": passed ? "Passed" : "Failed",
-      "Respondent Email": user.email,
+      "Respondent Email": user.userEmail,
       "Applicants": [applicant.id],
       "Onboarding - Quizzes": [quizId],
       "Submission Timestamp": new Date().toISOString(),
