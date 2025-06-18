@@ -13,10 +13,10 @@ const APPLICANTS = 'Applicants';
 
 async function getSessionUser() {
   const cookieStore = await cookies();
-  const session = cookieStore.get(process.env.SESSION_COOKIE_NAME);
-  if (!session) throw new Error("Not authenticated");
-  const user = await unsealData(session.value, { password: process.env.SESSION_PASSWORD });
-  if (!user?.email) throw new Error("No user email in session");
+  const sessionCookie = cookieStore.get("session")?.value;
+  if (!sessionCookie) throw new Error("Not authenticated");
+  const user = await unsealData(sessionCookie, { password: process.env.SESSION_SECRET });
+  if (!user?.userEmail) throw new Error("No user email in session");
   return user;
 }
 
@@ -30,9 +30,9 @@ async function getApplicantIdByEmail(userEmail) {
 export async function GET(request) {
   try {
     const user = await getSessionUser();
-    const applicantId = await getApplicantIdByEmail(user.email);
+    const applicantId = await getApplicantIdByEmail(user.userEmail);
     if (!applicantId) {
-      logger.debug(`No applicant found for email: ${user.email}`);
+      logger.debug(`No applicant found for email: ${user.userEmail}`);
       return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
     }
     // Fetch all logs for this applicant
