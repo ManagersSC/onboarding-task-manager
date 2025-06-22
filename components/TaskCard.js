@@ -1,5 +1,3 @@
-// Replace the entire file content with the proper TaskCard component
-
 "use client"
 
 import { useState } from "react"
@@ -128,52 +126,73 @@ export function TaskCard({ task, onComplete }) {
         {task.week && <div className="text-xs text-muted-foreground mb-2">Week {task.week}</div>}
       </CardContent>
 
-      <CardFooter className="p-4 pt-0 flex justify-between">
+      <CardFooter className="p-4 pt-0 flex justify-between items-center">
         {task.isQuiz ? (
-          <Link href={task.resourceUrl} passHref legacyBehavior>
-            <Button as="a" variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-              {task.completed ? "View Quiz" : "Start Quiz"}
-            </Button>
-          </Link>
-        ) : (
-          task.resourceUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-              onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-            >
-              <ExternalLink className="h-4 w-4 mr-1.5" />
-              Resource
-            </Button>
-          )
-        )}
-
-        {!task.isQuiz && (!task.completed ? (
-          <Button
-            variant={task.overdue ? "default" : "outline"}
-            size="sm"
-            className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
-            disabled={isCompleting}
-            onClick={handleComplete}
-          >
-            {isCompleting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                Completing...
-              </>
+          <div className="flex w-full justify-end">
+            {task.quizId ? (
+              <Link href={`/quizzes/${task.quizId}`}>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {task.completed ? "View Results" : "Get Started"}
+                </Button>
+              </Link>
             ) : (
-              <>
-                <Check className="h-4 w-4 mr-1.5" />
-                Complete
-              </>
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="bg-gray-400 cursor-not-allowed" 
+                disabled
+              >
+                Quiz Unavailable
+              </Button>
             )}
-          </Button>
-        ) : (
-          <div className="text-xs text-muted-foreground">
-            Completed {task.lastStatusChange ? new Date(task.lastStatusChange).toLocaleDateString() : ""}
           </div>
-        ))}
+        ) : (
+          <>
+            {task.resourceUrl ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="h-4 w-4 mr-1.5" />
+                Resource
+              </Button>
+            ) : (
+              <span /> // Empty span to maintain alignment
+            )}
+
+            {!task.completed ? (
+              <Button
+                variant={task.overdue ? "default" : "outline"}
+                size="sm"
+                className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
+                disabled={isCompleting}
+                onClick={handleComplete}
+              >
+                {isCompleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-1.5" />
+                    Complete
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                Completed {task.lastStatusChange ? new Date(task.lastStatusChange).toLocaleDateString() : ""}
+              </div>
+            )}
+          </>
+        )}
       </CardFooter>
     </Card>
   )

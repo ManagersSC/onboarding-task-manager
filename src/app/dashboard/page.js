@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+// Assuming these paths are correct in your project. Adjust if necessary.
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
 import { ProfileActions } from "@components/ProfileActions"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Skeleton } from "@components/ui/skeleton"
 import { Badge } from "@components/ui/badge"
@@ -25,19 +27,15 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Label } from "@components/ui/label"
-import Link from "next/link"
 
-// Determines the status of a folder
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
   const hasAssigned = subtasks.some((t) => !t.completed && !t.overdue)
-
   if (hasOverdue) return "overdue"
   if (hasAssigned) return "assigned"
   return "completed"
 }
 
-// TaskList Component
 const TaskList = ({ tasks, onComplete }) => {
   return (
     <div className="divide-y divide-border">
@@ -55,78 +53,103 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeView, setActiveView] = useState("kanban")
 
-  // Consolidated filters
   const [filters, setFilters] = useState({
-    status: "all", // all, assigned, overdue, completed
+    status: "all",
     week: "all",
-    type: "all", // all, standard, custom
-    urgency: "all", // all, critical, high, medium, low
+    type: "all",
+    urgency: "all",
   })
 
-  // Active filters count for badge
   const getActiveFiltersCount = () => {
-    return Object.entries(filters).filter(([key, value]) => value !== "all").length
+    return Object.values(filters).filter((value) => value !== "all").length
   }
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchData = async () => {
       try {
-        const [tasksRes, quizzesRes] = await Promise.all([
+        setLoading(true);
+        
+        // Fetch tasks and quizzes in parallel
+        const [tasksResponse, quizzesResponse] = await Promise.all([
           fetch("/api/get-tasks"),
-          fetch("/api/user/quizzes"),
-        ])
-        if (!tasksRes.ok) {
-          const data = await tasksRes.json()
-          throw new Error(data.error || "Failed to load tasks")
-        }
-        if (!quizzesRes.ok) {
-          const data = await quizzesRes.json()
-          throw new Error(data.error || "Failed to load quizzes")
-        }
-        const tasksData = await tasksRes.json()
-        const quizzesData = await quizzesRes.json()
-        const tasksFromBackend = Array.isArray(tasksData) ? tasksData : tasksData.tasks || []
-        // Transform backend data to match frontend structure
-        const tasksArray = tasksFromBackend.map((task) => ({
-          id: task.id,
-          title: Array.isArray(task.title) ? task.title[0] : task.title,
-          description: task.description,
-          completed: task.completed,
-          overdue: task.overdue,
-          resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
-          lastStatusChange: task.lastStatusChange,
-          week: task.week,
-          folder: task.folder,
-          isCustom: task.isCustom || false,
-          urgency: task.urgency, // No default urgency
-        }))
-        // Add quiz tasks as special tasks
-        const quizTasks = quizzesData.map((quiz) => ({
-          id: `quiz-${quiz.quizId}`,
-          title: quiz.title,
-          description: quiz.status === "completed" ? `Quiz completed. Score: ${quiz.score}` : "Weekly Quiz - Special Task!",
-          completed: quiz.status === "completed",
-          overdue: false,
-          resourceUrl: `/quizzes/${quiz.quizId}`,
-          lastStatusChange: null,
-          week: quiz.week,
-          folder: null,
-          isQuiz: true,
-          quizId: quiz.quizId,
-          score: quiz.score,
-          passed: quiz.passed,
-        }))
-        setTasks([...quizTasks, ...tasksArray])
-      } catch (e) {
-        setError(e.message)
+          fetch("/api/user/quizzes")
+        ]);
+  
+        const tasksFromBackend = tasksResponse.ok ? await tasksResponse.json() : [];
+        const quizzesData = quizzesResponse.ok ? await quizzesResponse.json() : [];
+  
+        console.log("Raw tasks from backend:", tasksFromBackend);
+        console.log("Raw quizzes from API:", quizzesData);
+  
+        const quizLogIds = new Set(quizzesData.map(q => q.logId));
+
+        // Process quiz data from API endpoint (primary source)
+        const apiQuizTasks = quizzesData.map((quiz) => {
+          return {
+            id: `quiz-${quiz.quizId || quiz.logId}`,
+            title: quiz.title,
+            description: quiz.description,
+            completed: quiz.completed,
+            overdue: quiz.overdue || false,
+            resourceUrl: quiz.resourceUrl,
+            lastStatusChange: quiz.lastStatusChange,
+            week: quiz.week,
+            folder: null, // Quizzes don't need folders in the UI
+            isQuiz: true,
+            quizId: quiz.quizId,
+            score: quiz.score,
+            passed: quiz.passed,
+            originalLogId: quiz.logId,
+            status: quiz.status,
+            type: "Quiz"
+          }
+        })
+  
+        console.log("=== Quiz Processing Results ===")
+        console.log("API quiz tasks:", apiQuizTasks.length)
+        console.log("Total quiz tasks:", apiQuizTasks.length)
+  
+        // Remove quiz tasks from regular tasks to prevent duplication
+        const regularTasks = tasksFromBackend
+          .filter(task => !quizLogIds.has(task.id))
+          .map(task => ({
+            id: task.id,
+            title: Array.isArray(task.title) ? task.title[0] : task.title,
+            description: task.description || "",
+            completed: task.completed,
+            overdue: task.overdue,
+            resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
+            lastStatusChange: task.lastStatusChange,
+            week: task.week,
+            folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
+            isQuiz: false
+          }))
+  
+        console.log("Regular tasks after quiz filtering:", regularTasks.length)
+  
+        // Combine all tasks
+        const allTasks = [...regularTasks, ...apiQuizTasks];
+  
+        setTasks(allTasks);
+  
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError("Failed to load tasks. Please try again.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchTasks()
-  }, [])
+    };
+  
+    fetchData();
+  }, []);
 
   const handleComplete = async (taskId) => {
+    const taskToComplete = tasks.find(t => t.id === taskId);
+    if (taskToComplete && taskToComplete.isQuiz) {
+      console.warn("Attempted to complete a quiz task via handleComplete. This is not allowed.");
+      return;
+    }
+    
     try {
       const response = await fetch("/api/complete-task", {
         method: "POST",
@@ -141,11 +164,10 @@ export default function DashboardPage() {
         prevTasks.map((task) => (task.id === taskId ? { ...task, completed: true, overdue: false } : task)),
       )
     } catch (e) {
-      console.error("Error completing task:", e)
+      console.error("Error completing task:", e.message)
     }
   }
 
-  // Reset all filters
   const resetFilters = () => {
     setFilters({
       status: "all",
@@ -156,111 +178,122 @@ export default function DashboardPage() {
     setSearchQuery("")
   }
 
-  // Apply filters to tasks
-  const filteredTasks = tasks.filter((task) => {
-    // Filter by search query
-    const matchesSearch =
-      searchQuery === "" ||
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredTasks = useMemo(
+    () =>
+      tasks.filter((task) => {
+        const matchesSearch =
+          searchQuery === "" ||
+          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    // Filter by status
-    let matchesStatus = true
-    if (filters.status !== "all") {
-      const taskStatus = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
-      matchesStatus = taskStatus === filters.status
-    }
+        let matchesStatus = true
+        if (filters.status !== "all") {
+          const taskStatus = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
+          matchesStatus = taskStatus === filters.status
+        }
 
-    // Filter by week
-    const matchesWeek = filters.week === "all" || task.week === filters.week
+        const matchesWeek = filters.week === "all" || String(task.week) === filters.week
 
-    // Filter by type
-    const matchesType =
-      filters.type === "all" ||
-      (filters.type === "custom" && task.isCustom) ||
-      (filters.type === "standard" && !task.isCustom)
+        const matchesType =
+          filters.type === "all" ||
+          (filters.type === "custom" && task.isCustom) ||
+          (filters.type === "standard" && !task.isCustom)
 
-    // Filter by urgency
-    const matchesUrgency =
-      filters.urgency === "all" ||
-      (filters.urgency === "no urgency"
-        ? !task.urgency
-        : task.urgency && task.urgency.toLowerCase() === filters.urgency.toLowerCase())
+        const matchesUrgency =
+          filters.urgency === "all" ||
+          (filters.urgency === "no urgency"
+            ? !task.urgency
+            : task.urgency && task.urgency.toLowerCase() === filters.urgency.toLowerCase())
 
-    return matchesSearch && matchesStatus && matchesWeek && matchesType && matchesUrgency
-  })
+        return matchesSearch && matchesStatus && matchesWeek && matchesType && matchesUrgency
+      }),
+    [tasks, searchQuery, filters],
+  )
 
-  // Group tasks that have a folder name
-  const folderGroups = filteredTasks.reduce((groups, task) => {
-    if (task.folder) {
-      if (!groups[task.folder]) {
-        groups[task.folder] = []
+  const filteredQuizTasks = useMemo(() => filteredTasks.filter((task) => task.isQuiz), [filteredTasks])
+  const filteredNormalTasks = useMemo(() => filteredTasks.filter((task) => !task.isQuiz), [filteredTasks])
+
+  const { folderGroups, individualTasks } = useMemo(() => {
+    const groups = {}
+    const individuals = []
+    filteredNormalTasks.forEach((task) => {
+      if (task.folder) {
+        if (!groups[task.folder]) {
+          groups[task.folder] = []
+        }
+        groups[task.folder].push(task)
+      } else {
+        individuals.push(task)
       }
-      groups[task.folder].push(task)
+    })
+    return { folderGroups: groups, individualTasks: individuals }
+  }, [filteredNormalTasks])
+
+  const assignedTasks = useMemo(
+    () => individualTasks.filter((task) => !task.completed && !task.overdue),
+    [individualTasks],
+  )
+  const overdueTasks = useMemo(() => individualTasks.filter((task) => task.overdue), [individualTasks])
+  const completedTasks = useMemo(() => individualTasks.filter((task) => task.completed), [individualTasks])
+
+  const assignedQuizTasks = useMemo(() => filteredQuizTasks.filter((task) => !task.completed), [filteredQuizTasks])
+  const completedQuizTasks = useMemo(() => filteredQuizTasks.filter((task) => task.completed), [filteredQuizTasks])
+
+  const foldersByStatus = useMemo(() => {
+    const acc = {
+      assigned: [],
+      overdue: [],
+      completed: [],
     }
-    return groups
-  }, {})
+    Object.entries(folderGroups).forEach(([folderName, tasksInFolder]) => {
+      const status = getFolderStatus(tasksInFolder)
+      acc[status].push({ folderName, tasks: tasksInFolder, status })
+    })
+    return acc
+  }, [folderGroups])
 
-  // Tasks without a folder
-  const individualTasks = filteredTasks.filter((task) => !task.folder)
-
-  // For non-folder tasks
-  const assignedTasks = individualTasks.filter((task) => !task.completed && !task.overdue)
-  const overdueTasks = individualTasks.filter((task) => task.overdue)
-  const completedTasks = individualTasks.filter((task) => task.completed)
-
-  // Process folders by status
-  const foldersByStatus = {
-    assigned: [],
-    overdue: [],
-    completed: [],
-  }
-
-  Object.entries(folderGroups).forEach(([folderName, tasksInFolder]) => {
-    const status = getFolderStatus(tasksInFolder)
-    foldersByStatus[status].push({ folderName, tasks: tasksInFolder, status })
-  })
-
-  // Calculate summary statistics
   const totalTasks = tasks.length
   const completedTasksCount = tasks.filter((task) => task.completed).length
-  const overdueTasksCount = tasks.filter((task) => task.overdue).length
+  const overdueTasksCount = tasks.filter((task) => task.overdue && !task.isQuiz).length
   const assignedTasksCount = tasks.filter((task) => !task.completed && !task.overdue).length
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0
 
-  // Get available weeks for filter
-  const availableWeeks = [...new Set(tasks.map((task) => task.week).filter(Boolean))].sort((a, b) => a - b)
+  const availableWeeks = useMemo(
+    () => [...new Set(tasks.map((task) => task.week).filter(Boolean))].sort((a, b) => Number(a) - Number(b)),
+    [tasks],
+  )
 
-  // Count tasks by type
   const customTasksCount = tasks.filter((task) => task.isCustom).length
   const standardTasksCount = tasks.length - customTasksCount
 
-  // Count tasks by urgency
-  const urgencyCounts = tasks.reduce((counts, task) => {
-    if (task.urgency) {
-      counts[task.urgency] = (counts[task.urgency] || 0) + 1
+  const urgencyCounts = useMemo(() => {
+    const counts = tasks.reduce((acc, task) => {
+      if (task.urgency) {
+        acc[task.urgency] = (acc[task.urgency] || 0) + 1
+      }
+      return acc
+    }, {})
+    const tasksWithoutUrgency = tasks.filter((task) => !task.urgency).length
+    if (tasksWithoutUrgency > 0) {
+      counts["No Urgency"] = tasksWithoutUrgency
     }
     return counts
-  }, {})
+  }, [tasks])
 
-  // Add a "No Urgency" count if needed
-  const tasksWithoutUrgency = tasks.filter((task) => !task.urgency).length
-  if (tasksWithoutUrgency > 0) {
-    urgencyCounts["No Urgency"] = tasksWithoutUrgency
-  }
-
-  // Get status counts for the status tabs
-  const statusCounts = {
-    all: tasks.length,
-    assigned: assignedTasksCount,
-    overdue: overdueTasksCount,
-    completed: completedTasksCount,
-  }
+  const statusCounts = useMemo(
+    () => ({
+      all: tasks.length,
+      assigned: assignedTasksCount,
+      overdue: overdueTasksCount,
+      completed: completedTasksCount,
+    }),
+    [tasks.length, assignedTasksCount, overdueTasksCount, completedTasksCount],
+  )
 
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
-        {/* Dashboard Header with Profile Actions */}
+        {/* ... rest of your JSX remains the same ... */}
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
@@ -269,7 +302,6 @@ export default function DashboardPage() {
           <ProfileActions />
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 flex items-center justify-between">
@@ -285,7 +317,6 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6 flex items-center justify-between">
               <div>
@@ -300,7 +331,6 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6 flex items-center justify-between">
               <div>
@@ -317,10 +347,8 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Consolidated Filter Bar */}
         <div className="mb-6 flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            {/* Search Bar */}
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -330,9 +358,7 @@ export default function DashboardPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-
             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
-              {/* Status Filter */}
               <Tabs
                 value={filters.status}
                 onValueChange={(value) => setFilters({ ...filters, status: value })}
@@ -340,36 +366,34 @@ export default function DashboardPage() {
               >
                 <TabsList className="grid grid-cols-4 w-full md:w-auto">
                   <TabsTrigger value="all" className="text-xs md:text-sm">
-                    All
+                    All{" "}
                     <Badge variant="secondary" className="ml-1 bg-muted">
                       {statusCounts.all}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="assigned" className="text-xs md:text-sm">
-                    Assigned
+                    Assigned{" "}
                     <Badge variant="secondary" className="ml-1 bg-muted">
                       {statusCounts.assigned}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="overdue" className="text-xs md:text-sm">
-                    Overdue
+                    Overdue{" "}
                     <Badge variant="secondary" className="ml-1 bg-muted">
                       {statusCounts.overdue}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="completed" className="text-xs md:text-sm">
-                    Completed
+                    Completed{" "}
                     <Badge variant="secondary" className="ml-1 bg-muted">
                       {statusCounts.completed}
                     </Badge>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-
-              {/* Advanced Filters */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9">
+                  <Button variant="outline" size="sm" className="h-9 bg-card text-card-foreground">
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
                     Filters
                     {getActiveFiltersCount() > 0 && (
@@ -389,11 +413,12 @@ export default function DashboardPage() {
                         <div className="col-span-3">
                           <Select
                             value={filters.type}
-                            onValueChange={(value) => setFilters({ ...filters, type: value })}                          >
+                            onValueChange={(value) => setFilters({ ...filters, type: value })}
+                          >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
-                            <SelectContent style={{ mindWidth: "180px" }}>
+                            <SelectContent style={{ minWidth: "180px" }}>
                               <SelectItem value="all">All Types</SelectItem>
                               <SelectItem value="standard">Standard ({standardTasksCount})</SelectItem>
                               <SelectItem value="custom">Custom ({customTasksCount})</SelectItem>
@@ -407,15 +432,14 @@ export default function DashboardPage() {
                           <Select
                             value={filters.week}
                             onValueChange={(value) => setFilters({ ...filters, week: value })}
-                            className="col-span-3"
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select week" />
                             </SelectTrigger>
-                            <SelectContent style={{ mindWidth: "180px"}}>
+                            <SelectContent style={{ minWidth: "180px" }}>
                               <SelectItem value="all">All Weeks</SelectItem>
                               {availableWeeks.map((week) => (
-                                <SelectItem key={week} value={week.toString()}>
+                                <SelectItem key={String(week)} value={String(week)}>
                                   Week {week}
                                 </SelectItem>
                               ))}
@@ -429,16 +453,15 @@ export default function DashboardPage() {
                           <Select
                             value={filters.urgency}
                             onValueChange={(value) => setFilters({ ...filters, urgency: value })}
-                            className="col-span-3"
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select urgency" />
                             </SelectTrigger>
-                            <SelectContent style={{ mindWidth: "180px"}}>
+                            <SelectContent style={{ minWidth: "180px" }}>
                               <SelectItem value="all">All Urgency</SelectItem>
-                              {Object.keys(urgencyCounts).map((urgency) => (
+                              {Object.entries(urgencyCounts).map(([urgency, count]) => (
                                 <SelectItem key={urgency} value={urgency.toLowerCase()}>
-                                  {urgency} ({urgencyCounts[urgency]})
+                                  {urgency} ({count})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -446,16 +469,18 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetFilters}
+                      className="mt-2 bg-card text-card-foreground"
+                    >
                       <X className="h-4 w-4 mr-2" />
                       Reset Filters
                     </Button>
                   </div>
                 </PopoverContent>
-                
               </Popover>
-
-              {/* View Toggle */}
               <div className="flex items-center gap-2 ml-auto">
                 <Button
                   variant={activeView === "kanban" ? "default" : "outline"}
@@ -479,7 +504,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Active Filters Display */}
           {getActiveFiltersCount() > 0 && (
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-sm text-muted-foreground">Active filters:</span>
@@ -537,7 +561,11 @@ export default function DashboardPage() {
             <CardTitle className="text-destructive mb-2">Error Loading Tasks</CardTitle>
             <CardContent className="p-0">
               <p>{error}</p>
-              <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+              <Button
+                variant="outline"
+                className="mt-4 bg-card text-card-foreground"
+                onClick={() => window.location.reload()}
+              >
                 Retry
               </Button>
             </CardContent>
@@ -566,31 +594,32 @@ export default function DashboardPage() {
                       Assigned
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {assignedTasks.length + foldersByStatus.assigned.length} items
+                      {assignedQuizTasks.length + foldersByStatus.assigned.length + assignedTasks.length} items
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {/* Render assigned folders */}
-                    {foldersByStatus.assigned.map(({ folderName, tasks, status }) => (
+                    {assignedQuizTasks.map((task) => (
+                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} />
+                    ))}
+                    {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                       <FolderCard
                         key={folderName}
                         folderName={folderName}
-                        tasks={tasks}
+                        tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
                       />
                     ))}
-
-                    {/* Render assigned individual tasks */}
                     {assignedTasks.map((task) => (
                       <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} />
                     ))}
-
-                    {assignedTasks.length === 0 && foldersByStatus.assigned.length === 0 && (
-                      <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-sm text-muted-foreground">No assigned items</p>
-                      </div>
-                    )}
+                    {assignedTasks.length === 0 &&
+                      foldersByStatus.assigned.length === 0 &&
+                      assignedQuizTasks.length === 0 && (
+                        <div className="rounded-lg border border-dashed p-8 text-center">
+                          <p className="text-sm text-muted-foreground">No assigned items</p>
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -605,26 +634,22 @@ export default function DashboardPage() {
                       Overdue
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {overdueTasks.length + foldersByStatus.overdue.length} items
+                      {foldersByStatus.overdue.length + overdueTasks.length} items
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {/* Render overdue folders */}
-                    {foldersByStatus.overdue.map(({ folderName, tasks, status }) => (
+                    {foldersByStatus.overdue.map(({ folderName, tasks: tasksInFolder, status }) => (
                       <FolderCard
                         key={folderName}
                         folderName={folderName}
-                        tasks={tasks}
+                        tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
                       />
                     ))}
-
-                    {/* Render overdue individual tasks */}
                     {overdueTasks.map((task) => (
                       <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} />
                     ))}
-
                     {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
                       <div className="rounded-lg border border-dashed p-8 text-center">
                         <p className="text-sm text-muted-foreground">No overdue items</p>
@@ -644,36 +669,37 @@ export default function DashboardPage() {
                       Completed
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {completedTasks.length + foldersByStatus.completed.length} items
+                      {completedQuizTasks.length + foldersByStatus.completed.length + completedTasks.length} items
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {/* Render completed folders */}
-                    {foldersByStatus.completed.map(({ folderName, tasks, status }) => (
+                    {completedQuizTasks.map((task) => (
+                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} />
+                    ))}
+                    {foldersByStatus.completed.map(({ folderName, tasks: tasksInFolder, status }) => (
                       <FolderCard
                         key={folderName}
                         folderName={folderName}
-                        tasks={tasks}
+                        tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
                       />
                     ))}
-
-                    {/* Render completed individual tasks */}
                     {completedTasks.map((task) => (
                       <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} />
                     ))}
-
-                    {completedTasks.length === 0 && foldersByStatus.completed.length === 0 && (
-                      <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-sm text-muted-foreground">No completed items</p>
-                      </div>
-                    )}
+                    {completedTasks.length === 0 &&
+                      foldersByStatus.completed.length === 0 &&
+                      completedQuizTasks.length === 0 && (
+                        <div className="rounded-lg border border-dashed p-8 text-center">
+                          <p className="text-sm text-muted-foreground">No completed items</p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
             ) : (
-              <TaskList tasks={filteredTasks} onComplete={handleComplete} />
+              <TaskList tasks={[...filteredQuizTasks, ...filteredNormalTasks]} onComplete={handleComplete} />
             )}
           </>
         )}

@@ -1354,6 +1354,11 @@
                                 "color": "yellowLight2"
                             },
                             {
+                                "id": "selIc16bvZNZdWvuw",
+                                "name": "Quiz Completion",
+                                "color": "pinkLight2"
+                            },
+                            {
                                 "id": "sel6QpDZn0Agxr51d",
                                 "name": "Announcement",
                                 "color": "orangeLight2"
@@ -3602,10 +3607,11 @@
                     "type": "formula",
                     "options": {
                         "isValid": true,
-                        "formula": "IF(\r\n  {fld9qao7szmd8WdM0},\r\n  {fld9qao7szmd8WdM0},\r\n  IF(\r\n    {fld9gVRaAFiZQ5SfV},\r\n    'Quiz',\r\n    'Type Not Available'\r\n  )\r\n)",
+                        "formula": "IF(\r\n  {fld9qao7szmd8WdM0},\r\n  {fld9qao7szmd8WdM0},\r\n  IF(\r\n    {fld9gVRaAFiZQ5SfV},\r\n    'Quiz',\r\n    IF(\r\n      {fld3mQE1yIRT85Isf} = 1,\r\n      'Custom',\r\n      'Type Not Available'\r\n    )\r\n  )\r\n)",
                         "referencedFieldIds": [
                             "fld9qao7szmd8WdM0",
-                            "fld9gVRaAFiZQ5SfV"
+                            "fld9gVRaAFiZQ5SfV",
+                            "fld3mQE1yIRT85Isf"
                         ],
                         "result": {
                             "type": "singleLineText"
@@ -3806,7 +3812,7 @@
                     "name": "Quiz Title"
                 },
                 {
-                    "type": "number",
+                    "type": "percent",
                     "options": {
                         "precision": 0
                     },
@@ -3877,6 +3883,19 @@
                     },
                     "id": "fld8WvP413jv7YkPN",
                     "name": "Onboarding Tasks"
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "RECORD_ID()",
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "singleLineText"
+                        }
+                    },
+                    "id": "fldGsPmaOfHGXHWVE",
+                    "name": "Record ID"
                 }
             ],
             "views": [
@@ -3906,6 +3925,19 @@
                         "inverseLinkFieldId": "fldBYDgyFv3bzLtV6"
                     },
                     "id": "fldWgHXEWhmuOW8Fx",
+                    "name": "Quiz Link"
+                },
+                {
+                    "type": "multipleLookupValues",
+                    "options": {
+                        "isValid": true,
+                        "recordLinkFieldId": "fldWgHXEWhmuOW8Fx",
+                        "fieldIdInLinkedTable": "fldGsPmaOfHGXHWVE",
+                        "result": {
+                            "type": "singleLineText"
+                        }
+                    },
+                    "id": "fldB61JMdiotCncV9",
                     "name": "Quiz ID"
                 },
                 {
@@ -4593,6 +4625,11 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "selx5dNOLmr83ewxr",
+                                "name": "Quiz Completed",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "selcrRwBLc8UVE7LF",
                                 "name": "Fetch Files",
                                 "color": "cyanBright"
@@ -4747,6 +4784,11 @@
                                 "id": "selbKooXj6DNHfEyX",
                                 "name": "Document Upload",
                                 "color": "yellowLight2"
+                            },
+                            {
+                                "id": "selmM8cqxQltHcRXX",
+                                "name": "Quiz Completion",
+                                "color": "pinkLight2"
                             },
                             {
                                 "id": "selwBCSGbXmHxfVxV",

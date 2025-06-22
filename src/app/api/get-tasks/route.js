@@ -95,7 +95,8 @@ export async function GET(request) {
         "Task Week Number",
         "Folder Name",
         "isCustom",
-        "Urgency"
+        "Urgency",
+        "Display Type",
       ],
       sort: [
         { field: "Created Date", direction: "desc" },
@@ -118,6 +119,7 @@ export async function GET(request) {
       const status = record.get("Status");
       const isCustom = record.get("isCustom");
       const urgency = record.get("Urgency");
+      const taskType = record.get("Display Type");
 
       const rawWeek = record.get("Task Week Number");
       let weekValue = null;
@@ -132,8 +134,8 @@ export async function GET(request) {
         title: record.get("Display Title") || "Untitled Task",
         description: record.get("Display Desc") || "",
         status: status,
-        completed: status === "Completed",
-        overdue: status === "Overdue",
+        completed: taskType === 'Quiz' ? false : status === "Completed",
+        overdue: taskType === 'Quiz' ? false : status === "Overdue",
         resourceUrl: record.get("Display Resource Link") || null,
         isCustom,
         urgency,
