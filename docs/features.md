@@ -85,91 +85,125 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 
 ### 8. Onboarding Quiz Feature
 - **What:** Assign, deliver, and score onboarding quizzes as part of the applicant onboarding journey.
-- **Who:** Admins (create/assign), Applicants (take quizzes), Managers (review results)
-- **Example:** Applicant is assigned a weekly quiz, completes it via the dashboard, and receives instant feedback on their score and pass/fail status.
+- **Who:** Admins (create/assign), Applicants (take quizzes).
+- **Example:** An applicant is assigned a weekly knowledge quiz, completes it via their dashboard, and receives instant feedback on their score and pass/fail status.
 
-#### How It Works
-- Quizzes are assigned to applicants as special onboarding tasks.
-- Quizzes appear in the applicant dashboard with a prominent badge and link.
-- The quiz UI loads real quiz data and any previous submission, allowing applicants to complete or review quizzes.
-- Upon submission, answers are scored automatically, and results (score, percentage, pass/fail) are shown instantly.
-- All quiz data, submissions, and results are stored in Airtable for audit and analytics.
+---
 
-#### Data Flow Diagram
-*This diagram shows the end-to-end data flow for the quiz feature, from user interaction to backend storage:*
+#### **Detailed Breakdown of Quiz Functionality**
 
+The quiz system is designed to be robust but requires a specific data flow to distinguish quiz tasks from regular tasks. This section provides a comprehensive overview of that flow, from data creation to user interaction.
+
+##### **Data Model & Airtable Setup**
+
+The system relies on three core tables in Airtable:
+-   `Onboarding Tasks Logs`: The central table where all tasks, including quizzes, are assigned to users.
+-   `Onboarding Quizzes`: A table containing the metadata for each quiz (e.g., "Week 1 Quiz," "Compliance Quiz").
+-   `Onboarding Quiz Submissions`: A table that stores a record every time a user completes a quiz, including their score and answers.
+
+##### **Quiz Identification Flow**
+
+The most critical part of the system is correctly identifying a task log as a quiz. This happens on the dashboard page load and follows a precise filtering sequence.
+
+**Flowchart: Dashboard Quiz Identification**
 ```mermaid
-sequenceDiagram
-  participant User
-  participant Frontend
-  participant API
-  participant Airtable
+graph TD
+    subgraph "User Dashboard"
+        A[Dashboard Page Loads] --> B{Fetch Data};
+    end
 
-  User->>Frontend: Login & view dashboard
-  Frontend->>API: GET /api/user/quizzes
-  API->>Airtable: Query assigned quizzes
-  Airtable-->>API: Quiz assignments
-  API-->>Frontend: Quiz list
-  User->>Frontend: Clicks on Quiz
-  Frontend->>API: GET /api/quizzes/[quizId]
-  API->>Airtable: Fetch quiz metadata & items
-  Airtable-->>API: Quiz data
-  API-->>Frontend: Quiz data
-  Frontend->>API: GET /api/quizzes/[quizId]/submission
-  API->>Airtable: Fetch previous submission
-  Airtable-->>API: Submission data
-  API-->>Frontend: Submission data
-  User->>Frontend: Answers questions & submits
-  Frontend->>API: POST /api/quizzes/[quizId] (answers)
-  API->>Airtable: Store submission, score quiz
-  Airtable-->>API: Store result
-  API-->>Frontend: Pass/fail, score, feedback
-  Frontend-->>User: Show results
+    subgraph "API Endpoints"
+        B --> C["/api/get-tasks<br/>(Fetches ALL tasks)"];
+        B --> D["/api/user/quizzes<br/>(Fetches ONLY quiz tasks)"];
+    end
+
+    subgraph "Data Processing on Dashboard"
+        D --> E[Create Set of <br/>True Quiz IDs];
+        C --> F[Get Master Task List];
+        E --> G{Filter Master List};
+        F --> G;
+        G --> H[Separate Regular Tasks];
+        D --> I[Get True Quiz Tasks];
+        H & I --> J[Combine All Tasks];
+    end
+
+    subgraph "UI Rendering"
+        J --> K[Render Task Cards];
+        K --> L{"For each task,<br/>is 'isQuiz' true?"};
+        L -- Yes --> M["Render 'Get Started' Button<br/>(links to /quizzes/id)"];
+        L -- No --> N["Render Normal Task Card<br/>(with 'Complete' button)"];
+    end
 ```
 
-#### Architectural Overview
-*This flowchart illustrates the main components and their interactions in the quiz feature stack:*
+**Explanation:**
+1.  When the dashboard loads, it calls both `/api/get-tasks` (for all tasks) and `/api/user/quizzes` in parallel.
+2.  The `/api/user/quizzes` endpoint is the **single source of truth for identifying quizzes**. It only returns task logs that are correctly linked to a record in the `Onboarding Quizzes` table.
+3.  The dashboard frontend creates a list of these "true quiz" IDs.
+4.  It then filters the master list of all tasks, removing any task that was already identified as a quiz.
+5.  This ensures there are no duplicates and that quizzes are always rendered with the special quiz UI (e.g., the "Get Started" button).
 
+##### **Quiz Completion Flow**
+
+A quiz is only considered "complete" when a submission record exists for it. The status of the task log in Airtable is ignored for determining quiz completion.
+
+**Flowchart: Quiz Completion and Submission**
 ```mermaid
-flowchart TD
-  F1[Dashboard Page] -- fetch quizzes --> A1[GET /api/user/quizzes]
-  A1 -- assigned quizzes --> F1
-  F1 -- user clicks quiz --> F2[Quiz UI Page]
-  F2 -- fetch quiz data --> A2[GET quiz metadata/items]
-  A2 -- quiz metadata/items --> F2
-  F2 -- fetch submission --> A3[GET previous submission]
-  A3 -- previous submission --> F2
-  F2 -- render quiz --> F3[QuizClient Component]
-  F3 -- submit answers --> A4[POST answers]
-  A4 -- store & score --> DB3[Quiz Submissions]
-  A4 -- result --> F3
-  A2 -- reads from --> DB1[Onboarding Quizzes]
-  A2 -- reads from --> DB2[Onboarding Quiz Items]
-  A3 -- reads from --> DB3
-  A4 -- writes to --> DB3
+graph TD
+    subgraph "User Action"
+        A[User clicks 'Get Started' on Quiz Card] --> B{Navigates to /quizzes/quizId};
+    end
+
+    subgraph "Quiz Page"
+        B --> C{Quiz Page Loads};
+        C --> D[Fetches Quiz Questions<br/>& Past Submission];
+        D --> E[User Answers Questions];
+        E --> F[User Clicks 'Submit'];
+    end
+
+    subgraph "Backend API"
+        F --> G["POST /api/quizzes/.../submission"];
+        G --> H[API creates record in<br/>'Onboarding Quiz Submissions' table];
+    end
+
+    subgraph "User Experience"
+        H --> I[User sees results on Quiz Page];
+        I --> J[User navigates back to Dashboard];
+    end
+
+    subgraph "Dashboard on Reload"
+        J --> K{Dashboard Reloads &<br/>Refetches Data};
+        K --> L["/api/user/quizzes now finds<br/>the submission record"];
+        L --> M[API returns this quiz with<br/>'completed: true'];
+        M --> N[Task Card now shows<br/>'View Results' button];
+    end
 ```
 
-#### Key API Endpoints
-- `GET /api/user/quizzes` — List all quizzes assigned to the user, with status and score.
-- `GET /api/quizzes/[quizId]` — Fetch quiz metadata and all items (info blocks and questions).
-- `POST /api/quizzes/[quizId]` — Submit answers, auto-score, and store the submission.
-- `GET /api/quizzes/[quizId]/submission` — Fetch the user's previous submission for that quiz.
+##### **How to Correctly Create a Quiz Task in Airtable**
 
-#### Data Model
-- See [ATS_schema.txt](./ATS_schema.txt) for full Airtable schema.
-- Key tables: **Onboarding Quizzes**, **Onboarding Quiz Items**, **Onboarding Quiz Submissions**.
-- Each quiz item can be an info block or a question (radio/checkbox, with options and correct answers).
-- Passing score is set as a percentage (e.g., 60 means 60%).
+To ensure a task is always recognized as a quiz, follow these steps exactly when creating a new record in your **`Onboarding Tasks Logs`** table:
 
-#### UX Details
-- Quizzes are visually distinct in the dashboard (blue border, "Quiz" badge).
-- Quiz UI supports info blocks, single/multi-select questions, and instant feedback.
-- Users see their score, percentage, and pass/fail status after submission.
-- Only one submission per quiz per applicant is allowed (see [FAQ](./FAQ.md)).
+**Required Fields:**
+1.  **`Assigned` Field:**
+    *   **Action:** Link this field to the applicant's record from the `Applicants` table.
+    *   **Why:** The API uses this to find all tasks assigned to the user.
 
-#### Developer Notes
-- Quiz logic is robust to handle missing/malformed data and various passing score formats (see [API Reference](./API_REFERENCE.md)).
-- For workflows and edge cases, see [WORKFLOWS.md](./WORKFLOWS.md).
+2.  **`Onboarding Quizzes` Field:**
+    *   **Action:** Link this field to the specific quiz record (e.g., "Week 1 Quiz") from the `Onboarding Quizzes` table.
+    *   **Why:** **This is the most critical step.** The `/api/user/quizzes` endpoint *only* finds records that have a valid link in this field.
+
+**Recommended Fields for UI:**
+3.  **`Display Title` Field:**
+    *   **Action:** Set a clear title, like "Complete the Week 1 Knowledge Quiz".
+    *   **Why:** This is the title that appears on the task card.
+4.  **`Status` Field:**
+    *   **Action:** Set the status to `Assigned`.
+    *   **Why:** This ensures it appears in the correct column on the dashboard.
+
+##### Developer Notes & Troubleshooting
+- The most common bug is a quiz task appearing as a normal task. This is almost always because the **`Onboarding Quizzes`** field is not correctly linked in the `Onboarding Tasks Logs` table.
+- The `handleComplete` function on the dashboard is now guarded and will not run on any task where `isQuiz` is true, preventing accidental client-side completions.
+- The `/api/user/quizzes` route contains detailed logging to help debug why a task may not be appearing as a quiz. Check the server terminal for `--- RAW TASK LOGS ---` to inspect the data being returned from Airtable.
+- Ensure old test data is cleared from the `Onboarding Quiz Submissions` table to correctly test the "Get Started" state.
 
 ## Page Structure
 
