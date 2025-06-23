@@ -571,14 +571,24 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-12 border rounded-lg">
-            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
+          tasks.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No tasks assigned</h3>
+              <p className="text-muted-foreground">No tasks has been assigned to you yet.</p>
             </div>
-            <h3 className="text-lg font-medium mb-2">No tasks found</h3>
-            <p className="text-muted-foreground mb-4">No tasks match your current filter criteria.</p>
-            <Button onClick={resetFilters}>Reset Filters</Button>
-          </div>
+          ) : (
+            <div className="text-center py-12 border rounded-lg">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No tasks found</h3>
+              <p className="text-muted-foreground mb-4">No tasks match your current filter criteria.</p>
+              <Button onClick={resetFilters}>Reset Filters</Button>
+            </div>
+          )
         ) : (
           <>
             {activeView === "kanban" ? (

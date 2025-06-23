@@ -1,6 +1,7 @@
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { sealData } from "iron-session";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 
@@ -8,7 +9,7 @@ import { logAuditEvent } from "@/lib/auditLogger";
 export async function POST(request) {
   let base;
   let normalisedEmail;
-  let userRole;
+  let userRole = 'user';
   try {
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID");
@@ -95,11 +96,11 @@ export async function POST(request) {
     });
 
     logAuditEvent({
-      eventType: "Login",
+      eventType: "Sign Up",
       eventStatus: "Success",
       userRole,
       userIdentifier: normalisedEmail,
-      detailedMessage: `Admin login: ${normalisedEmail}`,
+      detailedMessage: `User signed up successfully: ${normalisedEmail}`,
       request
     });
 
@@ -115,10 +116,9 @@ export async function POST(request) {
     logger.error("Signup Error:", error);
     // Attempt to log failed sign up
     await logAuditEvent({
-      base,
       eventType: "Sign Up",
       eventStatus: "Error",
-      userIdentifier: normalisedEmail,
+      userIdentifier: normalisedEmail || "unknown",
       detailedMessage: error.message,
       request
     });

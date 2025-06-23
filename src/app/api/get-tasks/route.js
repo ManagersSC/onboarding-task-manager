@@ -74,11 +74,7 @@ export async function GET(request) {
     logger.info(`Tasks in task log: ${taskIds.length}`)
 
     if (taskIds.length === 0) {
-      return Response.json({
-        email: applicantEmail,
-        recordId: applicantId,
-        tasks: []
-      })
+      return Response.json([])
     }
 
     const taskLogRecords = await base("Onboarding Tasks Logs")
@@ -106,11 +102,7 @@ export async function GET(request) {
 
     if (taskLogRecords.length === 0) {
       logger.warn(`No task logs found for applicant: ${applicantId}`);
-      return Response.json({
-        email: applicantEmail,
-        recordId: applicantId,
-        tasks: []
-      });
+      return Response.json([]);
     }
 
     // Map each task log record to an object with proper status flags.
