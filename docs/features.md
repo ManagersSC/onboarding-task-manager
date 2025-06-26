@@ -94,6 +94,76 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 
 The quiz system is designed to be robust but requires a specific data flow to distinguish quiz tasks from regular tasks. This section provides a comprehensive overview of that flow, from data creation to user interaction.
 
+##### **Onboarding Quiz Scoring Logic**
+
+This document explains how scores are calculated for the onboarding quizzes, particularly for questions that allow for multiple answers (checkboxes). Our goal is to have a scoring system that is both fair and accurate, rewarding knowledge while discouraging random guessing.
+
+**Single-Answer Questions (Radio Buttons)**
+
+These are the most straightforward question types.
+
+*   **Scoring Method:** All-or-nothing.
+*   **Logic:** If the user selects the correct answer, they receive the full points allocated to that question. If they select any other answer, they receive zero points.
+
+**Multiple-Answer Questions (Checkboxes)**
+
+For questions where multiple answers can be selected, we use a more nuanced approach called **Partial Credit with Penalty**. This system rewards users for each correct answer they select but subtracts points for any incorrect answers they choose.
+
+**The Formula**
+
+The score for a checkbox question is calculated in three steps:
+
+1.  **Calculate the Value of Each Correct Option:** We take the total points available for the question and divide it by the number of correct answers.
+    *   `Value per Option = (Total Points for the Question) / (Number of Correct Answers)`
+
+2.  **Calculate the Score:** We add up the value for each correct answer selected and subtract the value for each incorrect answer selected.
+    *   `Your Score = (Number of Correct Answers You Chose * Value per Option) - (Number of Incorrect Answers You Chose * Value per Option)`
+
+3.  **Final Score:** The score for a question cannot be negative. If the calculation results in a negative number, the final score for that question will be **0**.
+
+**Worked Examples**
+
+Let's walk through two scenarios to see how this works in practice.
+
+**Example 1: User Selects Correct and Incorrect Answers**
+
+*   **Question:** "Who provides dental implant treatment?"
+*   **Total Points:** 2
+*   **Correct Answers (2):** `Dr Ravinder Varaich`, `Dr Sarah Bux`
+*   **User Selection:** `Dr Ravinder Varaich` (Correct), `Dr Chetan Kaher` (Incorrect)
+
+1.  **Value per Option:** `2 points / 2 correct answers` = **1 point per option**.
+
+2.  **Calculate Score:**
+    *   Correct selections: 1 (`Dr Ravinder Varaich`)
+    *   Incorrect selections: 1 (`Dr Chetan Kaher`)
+    *   `(1 * 1 point) - (1 * 1 point)` = **0 points**.
+
+3.  **Final Score:** The user scores **0 points** for this question.
+
+**Example 2: User Selects All Correct Answers**
+
+*   **Question:** "Which of these are cosmetic treatments?"
+*   **Total Points:** 3
+*   **Correct Answers (3):** `Veneers`, `Whitening`, `Crowns`
+*   **User Selection:** `Veneers` (Correct), `Whitening` (Correct), `Crowns` (Correct)
+
+1.  **Value per Option:** `3 points / 3 correct answers` = **1 point per option**.
+
+2.  **Calculate Score:**
+    *   Correct selections: 3
+    *   Incorrect selections: 0
+    *   `(3 * 1 point) - (0 * 1 point)` = **3 points**.
+
+3.  **Final Score:** The user scores the full **3 points** for this question.
+
+**How to Achieve "One Point Per Answer"**
+
+If you want each correct answer to be worth exactly one point, simply set the **Total Points** for the question in Airtable to be equal to the **number of correct answers**.
+
+For instance, if a question has 3 correct answers, setting the question's `Points` to 3 will make each correct selection worth 1 point.
+
+
 ##### **Data Model & Airtable Setup**
 
 The system relies on three core tables in Airtable:

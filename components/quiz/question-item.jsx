@@ -10,16 +10,25 @@ import { CheckCircle, XCircle, HelpCircle } from "lucide-react"
 export default function QuestionItem({ question, onAnswerChange, userAnswer, isSubmitted, correctAnswer }) {
   const { id, questionText, questionType, options, points } = question
 
+  // Ensure userAnswer is always an array for checkboxes
+  const safeUserAnswer = questionType === "checkbox" 
+    ? (Array.isArray(userAnswer) ? userAnswer : [])
+    : userAnswer
+
   const getOptionState = (optionValue) => {
     if (!isSubmitted) return "default"
 
-    const isSelected = questionType === "checkbox" ? userAnswer?.includes(optionValue) : userAnswer === optionValue
+    const isSelected = questionType === "checkbox" 
+      ? safeUserAnswer.includes(optionValue)
+      : safeUserAnswer === optionValue
 
-    const isCorrect = questionType === "checkbox" ? correctAnswer?.includes(optionValue) : correctAnswer === optionValue
+    const isCorrect = questionType === "checkbox" 
+      ? (Array.isArray(correctAnswer) && correctAnswer.includes(optionValue))
+      : correctAnswer === optionValue
 
     if (isSelected && isCorrect) return "correctSelected"
     if (isSelected && !isCorrect) return "incorrectSelected"
-    if (!isSelected && isCorrect) return "correctUnselected" // Highlight correct answer even if not selected by user
+    if (!isSelected && isCorrect) return "correctUnselected"
     return "default"
   }
 
@@ -38,6 +47,17 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
     return null
   }
 
+  const handleCheckboxChange = (option, checked) => {
+    if (isSubmitted) return
+    
+    const currentAnswers = Array.isArray(safeUserAnswer) ? safeUserAnswer : []
+    const newAnswers = checked
+      ? [...currentAnswers, option]
+      : currentAnswers.filter((ans) => ans !== option)
+    
+    onAnswerChange(id, newAnswers)
+  }
+
   return (
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
       <CardHeader>
@@ -47,6 +67,7 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
         </CardTitle>
         <CardDescription>
           {points} point{points === 1 ? "" : "s"}
+          {questionType === "checkbox" && " (Select all that apply)"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -98,14 +119,7 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
                     <Checkbox
                       id={`${id}-${index}`}
                       checked={isChecked}
-                      onCheckedChange={(checked) => {
-                        if (isSubmitted) return
-                        const currentAnswers = userAnswer || []
-                        const newAnswers = checked
-                          ? [...currentAnswers, option]
-                          : currentAnswers.filter((ans) => ans !== option)
-                        onAnswerChange(id, newAnswers)
-                      }}
+                      onCheckedChange={(checked) => handleCheckboxChange(option, checked)}
                       disabled={isSubmitted}
                       className="mr-3 flex-shrink-0"
                     />

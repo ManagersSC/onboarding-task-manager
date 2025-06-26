@@ -13,35 +13,23 @@ const ONBOARDING_QUIZZES = 'Onboarding Quizzes';
 const ONBOARDING_QUIZ_ITEMS = 'Onboarding Quiz Items';
 const ONBOARDING_QUIZ_SUBMISSIONS = 'Onboarding Quiz Submissions';
 
-// async function getSessionUser() {
-//   try{
-//     const cookieStore = await cookies();
-//     const session = cookieStore.get(process.env.SESSION_COOKIE_NAME);
-//     if (!session) throw new Error("Not authenticated");
-//     const user = await unsealData(session.value, { password: process.env.SESSION_PASSWORD });
-//     if (!user?.email) throw new Error("No user email in session");
-//     return user;
-//   } catch (error) {
-//     logger.error("Error getting session user:", error);
-//     throw new Error("Internal server error");
-//   }
-// }
-
 async function getApplicantRecord(userEmail) {
   const records = await base(APPLICANTS).select({ filterByFormula: `{Email} = '${userEmail}'`, maxRecords: 1 }).firstPage();
   if (!records.length) throw new Error("Applicant not found");
   return records[0];
 }
 
-function parseOptions(optionsRaw) {
-  if (!optionsRaw) return [];
-  return optionsRaw.split('<br>').map(opt => opt.trim()).filter(Boolean).map(opt => ({ text: opt, value: opt }));
+function parseBrSeparatedString(str) {
+  if (!str) return [];
+  // First, decode common HTML entities, then split by the standard <br> tag.
+  const decodedStr = str.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  return decodedStr.split(/<br>/i).map(opt => opt.trim()).filter(Boolean);
 }
 
 function parseCorrectAnswer(correctRaw, questionType) {
   if (!correctRaw) return questionType === 'checkbox' ? [] : '';
   if (questionType === 'checkbox') {
-    return correctRaw.split('<br>').map(ans => ans.trim()).filter(Boolean);
+    return parseBrSeparatedString(correctRaw);
   }
   return correctRaw.trim();
 }
@@ -75,7 +63,7 @@ export async function GET(req, { params }) {
     // Fetch all quiz items (info and questions)
     let items = [];
     const filterFormula = `{Quiz ID} = '${quizId}'`;
-    // const filterFormula = `FIND('${quizId}', ARRAYJOIN({Quiz ID}))`;
+    
     logger.info(`[DEBUG] Fetching quiz items for quizId: ${quizId} with formula: ${filterFormula}`);
     try {
       items = await base(ONBOARDING_QUIZ_ITEMS)
@@ -103,10 +91,10 @@ export async function GET(req, { params }) {
           logger.error("Quiz question missing id or content", { item });
           return null;
         }
-        // Parse options into a clean array
+        
         let optionsArr = [];
         if (item.fields["Options"]) {
-          optionsArr = item.fields["Options"].split('&lt;br>').map(opt => opt.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+          optionsArr = parseBrSeparatedString(item.fields["Options"]);
         }
         return {
           type: "question",
@@ -150,8 +138,8 @@ export async function POST(req, { params }) {
     const p = await params;
     const quizId = p.quizId;
     const body = await req.json();
-    const { answers } = body; // { [questionId]: answer or [answers] }
-    // Fetch quiz items (questions only)
+    const { answers } = body;
+    
     const items = await base(ONBOARDING_QUIZ_ITEMS)
       .select({ filterByFormula: `AND(FIND('${quizId}', ARRAYJOIN({Quiz ID})), {Type} = 'Question')` })
       .all();
@@ -162,21 +150,39 @@ export async function POST(req, { params }) {
       const qid = item.id;
       const correct = parseCorrectAnswer(item.fields["Correct Answer"], questionType);
       const userAnswer = answers[qid];
-      let isCorrect = false;
+      const maxPoints = item.fields["Points"] || 1;
+      
+      let questionScore = 0;
+      
       if (questionType === "checkbox") {
-        // Both should be arrays, compare as sets
-        const userSet = new Set(Array.isArray(userAnswer) ? userAnswer : []);
-        const correctSet = new Set(Array.isArray(correct) ? correct : []);
-        isCorrect = userSet.size === correctSet.size && [...userSet].every(val => correctSet.has(val));
+        const userAnswers = new Set(Array.isArray(userAnswer) ? userAnswer : []);
+        const correctAnswers = new Set(Array.isArray(correct) ? correct : []);
+        
+        if (correctAnswers.size > 0) {
+          const pointsPerOption = maxPoints / correctAnswers.size;
+          let correctSelections = 0;
+          let incorrectSelections = 0;
+
+          for (const selected of userAnswers) {
+            if (correctAnswers.has(selected)) {
+              correctSelections++;
+            } else {
+              incorrectSelections++;
+            }
+          }
+          
+          questionScore = (correctSelections * pointsPerOption) - (incorrectSelections * pointsPerOption);
+          questionScore = Math.max(0, Math.round(questionScore * 100) / 100);
+        }
       } else {
-        isCorrect = userAnswer && userAnswer.toString().trim() === correct;
+        const isCorrect = userAnswer && userAnswer.toString().trim() === correct.toString().trim();
+        questionScore = isCorrect ? maxPoints : 0;
       }
-      if (isCorrect) {
-        score += item.fields["Points"] || 1;
-      }
-      total += item.fields["Points"] || 1;
+      
+      score += questionScore;
+      total += maxPoints;
     }
-    // Fetch quiz metadata for passing score
+    
     const quiz = await base(ONBOARDING_QUIZZES).find(quizId);
     let passingScoreRaw = quiz.fields["Passing Score"] ?? 0;
     let passingScore = Number(passingScoreRaw);
@@ -189,7 +195,7 @@ export async function POST(req, { params }) {
     const percent = total > 0 ? (score / total) * 100 : 0;
     logger.warn(`[QUIZ SUBMIT DEBUG] percent: ${percent}, passingScore: ${passingScore}, raw: ${passingScoreRaw}`);
     const passed = percent >= passingScore;
-    // Store submission
+    
     await base(ONBOARDING_QUIZ_SUBMISSIONS).create({
       "Score": score,
       "Total Form Score": total,
@@ -201,7 +207,6 @@ export async function POST(req, { params }) {
       "Answers": JSON.stringify(answers),
     });
 
-    // Notify all Admins
     try {
       const staffRecords = await base('Staff').select({ filterByFormula: `{IsAdmin}`, maxRecords: 20 }).firstPage();
       for (const admin of staffRecords) {
@@ -219,7 +224,6 @@ export async function POST(req, { params }) {
       logger.error("Failed to notify admins of quiz completion:", err);
     }
 
-    // Audit log
     try {
       await logAuditEvent({
         eventType: "Quiz Completed",
@@ -239,4 +243,4 @@ export async function POST(req, { params }) {
     logger.error("Error submitting quiz:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-} 
+}
