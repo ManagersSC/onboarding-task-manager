@@ -1230,6 +1230,24 @@
                     },
                     "id": "fldIJMYERkQN7VT72",
                     "name": "Onboarding - Week 1 Tasks Sent"
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "IF(\r\n  AND(\r\n    MONTH({fld1ZzNgYRCrDxJhi}) = MONTH(TODAY()),\r\n    YEAR({fld1ZzNgYRCrDxJhi}) = YEAR(TODAY())\r\n  ),\r\n  1,\r\n  0\r\n)",
+                        "referencedFieldIds": [
+                            "fld1ZzNgYRCrDxJhi"
+                        ],
+                        "result": {
+                            "type": "number",
+                            "options": {
+                                "precision": 0
+                            }
+                        }
+                    },
+                    "id": "fldXnrHL8sCkouyId",
+                    "name": "isCurrentMonth"
                 }
             ],
             "views": [
@@ -1291,6 +1309,16 @@
                 {
                     "id": "viwn7cfDDbMal3RDn",
                     "name": "DISC PDFs",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwejgh4uH43PsCSN",
+                    "name": "Active Onboardings (Current Month)",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwjNBamz07z68itp",
+                    "name": "Active Onboardings (Last Month)",
                     "type": "grid"
                 }
             ]
@@ -2525,12 +2553,58 @@
                     },
                     "id": "fldE8hei9MYIz3x2j",
                     "name": "📆 Created Time"
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "IF(\r\n  AND(\r\n    {fldJ6mb4TsamGXMFh} >= DATEADD(TODAY(), -WEEKDAY(TODAY(), 'Monday') + 1, 'days'),\r\n    {fldJ6mb4TsamGXMFh} <= DATEADD(TODAY(), 7 - WEEKDAY(TODAY(), 'Monday'), 'days')\r\n  ),\r\n  1,\r\n  0\r\n)",
+                        "referencedFieldIds": [
+                            "fldJ6mb4TsamGXMFh"
+                        ],
+                        "result": {
+                            "type": "number",
+                            "options": {
+                                "precision": 0
+                            }
+                        }
+                    },
+                    "id": "fldFe8hAbMWvIMsSX",
+                    "name": "isDueThisWeek"
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "IF(AND({fldJ6mb4TsamGXMFh}, DATETIME_FORMAT({fldJ6mb4TsamGXMFh}, 'YYYY-MM') = DATETIME_FORMAT(DATEADD(TODAY(), -1, 'month'), 'YYYY-MM')), 1, 0)",
+                        "referencedFieldIds": [
+                            "fldJ6mb4TsamGXMFh"
+                        ],
+                        "result": {
+                            "type": "number",
+                            "options": {
+                                "precision": 0
+                            }
+                        }
+                    },
+                    "id": "fldkDwNffHkGlxweP",
+                    "name": "isDueLastMonth"
                 }
             ],
             "views": [
                 {
                     "id": "viwxM0cS2fYKXpvdU",
                     "name": "📌 Tasks",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwAgic1iH1KJJoNT",
+                    "name": "Tasks Due This Week",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwfyPOGImciwo4Ka",
+                    "name": "Tasks Due Last Month",
                     "type": "grid"
                 }
             ]
@@ -3830,6 +3904,14 @@
                     "name": "Page Title"
                 },
                 {
+                    "type": "number",
+                    "options": {
+                        "precision": 0
+                    },
+                    "id": "fldfdIpgQwryyoClx",
+                    "name": "Week"
+                },
+                {
                     "type": "multipleRecordLinks",
                     "options": {
                         "linkedTableId": "tbleIrd3QQJulOdZQ",
@@ -4666,6 +4748,11 @@
                             {
                                 "id": "sel4kg5jVnLpq5wG3",
                                 "name": "Error",
+                                "color": "redBright"
+                            },
+                            {
+                                "id": "seljxaG4Tj0wyYWeE",
+                                "name": "Failure",
                                 "color": "redBright"
                             },
                             {

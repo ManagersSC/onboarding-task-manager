@@ -54,9 +54,12 @@ The Smile Clinique Onboarding Task Manager is a comprehensive web application de
 - **Example:** Admin assigns a checklist to a new hire; team member marks tasks as complete; manager reviews progress
 
 ### 2. Dashboard & Analytics
-- **What:** Visual overview of onboarding status, completion rates, overdue tasks, and team performance
-- **Who:** Admins, Managers
-- **Example:** Manager views dashboard to see which hires are behind schedule
+
+- The admin dashboard displays two key metrics:
+  - **Active Onboardings**: Number of hires in the onboarding process (not yet fully completed). Calculated from the `Applicants` table using the `Active Onboardings (Current Month)` and `Active Onboardings (Last Month)` views, which filter by `Stage`, `Onboarding Status`, and `Created Time`.
+  - **Tasks Due This Week**: Number of tasks assigned to staff/applicants that are due within the current week and not completed. Calculated from the `Tasks` table using the `Tasks Due This Week` and `Tasks Due Last Month` views, which filter by `📆 Due Date` and `🚀 Status`. The "monthly change" compares this week to the average week last month (total last month divided by number of weeks).
+
+- These metrics are updated in real-time and reflect the current state of onboarding and task management.
 
 ### 3. Document Management
 - **What:** Upload, categorize, and review onboarding documents

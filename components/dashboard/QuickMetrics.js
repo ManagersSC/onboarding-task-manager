@@ -13,8 +13,7 @@ function formatPercent(val) {
 
 function formatValue(val, isPercent = false, isCompletionRate = false, isTasksDue = false) {
   if (val === null || val === undefined) return "N/A";
-  // Only use placeholder for completion rate and tasks due this week
-  if (isCompletionRate && val === 11.11) return "11.11%";
+  // Only use placeholder for tasks due this week
   if (isTasksDue && val === 11.11) return "11.11";
   if (isPercent) return `${(val * 100).toFixed(0)}%`;
   return val;
@@ -44,20 +43,6 @@ export function QuickMetrics() {
       change: metrics.tasksDueThisWeekMonthlyChange,
       icon: Clock,
       color: "bg-amber-500/10 text-amber-500",
-    },
-    {
-      title: "Completion Rate",
-      value: formatValue(metrics.completionRate, true, true),
-      change: metrics.completionRateMonthlyChange,
-      icon: CheckCircle,
-      color: "bg-green-500/10 text-green-500",
-    },
-    {
-      title: "Blocked Items",
-      value: formatValue(metrics.blockedItems),
-      change: metrics.blockedItemsMonthlyChange,
-      icon: AlertTriangle,
-      color: "bg-red-500/10 text-red-500",
     },
   ];
 

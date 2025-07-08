@@ -17,8 +17,9 @@ Server-side caching is a technique where the server temporarily stores ("caches"
 - Each cache entry has a Time-To-Live (TTL), after which it is considered stale and will be refreshed on the next request.
 
 ## Which Endpoints Use Server-Side Caching?
-- **Quick Metrics:** `/api/admin/dashboard/quick-metrics`  
-  Caches all dashboard metrics for 60 seconds.
+- **Quick Metrics:** `/api/admin/dashboard/quick-metrics`
+  - Caches only two dashboard metrics for 60 seconds: Active Onboardings and Tasks Due This Week.
+  - Each metric is fetched as a count from a specific Airtable view (see API reference for details).
 - **Resource Hub:** `/api/admin/dashboard/resource-hub`  
   Caches resource file lists for 60 seconds, keyed by search query, page, and page size.
 - **Calendar:** `/api/admin/dashboard/calendar`  

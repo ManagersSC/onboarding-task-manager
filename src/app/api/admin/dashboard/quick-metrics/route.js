@@ -7,6 +7,40 @@ let quickMetricsCache = null;
 let quickMetricsCacheTime = 0;
 const CACHE_TTL = 60 * 1000; // 60 seconds
 
+// Helper: Calculate number of weeks in last month
+function getWeeksInLastMonth() {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const year = lastMonth.getFullYear();
+  const month = lastMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  // Count Mondays in the month
+  let mondays = 0;
+  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() === 1) mondays++;
+  }
+  // If the month doesn't start on Monday, add 1 to count the first partial week
+  if (firstDay.getDay() !== 1) mondays++;
+  return mondays;
+}
+
+// Helper: Fetch record count from Airtable view
+async function fetchAirtableCount(base, table, view) {
+  let count = 0;
+  try {
+    await base(table)
+      .select({ view }) // No fields specified
+      .eachPage((records, fetchNextPage) => {
+        count += records.length;
+        fetchNextPage();
+      });
+    return count;
+  } catch (e) {
+    throw new Error(`Airtable error for ${table} (${view}): ${e.message}`);
+  }
+}
+
 export async function GET() {
   // Check cache first
   const now = Date.now();
@@ -46,179 +80,37 @@ export async function GET() {
   }
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
-  // Helper: get start of current month in ISO format
-  function getStartOfCurrentMonth() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  }
-  // Helper: get start of last month in ISO format
-  function getStartOfLastMonth() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-  }
-  // Helper: get end of last month in ISO format
-  function getEndOfLastMonth() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).toISOString();
-  }
-  // Helper: get start/end of this week
-  function getStartOfWeek() {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday as first day
-    return new Date(now.setDate(diff));
-  }
-  function getEndOfWeek() {
-    const start = getStartOfWeek();
-    return new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-  }
-  // Helper: average of numeric array
-  function average(arr) {
-    const nums = arr.filter(x => typeof x === "number" && !isNaN(x));
-    if (!nums.length) return null;
-    return nums.reduce((a, b) => a + b, 0) / nums.length;
-  }
-  // Helper: group and count by field
-  function groupAndCount(records, field) {
-    return records.reduce((acc, rec) => {
-      const val = rec.fields[field] || "Unknown";
-      acc[val] = (acc[val] || 0) + 1;
-      return acc;
-    }, {});
-  }
-
-  // Fetch all metrics in parallel, handle errors gracefully
+  // Fetch counts from views
+  let applicantsCurrent = 0, applicantsLast = 0, tasksThisWeek = 0, tasksLastMonth = 0;
   const errors = {};
-  let applicants = [], jobs = [], tasks = [], summaryRecords = [];
-  const startOfMonth = getStartOfCurrentMonth();
-  const startOfLastMonth = getStartOfLastMonth();
-  const endOfLastMonth = getEndOfLastMonth();
-  const startOfWeek = getStartOfWeek();
-  const endOfWeek = getEndOfWeek();
-
-  // Helper for paginated fetch
-  async function fetchAll(base, table, options) {
-    let all = [];
-    try {
-      await base(table)
-        .select(options || {})
-        .eachPage((records, fetchNextPage) => {
-          all = all.concat(records);
-          fetchNextPage();
-        });
-      return all;
-    } catch (e) {
-      throw e;
-    }
-  }
-
   try {
-    [applicants, jobs, tasks, summaryRecords] = await Promise.all([
-      fetchAll(base, "Applicants", { fields: ["Stage", "Created Time", "Onboarding Status"] }),
-      fetchAll(base, "Jobs", { fields: ["Job Status"] }),
-      fetchAll(base, "Tasks", { fields: ["🚀 Status"] }),
-      fetchAll(base, "Summary", { fields: ["Progression", "Quiz Pass Rate"] }),
+    [applicantsCurrent, applicantsLast, tasksThisWeek, tasksLastMonth] = await Promise.all([
+      fetchAirtableCount(base, "Applicants", "Active Onboardings (Current Month)"),
+      fetchAirtableCount(base, "Applicants", "Active Onboardings (Last Month)"),
+      fetchAirtableCount(base, "Tasks", "Tasks Due This Week"),
+      fetchAirtableCount(base, "Tasks", "Tasks Due Last Month"),
     ]);
   } catch (e) {
-    errors.general = e.message;
+    errors.fetch = e.message;
   }
 
-  // --- Blocked Items (from Tasks table) ---
-  let blockedItems = 0, blockedItemsLastMonth = 0, blockedItemsMonthlyChange = null;
-  try {
-    blockedItems = tasks.filter(t => (t.fields["🚀 Status"] || "").toLowerCase() === "blocked").length;
-    // For monthly change, you would need a created/updated time field in Tasks. Placeholder for now:
-    blockedItemsLastMonth = null;
-    blockedItemsMonthlyChange = null;
-  } catch (e) {
-    errors.blockedItems = e.message;
-  }
+  // Calculate number of weeks in last month
+  const numWeeksLastMonth = getWeeksInLastMonth();
+  const tasksLastMonthAvgWeek = numWeeksLastMonth > 0 ? tasksLastMonth / numWeeksLastMonth : 0;
 
-  // --- Metric helpers for easy future swap ---
-  function getCompletionRate(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
-  function getTasksDueThisWeek(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
-  function getTasksDueThisWeekLastMonth(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
-  function getTasksDueThisWeekMonthlyChange(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
-  function getCompletionRateLastMonth(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
-  function getCompletionRateMonthlyChange(/* tasks */) {
-    // TODO: Implement real logic when ready
-    return 11.11;
-  }
+  // Calculate changes
+  const activeOnboardingsMonthlyChange = applicantsLast > 0 ? ((applicantsCurrent - applicantsLast) / applicantsLast) * 100 : null;
+  const tasksDueThisWeekMonthlyChange = tasksLastMonthAvgWeek > 0 ? ((tasksThisWeek - tasksLastMonthAvgWeek) / tasksLastMonthAvgWeek) * 100 : null;
 
-  // --- Use helpers for placeholder metrics ---
-  const tasksDueThisWeek = getTasksDueThisWeek();
-  const tasksDueThisWeekLastMonth = getTasksDueThisWeekLastMonth();
-  const tasksDueThisWeekMonthlyChange = getTasksDueThisWeekMonthlyChange();
-  const completionRate = getCompletionRate();
-  const completionRateLastMonth = getCompletionRateLastMonth();
-  const completionRateMonthlyChange = getCompletionRateMonthlyChange();
-
-  // --- Active Onboardings (from Applicants table) ---
-  const completedStatuses = ["Docs Signed", "Week 4 Quiz ✅", "Week 3 Quiz ✅", "Week 2 Quiz ✅", "Week 1 Quiz ✅"];
-  const activeOnboardings = applicants.filter(a => a.fields["Stage"] === "Hired" && (!a.fields["Onboarding Status"] || !completedStatuses.includes(a.fields["Onboarding Status"]))).length;
-  let activeOnboardingsThisMonth = 0, activeOnboardingsLastMonth = 0, activeOnboardingsMonthlyChange = null;
-  try {
-    activeOnboardingsThisMonth = applicants.filter(a => a.fields["Stage"] === "Hired" && (!a.fields["Onboarding Status"] || !completedStatuses.includes(a.fields["Onboarding Status"])) && a.fields["Created Time"] && new Date(a.fields["Created Time"]) >= new Date(startOfMonth)).length;
-    activeOnboardingsLastMonth = applicants.filter(a => a.fields["Stage"] === "Hired" && (!a.fields["Onboarding Status"] || !completedStatuses.includes(a.fields["Onboarding Status"])) && a.fields["Created Time"] && new Date(a.fields["Created Time"]) >= new Date(startOfLastMonth) && new Date(a.fields["Created Time"]) < new Date(startOfMonth)).length;
-    activeOnboardingsMonthlyChange = activeOnboardingsLastMonth > 0 ? ((activeOnboardingsThisMonth - activeOnboardingsLastMonth) / activeOnboardingsLastMonth) * 100 : null;
-  } catch (e) {
-    errors.activeOnboardingsMonthlyChange = e.message;
-  }
-
-  // --- Compose response ---
+  // Compose response
   const result = {
-    // Dashboard metrics
-    activeOnboardings,
-    activeOnboardingsThisMonth,
-    activeOnboardingsLastMonth,
+    activeOnboardings: applicantsCurrent,
+    activeOnboardingsLastMonth: applicantsLast,
     activeOnboardingsMonthlyChange,
-    tasksDueThisWeek,
-    tasksDueThisWeekLastMonth,
+    tasksDueThisWeek: tasksThisWeek,
+    tasksDueLastMonth: tasksLastMonth,
+    tasksDueLastMonthAverageWeek: tasksLastMonthAvgWeek,
     tasksDueThisWeekMonthlyChange,
-    completionRate,
-    completionRateLastMonth,
-    completionRateMonthlyChange,
-    blockedItems,
-    blockedItemsLastMonth,
-    blockedItemsMonthlyChange,
-    // Existing metrics
-    totalApplicants: applicants?.length ?? null,
-    applicantsByStage: applicants?.length ? groupAndCount(applicants, "Stage") : null,
-    totalHired: applicants?.filter(a => a.fields["Stage"] === "Hired").length ?? null,
-    hiresThisMonth: applicants?.filter(a => a.fields["Stage"] === "Hired" && a.fields["Created Time"] && new Date(a.fields["Created Time"]) >= new Date(startOfMonth)).length ?? null,
-    totalJobs: jobs?.length ?? null,
-    openJobs: jobs?.length ? jobs.filter(j => j.fields["Job Status"] === "Open").length : null,
-    taskCompletionRate: completionRate, // alias for backward compatibility
-    overdueTasks: null, // Not implemented
-    onboardingProgress: summaryRecords?.length ? average(summaryRecords.map(r => r.fields["Progression"])) : null,
-    quizPassRate: summaryRecords?.length ? average(summaryRecords.map(r => r.fields["Quiz Pass Rate"])) : null,
-    applicantsThisMonth: applicants?.filter(a => a.fields["Created Time"] && new Date(a.fields["Created Time"]) >= new Date(startOfMonth)).length ?? null,
-    applicantsLastMonth: applicants?.filter(a => {
-      const date = a.fields["Created Time"] ? new Date(a.fields["Created Time"]) : null;
-      return date && date >= new Date(startOfLastMonth) && date < new Date(startOfMonth);
-    }).length ?? null,
-    applicantsMonthlyChange: null, // Not implemented
-    hiredThisMonth: applicants?.filter(a => a.fields["Stage"] === "Hired" && a.fields["Created Time"] && new Date(a.fields["Created Time"]) >= new Date(startOfMonth)).length ?? null,
-    hiredLastMonth: applicants?.filter(a => {
-      const date = a.fields["Created Time"] ? new Date(a.fields["Created Time"]) : null;
-      return a.fields["Stage"] === "Hired" && date && date >= new Date(startOfLastMonth) && date < new Date(startOfMonth);
-    }).length ?? null,
-    hiredMonthlyChange: null, // Not implemented
     errors: Object.keys(errors).length ? errors : undefined,
   };
 
