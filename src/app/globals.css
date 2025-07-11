@@ -38,7 +38,7 @@
     --sidebar-border: 240 5.9% 90%;
     --sidebar-ring: 240 5% 64.9%;
   }
-  
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -73,7 +73,6 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 240 4.9% 83.9%;
   }
-  
 }
 
 @layer base {
@@ -89,6 +88,76 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Notification container with custom scrollbar */
+.notification-container {
+  max-height: 24rem; /* 384px */
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrollbar */
+  padding-right: 8px;
+  margin-right: -8px;
+}
+
+/* Custom prominent scrollbar - matching the image style */
+.notification-container::-webkit-scrollbar {
+  width: 16px;
+}
+
+.notification-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.notification-container::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 80%); /* Light gray color like in the image */
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.2s ease;
+}
+
+.notification-container:hover::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 70%);
+  background-clip: content-box;
+}
+
+.notification-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 60%);
+  background-clip: content-box;
+}
+
+/* Dark mode scrollbar */
+.dark .notification-container::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 85%); /* Lighter for dark mode */
+  background-clip: content-box;
+}
+
+.dark .notification-container:hover::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 75%);
+  background-clip: content-box;
+}
+
+.dark .notification-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 65%);
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar */
+.notification-container {
+  scrollbar-width: auto;
+  scrollbar-color: hsl(0 0% 80%) transparent;
+}
+
+.dark .notification-container {
+  scrollbar-color: hsl(0 0% 85%) transparent;
+}
+
+/* Prevent horizontal scrollbars on notification cards */
+.notification-container .motion-div {
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Custom sidebar styles */
@@ -113,31 +182,25 @@
   display: none;
 }
 
-
 [data-sidebar="sidebar"] {
   @apply h-full;
 }
-
 
 .peer[data-side="left"] {
   @apply left-0;
 }
 
-
 [data-sidebar="menu-button"] {
   @apply w-full justify-start;
 }
-
 
 [data-sidebar="menu-button"] > span {
   @apply truncate;
 }
 
-
 [data-sidebar="footer"] {
   @apply w-full;
 }
-
 
 [data-sidebar="rail"] {
   @apply h-full;

@@ -1,11 +1,14 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Bell } from 'lucide-react'
-import { useRouter } from "next/navigation"
-import { handleLogout } from "@/lib/utils/logout"
+import { useCallback } from "react";
+import { motion } from "framer-motion";
+import { Bell } from 'lucide-react';
+import { useRouter } from "next/navigation";
+import { handleLogout } from "@/lib/utils/logout";
+import { formatDistanceToNow } from "date-fns";
+import useNotifications from "@/hooks/useNotifications";
 
-import { Button } from "@components/ui/button"
+import { Button } from "@components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,19 +16,33 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
+} from "@components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar";
 
 export function DashboardHeader() {
-  const router = useRouter()
+  const router = useRouter();
+  const {
+    notifications,
+    loading,
+    unreadCount,
+    markAsRead,
+  } = useNotifications({ limit: 3 });
 
   const navigateToProfile = () => {
-    router.push("/admin/profile")
-  }
+    router.push("/admin/profile");
+  };
 
   const navigateToSettings = () => {
-    router.push("/admin/settings")
-  }
+    router.push("/admin/settings");
+  };
+
+  const handleNotificationClick = useCallback(
+    async (notification) => {
+      if (!notification.read) await markAsRead(notification.id);
+      if (notification.actionUrl) router.push(notification.actionUrl);
+    },
+    [markAsRead, router]
+  );
 
   return (
     <motion.div
@@ -38,32 +55,44 @@ export function DashboardHeader() {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="relative">
             <Bell className="h-4 w-4" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                {unreadCount}
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80">
           <DropdownMenuLabel>Notifications</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">New hire documents pending review</p>
-              <p className="text-xs text-muted-foreground">Sarah Chen - 10 minutes ago</p>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">Equipment setup completed</p>
-              <p className="text-xs text-muted-foreground">Michael Rodriguez - 1 hour ago</p>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">Orientation schedule updated</p>
-              <p className="text-xs text-muted-foreground">HR Department - 3 hours ago</p>
-            </div>
-          </DropdownMenuItem>
+          {loading ? (
+            <DropdownMenuItem>
+              <div className="flex flex-col gap-1 animate-pulse w-full">
+                <div className="h-4 bg-muted rounded w-2/3 mb-1" />
+                <div className="h-3 bg-muted rounded w-1/3" />
+              </div>
+            </DropdownMenuItem>
+          ) : notifications.length === 0 ? (
+            <DropdownMenuItem disabled>
+              <div className="text-muted-foreground text-center w-full">No notifications</div>
+            </DropdownMenuItem>
+          ) : (
+            notifications.map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                className="cursor-pointer"
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium line-clamp-1">{notification.title || notification.body}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {notification.source ? `${notification.source} - ` : ""}
+                    {notification.createdAt ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }) : ""}
+                  </p>
+                </div>
+              </DropdownMenuItem>
+            ))
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -92,5 +121,5 @@ export function DashboardHeader() {
         </DropdownMenuContent>
       </DropdownMenu>
     </motion.div>
-  )
+  );
 }
