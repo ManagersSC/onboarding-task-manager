@@ -55,7 +55,7 @@ const statusColors = {
   "in-progress": "text-blue-500 bg-blue-100 dark:bg-blue-900/20",
   today: "text-purple-500 bg-purple-100 dark:bg-purple-900/20",
   overdue: "text-red-500 bg-red-100 dark:bg-red-900/20",
-  blocked: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
+  flagged: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
 }
 
 function getStatusGroup(status) {
@@ -64,8 +64,8 @@ function getStatusGroup(status) {
     return "upcoming"
   } else if (normalizedStatus === "overdue") {
     return "overdue"
-  } else if (normalizedStatus === "blocked") {
-    return "blocked"
+  } else if (normalizedStatus === "flagged") {
+    return "flagged"
   }
   return "upcoming" // Default fallback
 }
@@ -73,7 +73,7 @@ function getStatusGroup(status) {
 const statusMap = {
   "in-progress": "In-Progress",
   completed: "Completed",
-  blocked: "Blocked",
+  flagged: "Flagged",
   overdue: "Overdue",
   today: "In-Progress",
 }
@@ -111,7 +111,7 @@ const normalizeTask = (task, staff) => {
     ...task,
     title: task.title || "",
     description: task.description || "",
-    blockedReason: task.blockedReason || "",
+    flaggedReason: task.flaggedReason || "",
     priority: task.priority || "",
     status: normalizeStatus(task.status),
     dueDate: normalizeDueDate(task.rawDueDate || task.dueDate),
@@ -127,7 +127,7 @@ function isTaskChanged(original, edited, staff) {
   const normalizedOriginal = normalizeTask(original, staff)
   const normalizedEdited = normalizeTask(edited, staff)
 
-  const fields = ["title", "description", "blockedReason", "priority", "status", "dueDate", "for"]
+  const fields = ["title", "description", "flaggedReason", "priority", "status", "dueDate", "for"]
 
   for (const key of fields) {
     const origVal = (normalizedOriginal[key] ?? "").toString().trim()
@@ -149,7 +149,7 @@ export function TaskManagement() {
     "very low": true,
   })
   const [expandedTasks, setExpandedTasks] = useState({})
-  const [tasks, setTasks] = useState({ upcoming: [], overdue: [], blocked: [] })
+  const [tasks, setTasks] = useState({ upcoming: [], overdue: [], flagged: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
@@ -175,7 +175,7 @@ export function TaskManagement() {
       })
       .then((data) => {
         console.log("Fetched tasks:", data.tasks)
-        setTasks(data.tasks || { upcoming: [], overdue: [], blocked: [] })
+        setTasks(data.tasks || { upcoming: [], overdue: [], flagged: [] })
         setLoading(false)
       })
       .catch((err) => {
@@ -273,7 +273,7 @@ export function TaskManagement() {
           action: "edit",
           title: editedTask.title,
           description: editedTask.description,
-          blockedReason: editedTask.blockedReason,
+          flaggedReason: editedTask.flaggedReason,
           priority: editedTask.priority,
           status: editedTask.status,
           dueDate: editedTask.dueDate,
@@ -456,10 +456,10 @@ export function TaskManagement() {
                             <span className="mx-2">•</span>
                             <span>Created by: {task.createdBy || "Unknown"}</span>
                           </div>
-                          {tabId === "blocked" && task.blockedReason && (
+                          {tabId === "flagged" && task.flaggedReason && (
                             <div className="flex items-center mt-1 text-amber-500">
                               <AlertCircle className="h-3 w-3 mr-1" />
-                              <span>{task.blockedReason}</span>
+                              <span>{task.flaggedReason}</span>
                             </div>
                           )}
                           {task.description && (
@@ -522,13 +522,13 @@ export function TaskManagement() {
       <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
         {tabId === "upcoming" && <Clock className="h-6 w-6 text-muted-foreground" />}
         {tabId === "overdue" && <AlertCircle className="h-6 w-6 text-muted-foreground" />}
-        {tabId === "blocked" && <AlertCircle className="h-6 w-6 text-muted-foreground" />}
+        {tabId === "flagged" && <AlertCircle className="h-6 w-6 text-muted-foreground" />}
       </div>
       <h3 className="text-lg font-medium mb-1">No {tabId} tasks</h3>
       <p className="text-sm text-muted-foreground mb-4">
         {tabId === "upcoming" && "You don't have any upcoming tasks at the moment."}
         {tabId === "overdue" && "You don't have any overdue tasks. Great job!"}
-        {tabId === "blocked" && "You don't have any blocked tasks right now."}
+        {tabId === "flagged" && "You don't have any flagged tasks right now."}
       </p>
       <Button size="sm" variant="outline" onClick={() => setNewTaskModalOpen(true)}>
         <Plus className="h-4 w-4 mr-1" />
@@ -605,10 +605,10 @@ export function TaskManagement() {
                   {tasks.overdue.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="blocked">
-                Blocked
+              <TabsTrigger value="flagged">
+                Flagged
                 <Badge className="ml-2 bg-amber-500 hover:bg-amber-500/90" variant="secondary">
-                  {tasks.blocked.length}
+                  {tasks.flagged.length}
                 </Badge>
               </TabsTrigger>
             </TabsList>
@@ -629,12 +629,12 @@ export function TaskManagement() {
                 : renderEmptyState("overdue")}
             </TabsContent>
 
-            <TabsContent value="blocked" className="mt-0">
-              {tasks.blocked.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.blocked)).map(([priority, tasks]) => (
-                    <div key={`blocked-${priority}`}>{renderTaskGroup(tasks, priority, "blocked")}</div>
+            <TabsContent value="flagged" className="mt-0">
+              {tasks.flagged.length > 0
+                ? sortPriorityGroups(groupTasksByPriority(tasks.flagged)).map(([priority, tasks]) => (
+                    <div key={`flagged-${priority}`}>{renderTaskGroup(tasks, priority, "flagged")}</div>
                   ))
-                : renderEmptyState("blocked")}
+                : renderEmptyState("flagged")}
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -746,13 +746,13 @@ export function TaskManagement() {
                 </div>
 
                 <div>
-                  <Label htmlFor="blockedReason" className="text-gray-300 mb-1.5 block">
-                    Blocked Reason (if any)
+                  <Label htmlFor="flaggedReason" className="text-gray-300 mb-1.5 block">
+                    Flagged Reason (if any)
                   </Label>
                   <Input
-                    id="blockedReason"
-                    name="blockedReason"
-                    value={editedTask.blockedReason}
+                    id="flaggedReason"
+                    name="flaggedReason"
+                    value={editedTask.flaggedReason}
                     onChange={handleInputChange}
                     className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                   />
@@ -791,7 +791,7 @@ export function TaskManagement() {
                       <SelectContent className="bg-background border-[#334155] text-white">
                         <SelectItem value="In-Progress">In-Progress</SelectItem>
                         <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Blocked">Blocked</SelectItem>
+                        <SelectItem value="Flagged">Flagged</SelectItem>
                         <SelectItem value="Overdue">Overdue</SelectItem>
                       </SelectContent>
                     </Select>
