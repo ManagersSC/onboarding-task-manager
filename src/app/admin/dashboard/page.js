@@ -1,13 +1,13 @@
 import { DashboardHeader } from "@components/dashboard/DashboardHeader"
 import { QuickMetrics } from "@components/dashboard/QuickMetrics"
 import { ActivityFeed } from "@components/dashboard/ActivityFeed"
-import { QuickActions } from "@components/dashboard/QuickActions"
 import { TaskManagement } from "@components/dashboard/TaskManagement"
 import { CalendarPreview } from "@components/dashboard/CalendarPreview"
 import { ResourceHub } from "@components/dashboard/ResourceHub"
 import { OnboardingHealth } from "@components/dashboard/OnboardingHealth"
 import { NewHireTracker } from "@components/dashboard/NewHireTracker"
 import { NotificationCenter } from "@components/dashboard/NotificationCenter"
+import FloatingQuickActions from "@components/dashboard/subComponents/FloatingQuickActions"
 
 export default function DashboardPage() {
     return (
@@ -37,10 +37,10 @@ export default function DashboardPage() {
             <ActivityFeed />
           </div>
           <div className="col-span-1 md:col-span-3 space-y-4 order-6">
-            <QuickActions />
             <NotificationCenter />
           </div>
         </div>
+        <FloatingQuickActions />
       </div>
     )
   }
