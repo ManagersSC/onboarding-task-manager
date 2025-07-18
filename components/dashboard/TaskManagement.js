@@ -166,6 +166,42 @@ export function TaskManagement() {
   const [editedTask, setEditedTask] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
 
+  // Claiming global task state
+  const [claimingTaskId, setClaimingTaskId] = useState(null)
+
+  // Helper: is this task global/unassigned?
+  const isGlobalTask = (task) => !task.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
+
+  // Claim handler
+  const handleClaimTask = async (taskId) => {
+    setClaimingTaskId(taskId)
+    try {
+      const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim" }),
+      })
+      if (response.status === 409) {
+        toast.error("This task has already been claimed by someone else.")
+        fetchTasks()
+        setClaimingTaskId(null)
+        return
+      }
+      if (!response.ok) {
+        const data = await response.json()
+        toast.error(data.error || "Failed to claim task.")
+        setClaimingTaskId(null)
+        return
+      }
+      toast.success("Task claimed!")
+      fetchTasks()
+    } catch (err) {
+      toast.error("Error claiming task: " + err.message)
+    } finally {
+      setClaimingTaskId(null)
+    }
+  }
+
   const fetchTasks = () => {
     setLoading(true)
     fetch("/api/dashboard/tasks")
@@ -365,7 +401,7 @@ export function TaskManagement() {
 
   const groupTasksByPriority = (taskList) => {
     return taskList.reduce((acc, task) => {
-      const priority = task.priority.toLowerCase().trim()
+      const priority = (task.priority || "").toLowerCase().trim()
       if (!acc[priority]) {
         acc[priority] = []
       }
@@ -442,6 +478,11 @@ export function TaskManagement() {
                           >
                             {task.status}
                           </Badge>
+                          {isGlobalTask(task) && (
+                            <Badge className="bg-emerald-600 text-white" variant="secondary">
+                              Global
+                            </Badge>
+                          )}
                           <h5 className="font-medium">{task.title}</h5>
                         </div>
                         <div className="mt-2 text-sm text-muted-foreground">
@@ -473,31 +514,46 @@ export function TaskManagement() {
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            console.log("Completing task:", task)
-                            completeTask(task.id)
-                          }}
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                          onClick={() => {
-                            setDeleteTaskDialogOpen(true)
-                            setTaskToDelete(task)
-                          }}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
+                        {isGlobalTask(task) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-auto mr-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                            onClick={() => handleClaimTask(task.id)}
+                            disabled={claimingTaskId === task.id}
+                            aria-label="Claim this task"
+                          >
+                            {claimingTaskId === task.id ? "Claiming..." : "Claim"}
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                console.log("Completing task:", task)
+                                completeTask(task.id)
+                              }}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              onClick={() => {
+                                setDeleteTaskDialogOpen(true)
+                                setTaskToDelete(task)
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                     {task.description && (

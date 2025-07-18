@@ -93,7 +93,7 @@ export async function POST(request) {
             userEmail: normalisedEmail,
             userRole: 'admin',
             userName: admin.fields.Name,
-            recordId: recordID
+            userStaffId: recordID
         }
         logger.debug(`Session Data to add: \nemail: ${sessionData.userEmail} \nrole: ${sessionData.userRole}`)
         const sealedSession = await sealData(sessionData, {

@@ -1,4 +1,4 @@
-import { completeStaffTask, deleteStaffTask, editStaffTask } from "@/lib/utils/dashboard/tasks";
+import { completeStaffTask, deleteStaffTask, editStaffTask, claimStaffTask } from "@/lib/utils/dashboard/tasks";
 import Airtable from "airtable";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { cookies } from "next/headers";
@@ -59,6 +59,45 @@ export async function PATCH(req, { params }){
           request: req,
         });
         return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
+    case "claim":
+      try {
+        // Get the user's Airtable staff record ID from the session
+        // Assume session.userStaffId is set (if not, adjust as needed)
+        const cookieStore = await cookies();
+        const sealedSession = cookieStore.get("session")?.value;
+        let userStaffId = null;
+        if (sealedSession) {
+          const session = await unsealData(sealedSession, {
+            password: process.env.SESSION_SECRET,
+          });
+          userStaffId = session.userStaffId;
+        }
+        if (!userStaffId) {
+          return new Response(JSON.stringify({ error: "User staff ID not found in session" }), { status: 401 });
+        }
+        const updated = await claimStaffTask(id, userStaffId);
+        await logAuditEvent({
+          eventType: 'Task Claimed',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' claimed by ${userName} (${userEmail}).`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Claimed',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task claim failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: e.message === "Task already claimed" ? 409 : 500 });
       }
     default:
       return new Response(JSON.stringify({ error: "Invalid action" }), {status: 400});

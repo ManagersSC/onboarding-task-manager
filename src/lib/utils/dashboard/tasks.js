@@ -210,3 +210,47 @@ export async function editStaffTask(taskId, fields) {
     throw e;
   }
 }
+
+/**
+ * Claim a global (unassigned) task for a user.
+ * Throws an error if the task is already assigned.
+ * @param {string} taskId - The Airtable record ID of the task
+ * @param {string} userId - The Airtable record ID of the staff/user claiming the task
+ * @returns {object} The updated Airtable record
+ */
+export async function claimStaffTask(taskId, userId) {
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Airtable environment variables are missing");
+  }
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+
+  // Fetch the task
+  let record;
+  try {
+    record = await base("Tasks").find(taskId);
+  } catch (e) {
+    logger.error("Task not found in Tasks table:", e);
+    throw new Error("Task not found");
+  }
+
+  // Check if already assigned
+  if (Array.isArray(record.fields["👨 Assigned Staff"]) && record.fields["👨 Assigned Staff"].length > 0) {
+    throw new Error("Task already claimed");
+  }
+
+  // Assign to user
+  try {
+    const updated = await base("Tasks").update([
+      {
+        id: taskId,
+        fields: {
+          "👨 Assigned Staff": [userId],
+        },
+      },
+    ]);
+    return updated[0];
+  } catch (e) {
+    logger.error("Error updating task for claim:", e);
+    throw e;
+  }
+}
