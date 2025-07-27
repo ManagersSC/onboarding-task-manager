@@ -1,6 +1,8 @@
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 
+// src/app/api/admin/staff/route.js
+
 export async function GET(req){
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
         throw new Error("Airtable environment variables are missing")

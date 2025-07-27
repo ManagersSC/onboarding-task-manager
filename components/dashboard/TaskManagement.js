@@ -6,15 +6,21 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  ChevronDown,
-  ChevronRight,
   Plus,
-  FileText,
   Pencil,
   Trash,
   X,
   CalendarIcon,
   RefreshCw,
+  Flag,
+  Zap,
+  Timer,
+  AlertTriangle,
+  CheckCircle,
+  MoreHorizontal,
+  Eye,
+  Search,
+  TrendingUp,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
@@ -25,24 +31,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
 import { Save } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
 import { toast } from "sonner"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import { format, parse, isValid } from "date-fns"
+import { Separator } from "@components/ui/separator"
+import { Avatar, AvatarFallback } from "@components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
-  "very high": "text-white bg-red-600 dark:bg-red-700",
-  high: "text-red-500 bg-red-100 dark:bg-red-900/20",
-  medium: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
-  low: "text-green-500 bg-green-100 dark:bg-green-900/20",
-  "very low": "text-blue-500 bg-blue-100 dark:bg-blue-900/20",
+  "very high": "bg-red-500 text-white",
+  high: "bg-orange-500 text-white",
+  medium: "bg-yellow-500 text-white",
+  low: "bg-green-500 text-white",
+  "very low": "bg-blue-500 text-white",
 }
 
-// Priority order for sorting
+// Status colors
+const statusColors = {
+  "in-progress": "bg-emerald-500 text-white",
+  completed: "bg-blue-500 text-white",
+  flagged: "bg-amber-500 text-white",
+  overdue: "bg-red-500 text-white",
+  today: "bg-emerald-500 text-white",
+}
+
+// Priority order
 const priorityOrder = {
   "very high": 1,
   high: 2,
@@ -51,11 +69,26 @@ const priorityOrder = {
   "very low": 5,
 }
 
-const statusColors = {
-  "in-progress": "text-blue-500 bg-blue-100 dark:bg-blue-900/20",
-  today: "text-purple-500 bg-purple-100 dark:bg-purple-900/20",
-  overdue: "text-red-500 bg-red-100 dark:bg-red-900/20",
-  flagged: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
+// Add this near the other utility functions
+const formatDueDate = (rawDate) => {
+  if (!rawDate) return "No date"
+  try {
+    // Handle different date formats from Airtable
+    const date = new Date(rawDate)
+    if (isNaN(date.getTime())) return "Invalid date"
+    return format(date, "MMM dd, yyyy")
+  } catch (error) {
+    console.log("Date formatting error:", error, "Raw date:", rawDate)
+    return rawDate
+  }
+}
+
+const priorityIcons = {
+  "very high": Zap,
+  high: AlertTriangle,
+  medium: Timer,
+  low: Clock,
+  "very low": CheckCircle,
 }
 
 function getStatusGroup(status) {
@@ -67,7 +100,7 @@ function getStatusGroup(status) {
   } else if (normalizedStatus === "flagged") {
     return "flagged"
   }
-  return "upcoming" // Default fallback
+  return "upcoming"
 }
 
 const statusMap = {
@@ -87,9 +120,7 @@ const normalizeStatus = (status) => {
 
 const normalizeStaffId = (val, staff) => {
   if (!val) return ""
-  // If already an ID, return as is
   if (staff.some((s) => s.id === val)) return val
-  // Otherwise, try to find by name
   const found = staff.find((s) => s.name === val)
   return found ? found.id : val
 }
@@ -97,7 +128,6 @@ const normalizeStaffId = (val, staff) => {
 const normalizeDueDate = (date) => {
   if (!date) return ""
   try {
-    // If it's already in yyyy-MM-dd format, keep it
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date
     return format(parse(date, "yyyy-MM-dd", new Date()), "yyyy-MM-dd")
   } catch {
@@ -105,7 +135,6 @@ const normalizeDueDate = (date) => {
   }
 }
 
-// Helper to normalize a task object
 const normalizeTask = (task, staff) => {
   return {
     ...task,
@@ -119,11 +148,9 @@ const normalizeTask = (task, staff) => {
   }
 }
 
-// Helper to compare only editable fields
 function isTaskChanged(original, edited, staff) {
   if (!original || !edited) return false
 
-  // Normalize both tasks using the same logic
   const normalizedOriginal = normalizeTask(original, staff)
   const normalizedEdited = normalizeTask(edited, staff)
 
@@ -141,24 +168,19 @@ function isTaskChanged(original, edited, staff) {
 }
 
 export function TaskManagement() {
-  const [expandedGroups, setExpandedGroups] = useState({
-    "very high": true,
-    high: true,
-    medium: true,
-    low: true,
-    "very low": true,
-  })
-  const [expandedTasks, setExpandedTasks] = useState({})
   const [tasks, setTasks] = useState({ upcoming: [], overdue: [], flagged: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState("John Doe")
   const [staff, setStaff] = useState([])
+  const [viewMode, setViewMode] = useState("list") // list, grid, calendar
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [showTaskDetails, setShowTaskDetails] = useState(false)
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
-  const [recentlyDeletedTask, setRecentlyDeletedTask] = useState(null)
   const undoTimeoutRef = useRef(null)
 
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -166,13 +188,10 @@ export function TaskManagement() {
   const [editedTask, setEditedTask] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
 
-  // Claiming global task state
   const [claimingTaskId, setClaimingTaskId] = useState(null)
 
-  // Helper: is this task global/unassigned?
   const isGlobalTask = (task) => !task.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
 
-  // Claim handler
   const handleClaimTask = async (taskId) => {
     setClaimingTaskId(taskId)
     try {
@@ -229,7 +248,7 @@ export function TaskManagement() {
         body: JSON.stringify({ action: "complete" }),
       })
       if (!response.ok) throw new Error("Failed to complete task")
-      fetchTasks() // Refresh the list after completion
+      fetchTasks()
       toast.success("Task marked as complete!")
     } catch (err) {
       toast.error("Error completing task: " + err.message)
@@ -237,7 +256,6 @@ export function TaskManagement() {
   }
 
   const deleteTask = (taskId) => {
-    // Find and remove from UI
     let deletedTask
     const newTasks = { ...tasks }
     for (const key of Object.keys(newTasks)) {
@@ -313,11 +331,11 @@ export function TaskManagement() {
           priority: editedTask.priority,
           status: editedTask.status,
           dueDate: editedTask.dueDate,
-          for: editedTask.for ? [editedTask.for] : [], // always send array of staff ID
+          for: editedTask.for ? [editedTask.for] : [],
         }),
       })
       if (!response.ok) throw new Error("Failed to update task")
-      fetchTasks() // Refresh the list from backend
+      fetchTasks()
       setEditDialogOpen(false)
       setHasChanges(false)
       toast.success("Task updated!")
@@ -344,25 +362,11 @@ export function TaskManagement() {
   }, [])
 
   useEffect(() => {
-    const timeout = undoTimeoutRef.current;
+    const timeout = undoTimeoutRef.current
     return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, []);
-
-  const toggleGroup = (group) => {
-    setExpandedGroups({
-      ...expandedGroups,
-      [group]: !expandedGroups[group],
-    })
-  }
-
-  const toggleTaskDescription = (taskId) => {
-    setExpandedTasks({
-      ...expandedTasks,
-      [taskId]: !expandedTasks[taskId],
-    })
-  }
+      if (timeout) clearTimeout(timeout)
+    }
+  }, [])
 
   const handleNewTaskCreated = async (taskData) => {
     try {
@@ -372,8 +376,7 @@ export function TaskManagement() {
         body: JSON.stringify(taskData),
       })
       if (!response.ok) throw new Error("Failed to create task")
-      fetchTasks() // Refresh the list after creating
-      // Find staff name
+      fetchTasks()
       let staffName = "Unknown"
       if (taskData.assignTo) {
         const staffObj = staff.find((s) => s.id === taskData.assignTo)
@@ -399,199 +402,299 @@ export function TaskManagement() {
     }
   }
 
-  const groupTasksByPriority = (taskList) => {
-    return taskList.reduce((acc, task) => {
-      const priority = (task.priority || "").toLowerCase().trim()
-      if (!acc[priority]) {
-        acc[priority] = []
-      }
-      acc[priority].push(task)
-      return acc
-    }, {})
+  const getStaffName = (staffId) => {
+    if (!staffId) return "Unassigned"
+    const staffMember = staff.find((s) => s.id === staffId)
+    return staffMember ? staffMember.name : staffId // Return the ID if name not found, not "Unknown"
   }
 
-  const sortPriorityGroups = (groups) => {
-    return Object.entries(groups).sort(([a], [b]) => {
-      // Use the priorityOrder mapping for correct sorting
-      return (priorityOrder[a] || 999) - (priorityOrder[b] || 999)
-    })
+  const getStaffInitials = (staffId) => {
+    if (!staffId) return "U"
+    const name = getStaffName(staffId)
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) // Limit to 2 characters
   }
 
-  const renderTaskGroup = (tasks, priority, tabId) => {
-    if (!tasks || tasks.length === 0) return null
+  const filteredTasks = (taskList) => {
+    if (!searchQuery) return taskList
+    return taskList.filter(
+      (task) =>
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        getStaffName(task.for).toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+  }
+
+  const TaskItem = ({ task, index, tabId }) => {
+    const PriorityIcon = priorityIcons[task.priority.toLowerCase().trim()] || Clock
 
     return (
-      <div className="mb-2">
-        <motion.div
-          className="flex items-center cursor-pointer py-2"
-          onClick={() => toggleGroup(priority)}
-          whileHover={{ scale: 1.01 }}
-        >
-          {expandedGroups[priority] ? (
-            <ChevronDown className="h-4 w-4 mr-2" />
-          ) : (
-            <ChevronRight className="h-4 w-4 mr-2" />
-          )}
-          <h4 className="text-sm font-medium capitalize">{priority} Priority</h4>
-          <Badge variant="outline" className="ml-2">
-            {tasks.length}
-          </Badge>
-        </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2, delay: index * 0.05 }}
+        className="group relative"
+      >
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 hover:border-border transition-all duration-200 cursor-pointer">
+          {/* Priority Indicator */}
+          <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+            <PriorityIcon
+              className={`h-4 w-4 flex-shrink-0 ${
+                task.priority.toLowerCase().trim() === "very high"
+                  ? "text-red-500"
+                  : task.priority.toLowerCase().trim() === "high"
+                    ? "text-orange-500"
+                    : task.priority.toLowerCase().trim() === "medium"
+                      ? "text-yellow-500"
+                      : task.priority.toLowerCase().trim() === "low"
+                        ? "text-green-500"
+                        : "text-blue-500"
+              }`}
+            />
+          </div>
 
-        <AnimatePresence>
-          {expandedGroups[priority] && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+          {/* Task Content - Allow it to grow and shrink */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 min-w-0">
+                {isGlobalTask(task) ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-emerald-600 font-medium">Global Task</span>
+                  </div>
+                ) : (
+                  <>
+                    <Avatar className="h-4 w-4 flex-shrink-0">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getStaffInitials(task.for)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{getStaffName(task.for)}</span>
+                  </>
+                )}
+              </div>
+              <Separator orientation="vertical" className="h-3 flex-shrink-0" />
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Clock className="h-3 w-3" />
+                <span className={tabId === "overdue" ? "text-red-500 font-medium" : ""}>
+                  {formatDueDate(task.rawDueDate)}
+                </span>
+              </div>
+              {task.flaggedReason && (
+                <>
+                  <Separator orientation="vertical" className="h-3 flex-shrink-0" />
+                  <div className="flex items-center gap-1 text-amber-600 min-w-0">
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{task.flaggedReason}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Status Badge - Fixed width for alignment */}
+          <div className="flex items-center justify-end w-20 flex-shrink-0">
+            <Badge
+              className={`text-xs px-2 py-1 font-medium border-0 ${
+                task.status === "overdue"
+                  ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                  : task.status === "in-progress" || task.status === "today"
+                    ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                    : task.status === "flagged"
+                      ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                      : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+              }`}
+              variant="secondary"
             >
-              {tasks.map((task) => (
-                <Collapsible
-                  key={task.id}
-                  open={expandedTasks[task.id]}
-                  onOpenChange={() => toggleTaskDescription(task.id)}
-                >
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="bg-card rounded-md p-3 mb-2 border shadow-sm hover:shadow-md transition-shadow"
-                    whileHover={{ scale: 1.01 }}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <Badge
-                            className={
-                              priorityColors[task.priority.toLowerCase().trim()] || "bg-gray-100 text-gray-500"
-                            }
-                            variant="secondary"
-                          >
-                            {task.priority}
-                          </Badge>
-                          <Badge
-                            className={statusColors[task.status] || "bg-gray-100 text-gray-500"}
-                            variant="secondary"
-                          >
-                            {task.status}
-                          </Badge>
-                          {isGlobalTask(task) && (
-                            <Badge className="bg-emerald-600 text-white" variant="secondary">
-                              Global
-                            </Badge>
-                          )}
-                          <h5 className="font-medium">{task.title}</h5>
-                        </div>
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          <p>
-                            For: <span className="font-medium">{task.for || "Unassigned"}</span>
-                          </p>
-                          <div className="flex items-center mt-1">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span className={tabId === "overdue" ? "text-red-500" : ""}>
-                              {task.dueDate || "No due date"}
-                            </span>
-                            <span className="mx-2">•</span>
-                            <span>Created by: {task.createdBy || "Unknown"}</span>
-                          </div>
-                          {tabId === "flagged" && task.flaggedReason && (
-                            <div className="flex items-center mt-1 text-amber-500">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              <span>{task.flaggedReason}</span>
-                            </div>
-                          )}
-                          {task.description && (
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto">
-                                <FileText className="h-3 w-3 mr-1" />
-                                <span>{expandedTasks[task.id] ? "Hide details" : "Show details"}</span>
-                              </Button>
-                            </CollapsibleTrigger>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        {isGlobalTask(task) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-auto mr-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                            onClick={() => handleClaimTask(task.id)}
-                            disabled={claimingTaskId === task.id}
-                            aria-label="Claim this task"
-                          >
-                            {claimingTaskId === task.id ? "Claiming..." : "Claim"}
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                console.log("Completing task:", task)
-                                completeTask(task.id)
-                              }}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(task)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                              onClick={() => {
-                                setDeleteTaskDialogOpen(true)
-                                setTaskToDelete(task)
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {task.description && (
-                      <CollapsibleContent>
-                        <div className="mt-3 pt-3 border-t text-sm">
-                          <p className="whitespace-pre-line">{task.description}</p>
-                        </div>
-                      </CollapsibleContent>
-                    )}
-                  </motion.div>
-                </Collapsible>
-              ))}
-            </motion.div>
-          )}
+              {task.status}
+            </Badge>
+          </div>
+
+          {/* Actions - Properly hidden until hover */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+            {isGlobalTask(task) ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleClaimTask(task.id)
+                      }}
+                      disabled={claimingTaskId === task.id}
+                    >
+                      {claimingTaskId === task.id ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </motion.div>
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Claim this task</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          completeTask(task.id)
+                        }}
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Mark as complete</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                    >
+                      <MoreHorizontal className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedTask(task)
+                        setShowTaskDetails(true)
+                      }}
+                    >
+                      <Eye className="h-3 w-3 mr-2" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openEditDialog(task)}>
+                      <Pencil className="h-3 w-3 mr-2" />
+                      Edit Task
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setDeleteTaskDialogOpen(true)
+                        setTaskToDelete(task)
+                      }}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash className="h-3 w-3 mr-2" />
+                      Delete Task
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  const renderTaskList = (taskList, tabId) => {
+    const filtered = filteredTasks(taskList)
+
+    if (filtered.length === 0) {
+      return renderEmptyState(tabId)
+    }
+
+    // Sort by priority
+    const sortedTasks = [...filtered].sort((a, b) => {
+      const aPriority = priorityOrder[a.priority.toLowerCase().trim()] || 999
+      const bPriority = priorityOrder[b.priority.toLowerCase().trim()] || 999
+      return aPriority - bPriority
+    })
+
+    return (
+      <div className="space-y-2">
+        <AnimatePresence>
+          {sortedTasks.map((task, index) => (
+            <TaskItem key={task.id} task={task} index={index} tabId={tabId} />
+          ))}
         </AnimatePresence>
       </div>
     )
   }
 
-  const renderEmptyState = (tabId) => (
-    <div className="py-8 text-center">
-      <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-        {tabId === "upcoming" && <Clock className="h-6 w-6 text-muted-foreground" />}
-        {tabId === "overdue" && <AlertCircle className="h-6 w-6 text-muted-foreground" />}
-        {tabId === "flagged" && <AlertCircle className="h-6 w-6 text-muted-foreground" />}
-      </div>
-      <h3 className="text-lg font-medium mb-1">No {tabId} tasks</h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        {tabId === "upcoming" && "You don't have any upcoming tasks at the moment."}
-        {tabId === "overdue" && "You don't have any overdue tasks. Great job!"}
-        {tabId === "flagged" && "You don't have any flagged tasks right now."}
-      </p>
-      <Button size="sm" variant="outline" onClick={() => setNewTaskModalOpen(true)}>
-        <Plus className="h-4 w-4 mr-1" />
-        Create Task
-      </Button>
-    </div>
-  )
+  const renderEmptyState = (tabId) => {
+    const emptyStateConfig = {
+      upcoming: {
+        icon: Clock,
+        title: "No upcoming tasks",
+        description: "You're all caught up! No upcoming tasks at the moment.",
+        color: "text-blue-500",
+      },
+      overdue: {
+        icon: AlertTriangle,
+        title: "No overdue tasks",
+        description: "Excellent work! You're staying on top of your deadlines.",
+        color: "text-emerald-500",
+      },
+      flagged: {
+        icon: Flag,
+        title: "No flagged tasks",
+        description: "All clear! No tasks require special attention right now.",
+        color: "text-amber-500",
+      },
+    }
+
+    const config = emptyStateConfig[tabId]
+    const Icon = config.icon
+
+    return (
+      <motion.div
+        className="py-12 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.div
+          className={`mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center mb-4 ${config.color}`}
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <Icon className="h-8 w-8" />
+        </motion.div>
+        <h3 className="text-lg font-semibold mb-2 text-foreground">{config.title}</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto leading-relaxed">{config.description}</p>
+        <Button
+          size="sm"
+          onClick={() => setNewTaskModalOpen(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create New Task
+        </Button>
+      </motion.div>
+    )
+  }
 
   if (loading) {
     return <TaskManagementSkeleton />
@@ -599,16 +702,24 @@ export function TaskManagement() {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Failed to load tasks</h3>
-            <p className="text-sm text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => fetchTasks()} variant="outline">
+      <Card className="border-destructive/20">
+        <CardContent className="p-8">
+          <motion.div
+            className="text-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Failed to load tasks</h3>
+            <p className="text-sm text-muted-foreground mb-6">{error}</p>
+            <Button onClick={() => fetchTasks()} variant="outline" className="shadow-sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </Button>
-          </div>
+          </motion.div>
         </CardContent>
       </Card>
     )
@@ -624,333 +735,505 @@ export function TaskManagement() {
     setEditDialogOpen(true)
   }
 
+  const tabCounts = {
+    upcoming: tasks.upcoming.length,
+    overdue: tasks.overdue.length,
+    flagged: tasks.flagged.length,
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-    >
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Task Management</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={fetchTasks} title="Refresh tasks">
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Refresh
-              </Button>
-              <Button size="sm" onClick={() => setNewTaskModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                New Task
-              </Button>
+    <TooltipProvider>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-semibold">Task Management</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {tabCounts.upcoming + tabCounts.overdue + tabCounts.flagged} total tasks
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 bg-background border-border/50 focus:border-primary/50"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={fetchTasks}
+                  className="shadow-sm hover:shadow-md transition-shadow bg-transparent"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setNewTaskModalOpen(true)}
+                  className="shadow-sm hover:shadow-md transition-shadow bg-primary hover:bg-primary/90"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Task
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="upcoming" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="upcoming">
-                Upcoming
-                <Badge className="ml-2 bg-blue-500 hover:bg-blue-500/90" variant="secondary">
-                  {tasks.upcoming.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="overdue">
-                Overdue
-                <Badge className="ml-2 bg-red-500 hover:bg-red-500/90" variant="secondary">
-                  {tasks.overdue.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="flagged">
-                Flagged
-                <Badge className="ml-2 bg-amber-500 hover:bg-amber-500/90" variant="secondary">
-                  {tasks.flagged.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+          </CardHeader>
 
-            <TabsContent value="upcoming" className="mt-0">
-              {tasks.upcoming.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.upcoming)).map(([priority, tasks]) => (
-                    <div key={`upcoming-${priority}`}>{renderTaskGroup(tasks, priority, "upcoming")}</div>
-                  ))
-                : renderEmptyState("upcoming")}
-            </TabsContent>
+          <CardContent className="pt-0">
+            <Tabs defaultValue="upcoming" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/30 p-1 rounded-lg h-11">
+                <TabsTrigger
+                  value="upcoming"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span className="hidden sm:inline">Upcoming</span>
+                  <Badge className="bg-blue-500 hover:bg-blue-500/90 text-white text-xs" variant="secondary">
+                    {tabCounts.upcoming}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="overdue"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Overdue</span>
+                  <Badge className="bg-red-500 hover:bg-red-500/90 text-white text-xs" variant="secondary">
+                    {tabCounts.overdue}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="flagged"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                >
+                  <Flag className="h-4 w-4" />
+                  <span className="hidden sm:inline">Flagged</span>
+                  <Badge className="bg-amber-500 hover:bg-amber-500/90 text-white text-xs" variant="secondary">
+                    {tabCounts.flagged}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="overdue" className="mt-0">
-              {tasks.overdue.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.overdue)).map(([priority, tasks]) => (
-                    <div key={`overdue-${priority}`}>{renderTaskGroup(tasks, priority, "overdue")}</div>
-                  ))
-                : renderEmptyState("overdue")}
-            </TabsContent>
+              <TabsContent value="upcoming" className="mt-0">
+                {renderTaskList(tasks.upcoming, "upcoming")}
+              </TabsContent>
 
-            <TabsContent value="flagged" className="mt-0">
-              {tasks.flagged.length > 0
-                ? sortPriorityGroups(groupTasksByPriority(tasks.flagged)).map(([priority, tasks]) => (
-                    <div key={`flagged-${priority}`}>{renderTaskGroup(tasks, priority, "flagged")}</div>
-                  ))
-                : renderEmptyState("flagged")}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <TabsContent value="overdue" className="mt-0">
+                {renderTaskList(tasks.overdue, "overdue")}
+              </TabsContent>
 
-      {/* New Task Modal */}
-      <NewTaskModal
-        open={newTaskModalOpen}
-        onOpenChange={setNewTaskModalOpen}
-        onTaskCreate={handleNewTaskCreated}
-        userName={currentUser}
-      />
+              <TabsContent value="flagged" className="mt-0">
+                {renderTaskList(tasks.flagged, "flagged")}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <AnimatePresence>
-        {deleteTaskDialogOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        {/* Task Details Sidebar */}
+        <AnimatePresence>
+          {showTaskDetails && selectedTask && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0f1729] text-white rounded-lg w-full max-w-md p-6 relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end"
+              onClick={() => setShowTaskDetails(false)}
             >
-              <button
-                onClick={() => setDeleteTaskDialogOpen(false)}
-                className="absolute right-4 top-4 text-gray-400 hover:text-white"
+              <motion.div
+                initial={{ x: 400 }}
+                animate={{ x: 0 }}
+                exit={{ x: 400 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="w-96 bg-background border-l border-border h-full overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
               >
-                <X size={18} />
-              </button>
-
-              <h2 className="text-xl font-semibold mb-2">Delete Task</h2>
-              <p className="text-gray-400 mb-6">Are you sure you want to delete this task?</p>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteTaskDialogOpen(false)}
-                  className="bg-primary text-black border-none"
-                >
-                  No
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (taskToDelete) {
-                      deleteTask(taskToDelete.id)
-                      setDeleteTaskDialogOpen(false)
-                    }
-                  }}
-                  className="bg-[#9e2a2b] hover:bg-[#801f20] text-white border-none"
-                >
-                  Yes
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Edit Task Dialog */}
-      <AnimatePresence>
-        {editDialogOpen && editedTask && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-background text-white rounded-lg w-full max-w-2xl p-6 relative"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold">Edit Task</h2>
-                  {hasChanges && (
-                    <Badge className="bg-orange-500 text-white font-medium px-3 py-1">Unsaved Changes</Badge>
-                  )}
-                </div>
-                <button onClick={() => setEditDialogOpen(false)} className="text-gray-400 hover:text-white">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <p className="text-gray-400 italic mb-5 text-sm">ID: {editedTask.id}</p>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title" className="text-gray-300 mb-1.5 block">
-                    Title
-                  </Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    value={editedTask.title}
-                    onChange={handleInputChange}
-                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="description" className="text-gray-300 mb-1.5 block">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={editedTask.description}
-                    onChange={handleInputChange}
-                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="flaggedReason" className="text-gray-300 mb-1.5 block">
-                    Flagged Reason (if any)
-                  </Label>
-                  <Input
-                    id="flaggedReason"
-                    name="flaggedReason"
-                    value={editedTask.flaggedReason}
-                    onChange={handleInputChange}
-                    className="bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="priority" className="text-gray-300 mb-1.5 block">
-                      Priority
-                    </Label>
-                    <Select
-                      value={editedTask.priority}
-                      onValueChange={(value) => handleSelectChange("priority", value)}
-                    >
-                      <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border-[#334155] text-white">
-                        <SelectItem value="Very High">Very High</SelectItem>
-                        <SelectItem value="High">High</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Low">Low</SelectItem>
-                        <SelectItem value="Very Low">Very Low</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold">Task Details</h3>
+                    <Button variant="ghost" size="icon" onClick={() => setShowTaskDetails(false)} className="h-8 w-8">
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
 
-                  <div>
-                    <Label htmlFor="status" className="text-gray-300 mb-1.5 block">
-                      Status
-                    </Label>
-                    <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
-                      <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border-[#334155] text-white">
-                        <SelectItem value="In-Progress">In-Progress</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Flagged">Flagged</SelectItem>
-                        <SelectItem value="Overdue">Overdue</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="dueDate" className="text-gray-300 mb-1.5 block">
-                    Due Date
-                  </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal bg-background border-[#334155] text-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {editedTask.dueDate && isValid(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()))
-                          ? format(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()), "PPP")
-                          : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="start"
-                      className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50"
-                    >
-                      <div className="rounded-md border">
-                        <CustomCalendar
-                          selected={
-                            editedTask.dueDate ? parse(editedTask.dueDate, "yyyy-MM-dd", new Date()) : undefined
-                          }
-                          onSelect={(date) => {
-                            if (date) {
-                              const localStr = format(date, "yyyy-MM-dd")
-                              setEditedTask((prev) => ({
-                                ...prev,
-                                dueDate: localStr,
-                              }))
-                              setHasChanges(true)
-                            }
-                          }}
-                        />
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-medium text-lg mb-2">{selectedTask.title}</h4>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Badge className={priorityColors[selectedTask.priority.toLowerCase().trim()]}>
+                          {selectedTask.priority}
+                        </Badge>
+                        <Badge className={statusColors[selectedTask.status]} variant="secondary">
+                          {selectedTask.status}
+                        </Badge>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                    </div>
 
-                <div>
-                  <Label htmlFor="for" className="text-gray-300 mb-1.5 block">
-                    Assigned To
-                  </Label>
-                  <Select value={editedTask.for || ""} onValueChange={(value) => handleSelectChange("for", value)}>
-                    <SelectTrigger className="bg-background border-[#334155] text-white focus:ring-1 focus:ring-[#3B82F6]">
-                      <SelectValue placeholder="Select staff" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-[#334155] text-white">
-                      {staff.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {selectedTask.description && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                        <p className="mt-2 text-sm leading-relaxed">{selectedTask.description}</p>
+                      </div>
+                    )}
 
-                <div>
-                  <Label htmlFor="createdBy" className="text-gray-300 mb-1.5 block">
-                    Created By
-                  </Label>
-                  <Input
-                    id="createdBy"
-                    value={editedTask.createdBy}
-                    disabled
-                    className="bg-background border-[#334155] text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-              </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Assigned To</Label>
+                        <div className="mt-2 flex items-center gap-2">
+                          {isGlobalTask(selectedTask) ? (
+                            <span className="text-sm">Unassigned</span>
+                          ) : (
+                            <>
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs">
+                                  {getStaffInitials(selectedTask.for)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{getStaffName(selectedTask.for)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(false)}
-                  className="bg-transparent hover:bg-gray-700 text-white border-gray-600"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={saveChanges}
-                  disabled={!hasChanges}
-                  className={`flex items-center gap-2 ${
-                    hasChanges
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      : "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  }`}
-                >
-                  <Save size={16} />
-                  Save Changes
-                </Button>
-              </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                        <p className="mt-2 text-sm">{selectedTask.dueDate || "No due date"}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Created By</Label>
+                      <p className="mt-2 text-sm">{selectedTask.createdBy || "Unknown"}</p>
+                    </div>
+
+                    {selectedTask.flaggedReason && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Flagged Reason</Label>
+                        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-sm text-amber-800 dark:text-amber-200">{selectedTask.flaggedReason}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          completeTask(selectedTask.id)
+                          setShowTaskDetails(false)
+                        }}
+                        className="flex-1"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Complete
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          openEditDialog(selectedTask)
+                          setShowTaskDetails(false)
+                        }}
+                        className="flex-1"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* New Task Modal */}
+        <NewTaskModal
+          open={newTaskModalOpen}
+          onOpenChange={setNewTaskModalOpen}
+          onTaskCreate={handleNewTaskCreated}
+          userName={currentUser}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <AnimatePresence>
+          {deleteTaskDialogOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-destructive/10">
+                      <Trash className="h-5 w-5 text-destructive" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-foreground">Delete Task</h2>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteTaskDialogOpen(false)}
+                    className="h-8 w-8 rounded-lg"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <p className="text-muted-foreground mb-6 leading-relaxed">
+                  Are you sure you want to delete this task? This action cannot be undone.
+                </p>
+
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setDeleteTaskDialogOpen(false)} className="shadow-sm">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (taskToDelete) {
+                        deleteTask(taskToDelete.id)
+                        setDeleteTaskDialogOpen(false)
+                      }
+                    }}
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
+                  >
+                    Delete Task
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit Task Dialog */}
+        <AnimatePresence>
+          {editDialogOpen && editedTask && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-2xl p-6 shadow-2xl my-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Pencil className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-foreground">Edit Task</h2>
+                      {hasChanges && (
+                        <Badge className="bg-amber-500 text-white font-medium px-2 py-1 mt-1">Unsaved Changes</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditDialogOpen(false)}
+                    className="h-8 w-8 rounded-lg"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <p className="text-muted-foreground text-sm mb-6">ID: {editedTask.id}</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <Label htmlFor="title" className="text-foreground mb-2 block font-medium">
+                      Title
+                    </Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      value={editedTask.title}
+                      onChange={handleInputChange}
+                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Enter task title"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description" className="text-foreground mb-2 block font-medium">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={editedTask.description}
+                      onChange={handleInputChange}
+                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      rows={3}
+                      placeholder="Enter task description"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="flaggedReason" className="text-foreground mb-2 block font-medium">
+                      Flagged Reason (if any)
+                    </Label>
+                    <Input
+                      id="flaggedReason"
+                      name="flaggedReason"
+                      value={editedTask.flaggedReason}
+                      onChange={handleInputChange}
+                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      placeholder="Enter reason for flagging"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="priority" className="text-foreground mb-2 block font-medium">
+                        Priority
+                      </Label>
+                      <Select
+                        value={editedTask.priority}
+                        onValueChange={(value) => handleSelectChange("priority", value)}
+                      >
+                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          <SelectItem value="Very High">Very High</SelectItem>
+                          <SelectItem value="High">High</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Low">Low</SelectItem>
+                          <SelectItem value="Very Low">Very Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="status" className="text-foreground mb-2 block font-medium">
+                        Status
+                      </Label>
+                      <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
+                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          <SelectItem value="In-Progress">In-Progress</SelectItem>
+                          <SelectItem value="Completed">Completed</SelectItem>
+                          <SelectItem value="Flagged">Flagged</SelectItem>
+                          <SelectItem value="Overdue">Overdue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dueDate" className="text-foreground mb-2 block font-medium">
+                      Due Date
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {editedTask.dueDate && isValid(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()))
+                            ? format(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()), "PPP")
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50"
+                      >
+                        <div className="rounded-md border">
+                          <CustomCalendar
+                            selected={
+                              editedTask.dueDate ? parse(editedTask.dueDate, "yyyy-MM-dd", new Date()) : undefined
+                            }
+                            onSelect={(date) => {
+                              if (date) {
+                                const localStr = format(date, "yyyy-MM-dd")
+                                setEditedTask((prev) => ({
+                                  ...prev,
+                                  dueDate: localStr,
+                                }))
+                                setHasChanges(true)
+                              }
+                            }}
+                          />
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="for" className="text-foreground mb-2 block font-medium">
+                      Assigned To
+                    </Label>
+                    <Select value={editedTask.for || ""} onValueChange={(value) => handleSelectChange("for", value)}>
+                      <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectValue placeholder="Select staff" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        {staff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="createdBy" className="text-foreground mb-2 block font-medium">
+                      Created By
+                    </Label>
+                    <Input
+                      id="createdBy"
+                      value={editedTask.createdBy}
+                      disabled
+                      className="bg-muted border-border text-muted-foreground cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8">
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="shadow-sm">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={saveChanges}
+                    disabled={!hasChanges}
+                    className={`flex items-center gap-2 shadow-sm ${
+                      hasChanges
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    <Save className="h-4 w-4" />
+                    Save Changes
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </TooltipProvider>
   )
 }

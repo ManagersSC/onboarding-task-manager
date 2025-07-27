@@ -4,6 +4,8 @@ import { logAuditEvent } from "@/lib/auditLogger";
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
 
+// src/app/api/dashboard/tasks/[id]/route.js
+
 export async function PATCH(req, { params }){
   // --- Get session for audit logging ---
   let userEmail = "Unknown";
