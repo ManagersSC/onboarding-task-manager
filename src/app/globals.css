@@ -100,16 +100,19 @@
 }
 
 /* Custom prominent scrollbar - matching the image style */
-.notification-container::-webkit-scrollbar {
+.notification-container::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
   width: 16px;
 }
 
-.notification-container::-webkit-scrollbar-track {
+.notification-container::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
 
-.notification-container::-webkit-scrollbar-thumb {
+.notification-container::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
   background: hsl(0 0% 80%); /* Light gray color like in the image */
   border-radius: 10px;
   border: 3px solid transparent;
@@ -117,39 +120,46 @@
   transition: background-color 0.2s ease;
 }
 
-.notification-container:hover::-webkit-scrollbar-thumb {
+.notification-container:hover::-webkit-scrollbar-thumb,
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
   background: hsl(0 0% 70%);
   background-clip: content-box;
 }
 
-.notification-container::-webkit-scrollbar-thumb:hover {
+.notification-container::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(0 0% 60%);
   background-clip: content-box;
 }
 
 /* Dark mode scrollbar */
-.dark .notification-container::-webkit-scrollbar-thumb {
+.dark .notification-container::-webkit-scrollbar-thumb,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: hsl(0 0% 85%); /* Lighter for dark mode */
   background-clip: content-box;
 }
 
-.dark .notification-container:hover::-webkit-scrollbar-thumb {
+.dark .notification-container:hover::-webkit-scrollbar-thumb,
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
   background: hsl(0 0% 75%);
   background-clip: content-box;
 }
 
-.dark .notification-container::-webkit-scrollbar-thumb:hover {
+.dark .notification-container::-webkit-scrollbar-thumb:hover,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(0 0% 65%);
   background-clip: content-box;
 }
 
 /* Firefox scrollbar */
-.notification-container {
+.notification-container,
+.custom-scrollbar {
   scrollbar-width: auto;
   scrollbar-color: hsl(0 0% 80%) transparent;
 }
 
-.dark .notification-container {
+.dark .notification-container,
+.dark .custom-scrollbar {
   scrollbar-color: hsl(0 0% 85%) transparent;
 }
 
