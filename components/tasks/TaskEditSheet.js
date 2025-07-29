@@ -20,8 +20,6 @@ import {
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@components/ui/form"
 import { Skeleton } from "@components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@components/ui/alert-dialog"
-import { Check, ChevronsUpDown, Plus, AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip } from "lucide-react"
+import { AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip } from "lucide-react"
 import { cn } from "@components/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@components/ui/badge"
@@ -55,7 +53,6 @@ const taskFormSchema = z.object({
 export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [folderOpen, setFolderOpen] = useState(false)
   const [folderOptions, setFolderOptions] = useState([])
   const [loadingFolders, setLoadingFolders] = useState(false)
   const [originalData, setOriginalData] = useState(null)
@@ -92,6 +89,20 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
     { value: "Doc", label: "Document" },
     { value: "Video", label: "Video" },
     { value: "G.Drive", label: "Google Drive" },
+  ]
+
+  // Job options
+  const jobOptions = [
+    { value: "Nurse", label: "Nurse" },
+    { value: "Dentist", label: "Dentist" },
+    { value: "Receptionist", label: "Receptionist" },
+    { value: "Manager", label: "Manager" },
+  ]
+
+  // Location options
+  const locationOptions = [
+    { value: "Finchley", label: "Finchley" },
+    { value: "SJW", label: "SJW" },
   ]
 
   // Check if a field has been modified
@@ -253,11 +264,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
         })
         .catch((err) => {
           setError(err.message)
-          toast({
-            variant: "destructive",
-            title: "Error loading task",
-            description: err.message,
-          })
+          toast.error("Error loading task: " + err.message)
         })
         .finally(() => setLoading(false))
     }
@@ -320,13 +327,23 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
       // This would be a real API call in production
       setTimeout(() => {
         setFolderOptions([
-          { value: "treatments-overview", label: "Treatments Overview" },
-          { value: "understanding-treatment", label: "Understanding Treatment" },
-          { value: "practice-operations", label: "Practice Operations" },
-          { value: "using-dentally", label: "Using Dentally" },
-          { value: "finance-payments", label: "Finance & Payments" },
-          { value: "closing", label: "Closing" },
-          { value: "new-patient-booking", label: "New Patient Booking" },
+          { value: "Treatments Overview", label: "Treatments Overview" },
+          { value: "Understanding Treatments", label: "Understanding Treatments" },
+          { value: "Practice Operations", label: "Practice Operations" },
+          { value: "Using Dentally", label: "Using Dentally" },
+          { value: "Finance & Payments", label: "Finance & Payments" },
+          { value: "Closing", label: "Closing" },
+          { value: "New Patient Booking Training Series", label: "New Patient Booking Training Series" },
+          { value: "Practice Safety & Operations", label: "Practice Safety & Operations" },
+          { value: "Start Learning Scripts", label: "Start Learning Scripts" },
+          { value: "Specialists at Smile Cliniq", label: "Specialists at Smile Cliniq" },
+          { value: "Dental Implants", label: "Dental Implants" },
+          { value: "Teeth Straightening", label: "Teeth Straightening" },
+          { value: "Training Video", label: "Training Video" },
+          { value: "Outstanding Treatments", label: "Outstanding Treatments" },
+          { value: "Communication & Admin", label: "Communication & Admin" },
+          { value: "IT & Software", label: "IT & Software" },
+          { value: "Lab Work & Clinical Admin", label: "Lab Work & Clinical Admin" },
         ])
         setLoadingFolders(false)
       }, 500)
@@ -370,10 +387,8 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
       setOriginalData({ ...data, attachments })
       setFormModified(false)
 
-      toast({
-        title: "Task updated",
-        description: "Task details have been saved successfully",
-      })
+      // Fixed toast calls for sonner
+      toast.success("Task updated successfully!")
 
       // Call onEditSuccess callback to refetch data
       if (typeof onEditSuccess === "function") {
@@ -382,17 +397,12 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
 
       onOpenChange(false) // Close the sheet
     } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Error updating task",
-        description: err.message,
-      })
+      // Fixed toast call for sonner
+      toast.error("Error updating task: " + err.message)
     } finally {
       setLoading(false)
     }
   }
-
-  // ... rest of the component ...
 
   return (
     <>
@@ -652,7 +662,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                         />
                       </div>
 
-                      {/* Folder Name */}
+                      {/* Simple Select Version for Folder Name */}
                       <FormField
                         control={form.control}
                         name="folderName"
@@ -663,82 +673,35 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                               <Skeleton className="h-10 w-full" />
                             ) : (
                               <div className="space-y-1">
-                                <Popover open={folderOpen} onOpenChange={setFolderOpen}>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={folderOpen}
-                                        className={cn(
-                                          "w-full justify-between",
-                                          isFieldModified("folderName") &&
-                                            "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
-                                        )}
-                                      >
-                                        {field.value
-                                          ? folderOptions.find((folder) => folder.value === field.value)?.label ||
-                                            field.value
-                                          : "Select folder..."}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="p-0" align="start" side="top">
-                                    <Command>
-                                      <CommandInput placeholder="Search folders..." />
-                                      <CommandList>
-                                        {loadingFolders ? (
-                                          <div className="p-4 text-center">
-                                            <Skeleton className="h-5 w-full mb-2" />
-                                            <Skeleton className="h-5 w-full mb-2" />
-                                            <Skeleton className="h-5 w-full" />
-                                          </div>
-                                        ) : (
-                                          <>
-                                            <CommandEmpty>
-                                              <div className="flex flex-col items-center justify-center p-4 text-center">
-                                                <p className="text-sm text-muted-foreground">No folder found.</p>
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  className="mt-2"
-                                                  onClick={() => {
-                                                    // This would create a new folder in production
-                                                    setFolderOpen(false)
-                                                  }}
-                                                >
-                                                  <Plus className="mr-2 h-4 w-4" />
-                                                  Create new folder
-                                                </Button>
-                                              </div>
-                                            </CommandEmpty>
-                                            <CommandGroup>
-                                              {folderOptions.map((folder) => (
-                                                <CommandItem
-                                                  key={folder.value}
-                                                  value={folder.value}
-                                                  onSelect={(value) => {
-                                                    form.setValue("folderName", value)
-                                                    setFolderOpen(false)
-                                                  }}
-                                                >
-                                                  <Check
-                                                    className={cn(
-                                                      "mr-2 h-4 w-4",
-                                                      field.value === folder.value ? "opacity-100" : "opacity-0",
-                                                    )}
-                                                  />
-                                                  {folder.label}
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                          </>
-                                        )}
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger
+                                      className={cn(
+                                        isFieldModified("folderName") &&
+                                          "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
+                                      )}
+                                    >
+                                      <SelectValue placeholder="Select folder..." />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent className="max-h-[300px] overflow-y-auto z-[9999]">
+                                    {loadingFolders ? (
+                                      <div className="p-4 text-center">
+                                        <Skeleton className="h-5 w-full mb-2" />
+                                        <Skeleton className="h-5 w-full mb-2" />
+                                        <Skeleton className="h-5 w-full" />
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {folderOptions.map((folder) => (
+                                          <SelectItem key={folder.value} value={folder.value}>
+                                            {folder.label}
+                                          </SelectItem>
+                                        ))}
+                                      </>
+                                    )}
+                                  </SelectContent>
+                                </Select>
                                 {isFieldModified("folderName") && (
                                   <p className="text-xs text-muted-foreground flex items-center">
                                     <AlertCircle className="h-3 w-3 mr-1" />
@@ -768,15 +731,24 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                               <Skeleton className="h-10 w-full" />
                             ) : (
                               <div className="space-y-1">
-                                <FormControl>
-                                  <Input
-                                    placeholder="Job role"
-                                    {...field}
-                                    className={cn(
-                                      isFieldModified("job") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
-                                    )}
-                                  />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger
+                                      className={cn(
+                                        isFieldModified("job") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
+                                      )}
+                                    >
+                                      <SelectValue placeholder="Select job role" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {jobOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 {isFieldModified("job") && (
                                   <p className="text-xs text-muted-foreground flex items-center">
                                     <AlertCircle className="h-3 w-3 mr-1" />
@@ -801,16 +773,25 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                               <Skeleton className="h-10 w-full" />
                             ) : (
                               <div className="space-y-1">
-                                <FormControl>
-                                  <Input
-                                    placeholder="Location"
-                                    {...field}
-                                    className={cn(
-                                      isFieldModified("location") &&
-                                        "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
-                                    )}
-                                  />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger
+                                      className={cn(
+                                        isFieldModified("location") &&
+                                          "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
+                                      )}
+                                    >
+                                      <SelectValue placeholder="Select location" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {locationOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 {isFieldModified("location") && (
                                   <p className="text-xs text-muted-foreground flex items-center">
                                     <AlertCircle className="h-3 w-3 mr-1" />

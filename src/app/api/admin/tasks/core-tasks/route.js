@@ -64,7 +64,8 @@ export async function GET(request) {
     // 4. Build filter formula
     const conditions = [
       "NOT({Week Number} = '0')",
-      "NOT({Day Number} = '0')"
+      "NOT({Day Number} = '0')",
+      "NOT({Type} = 'Managers')"
     ]
     const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
     if (search) {
