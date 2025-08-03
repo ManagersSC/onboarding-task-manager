@@ -6,7 +6,7 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process
 
 export async function GET() {
   try {
-    // Fetch applicants with "Hired" stage
+    // Fetch applicants with "Hired" stage and expand linked records
     const records = await base('Applicants').select({
       filterByFormula: "{Stage} = 'Hired'",
       sort: [{ field: 'Onboarding Start Date', direction: 'desc' }]
@@ -15,9 +15,24 @@ export async function GET() {
     console.log('Fetched records:', records.length)
 
     const newHires = records.map(record => {
-      // Use the Job field which is a single select with role options
-      const jobRole = record.get('Job')
+      // Use the "Job Name" field directly instead of linked records
+      const jobRole = record.get('Job Name') || 'Role TBD'
+      const location = record.get('Location') || record.fields?.fldITAJcvyysx3Gxr
+      
+      console.log('Job Name field:', record.get('Job Name'))
+      console.log('Location field:', record.get('Location'))
+      
+      console.log('Record data:', {
+        id: record.id,
+        name: record.get('Name'),
+        jobRole: jobRole,
+        location: location,
+        allFields: Object.keys(record.fields)
+      })
+      
       const role = jobRole || 'Role TBD'
+      
+      // Use the job role as the department as well, since there's no separate department field
       const department = jobRole || 'Department TBD'
 
       const applicantData = {
