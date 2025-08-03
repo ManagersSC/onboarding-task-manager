@@ -13,12 +13,22 @@ export async function GET() {
       password: process.env.SESSION_SECRET,
     });
 
-    if (!session || !session.recordId || !session.userName || !session.userEmail) {
+    if (!session || !session.userName || !session.userEmail) {
       return new Response(JSON.stringify({ error: "Invalid session" }), { status: 401 });
     }
 
+    // Handle both admin and user sessions
+    const userId = session.userStaffId || session.recordId || null;
+    const userRole = session.userRole || 'user';
+
     return new Response(
-      JSON.stringify({ id: session.recordId, name: session.userName, email: session.userEmail }),
+      JSON.stringify({ 
+        id: userId, 
+        name: session.userName, 
+        email: session.userEmail,
+        userName: session.userName,
+        role: userRole
+      }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {

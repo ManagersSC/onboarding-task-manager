@@ -1248,6 +1248,17 @@
                     },
                     "id": "fldXnrHL8sCkouyId",
                     "name": "isCurrentMonth"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblTBbIQ2zxBTfnen",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fld89WrmwYO41Qghx"
+                    },
+                    "id": "fldpsmLs0gVLKPZeN",
+                    "name": "Email Logs"
                 }
             ],
             "views": [
@@ -1302,13 +1313,13 @@
                     "type": "grid"
                 },
                 {
-                    "id": "viw6wv2JMTi0dRak8",
-                    "name": "Onboarding",
+                    "id": "viwn7cfDDbMal3RDn",
+                    "name": "DISC PDFs",
                     "type": "grid"
                 },
                 {
-                    "id": "viwn7cfDDbMal3RDn",
-                    "name": "DISC PDFs",
+                    "id": "viw6wv2JMTi0dRak8",
+                    "name": "Onboarding",
                     "type": "grid"
                 },
                 {
@@ -1530,6 +1541,28 @@
                     },
                     "id": "fldiAuPzMCMmKelpL",
                     "name": "Notifications"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblKNkoWosCdYhurG",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldbiM6GlYag9o2qh"
+                    },
+                    "id": "fld3KgQ0oe6gGTrJG",
+                    "name": "Email Templates"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblTBbIQ2zxBTfnen",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fld4WIAw5731BkrcG"
+                    },
+                    "id": "fldpEIySTM8zFD2R3",
+                    "name": "Email Logs"
                 }
             ],
             "views": [
@@ -2476,6 +2509,19 @@
                     "name": "👨 Assigned Staff"
                 },
                 {
+                    "type": "multipleLookupValues",
+                    "options": {
+                        "isValid": true,
+                        "recordLinkFieldId": "fld15xSpsrFIO0ONh",
+                        "fieldIdInLinkedTable": "fld6H1llTsbK1Jivf",
+                        "result": {
+                            "type": "singleLineText"
+                        }
+                    },
+                    "id": "fld9BpyP5voB0J74q",
+                    "name": "Assigned Staff Name"
+                },
+                {
                     "type": "multipleRecordLinks",
                     "options": {
                         "linkedTableId": "tbl4ldFExsS5hWR3L",
@@ -2507,7 +2553,7 @@
                 {
                     "type": "multilineText",
                     "id": "fldcXwC0PBEjUX9ZB",
-                    "name": "Blocked Reason"
+                    "name": "Flagged Reason"
                 },
                 {
                     "type": "multipleLookupValues",
@@ -2904,6 +2950,11 @@
                                 "id": "selnuZkGcTCF16gLe",
                                 "name": "Receptionist",
                                 "color": "tealLight2"
+                            },
+                            {
+                                "id": "selAuAliQAAFZJkfJ",
+                                "name": "Manager",
+                                "color": "greenLight2"
                             }
                         ]
                     },
@@ -4712,6 +4763,11 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "selTpHJ36bhKc4lcq",
+                                "name": "New Hires Data Fetch",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "selcrRwBLc8UVE7LF",
                                 "name": "Fetch Files",
                                 "color": "cyanBright"
@@ -4952,6 +5008,29 @@
                     "name": "Action URL"
                 },
                 {
+                    "type": "lastModifiedTime",
+                    "options": {
+                        "isValid": true,
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "flduQtwtO9GUQj5Qp",
+                    "name": "Updated At"
+                },
+                {
                     "type": "createdTime",
                     "options": {
                         "result": {
@@ -4976,6 +5055,189 @@
             "views": [
                 {
                     "id": "viw4v5PFE8qMMhPLk",
+                    "name": "Grid view",
+                    "type": "grid"
+                }
+            ]
+        },
+        {
+            "id": "tblKNkoWosCdYhurG",
+            "name": "Email Templates",
+            "primaryFieldId": "fldzsilihT06WEbbD",
+            "fields": [
+                {
+                    "type": "singleLineText",
+                    "id": "fldzsilihT06WEbbD",
+                    "name": "Name"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldpbUXkDIdGldvkP",
+                    "name": "Subject"
+                },
+                {
+                    "type": "richText",
+                    "id": "fld68r1jG04X2nAQm",
+                    "name": "Body"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldzrdwicM18GumRY",
+                    "name": "isCustom"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fld3KgQ0oe6gGTrJG"
+                    },
+                    "id": "fldbiM6GlYag9o2qh",
+                    "name": "Created By"
+                },
+                {
+                    "type": "createdTime",
+                    "options": {
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldTW0erbdIbhe3Zm",
+                    "name": "Created At"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fld4IVeCEzf4nLGYY",
+                    "name": "Updated At"
+                }
+            ],
+            "views": [
+                {
+                    "id": "viwr9Wkj0PGkwbvix",
+                    "name": "Grid view",
+                    "type": "grid"
+                }
+            ]
+        },
+        {
+            "id": "tblTBbIQ2zxBTfnen",
+            "name": "Email Logs",
+            "primaryFieldId": "fldDivpHhsR4PUlLf",
+            "fields": [
+                {
+                    "type": "singleLineText",
+                    "id": "fldDivpHhsR4PUlLf",
+                    "name": "Subject"
+                },
+                {
+                    "type": "richText",
+                    "id": "fldN5ugFXWFeDnS5P",
+                    "name": "Body"
+                },
+                {
+                    "type": "richText",
+                    "id": "flde6yUgoPW52bUSm",
+                    "name": "Recipients"
+                },
+                {
+                    "type": "singleSelect",
+                    "options": {
+                        "choices": [
+                            {
+                                "id": "selCECng9nqnLkY3d",
+                                "name": "Sent",
+                                "color": "greenBright"
+                            },
+                            {
+                                "id": "selE3DLS3sWXe9yjx",
+                                "name": "Failed",
+                                "color": "orangeBright"
+                            },
+                            {
+                                "id": "selPX8hs7iHv7wZgz",
+                                "name": "Pending",
+                                "color": "yellowBright"
+                            }
+                        ]
+                    },
+                    "id": "fldgH3R2mvPZN714h",
+                    "name": "Status"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl4ldFExsS5hWR3L",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldpsmLs0gVLKPZeN"
+                    },
+                    "id": "fld89WrmwYO41Qghx",
+                    "name": "For"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldpEIySTM8zFD2R3"
+                    },
+                    "id": "fld4WIAw5731BkrcG",
+                    "name": "Sender"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fld8wFTjTZrZU1nFd",
+                    "name": "Sent At",
+                    "description": "An AI generated summary of the Attachments field. Upload files to Attachments to generate a summary."
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldjYOGbJPiItobdu",
+                    "name": "Template Used"
+                }
+            ],
+            "views": [
+                {
+                    "id": "viwsf2CjbhykC2pVg",
                     "name": "Grid view",
                     "type": "grid"
                 }
