@@ -5,121 +5,154 @@ import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs"
-import { Users, Filter, Plus, RotateCw } from "lucide-react"
+import { Users, Filter, Plus, RotateCw, Loader2, Search } from "lucide-react"
 import UsersTable from "./users-table"
 import AddApplicantDialog from "./add-applicant-dialog"
 
-export default function ApplicantsPage({ initialApplicants = [] }) {
-  const [data, setData] = useState(initialApplicants)
+export default function ApplicantsPage({ 
+  initialApplicants = [], 
+  pagination = {},
+  isLoading = false,
+  isSearching = false,
+  onParamsChange,
+  onRefresh
+}) {
   const [query, setQuery] = useState("")
   const [stagePreset, setStagePreset] = useState("all")
   const [addOpen, setAddOpen] = useState(false)
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const stageGroups = {
-      all: () => true,
-      new: (a) => a.stage === "New Application",
-      first: (a) =>
-        ["First Interview Invite Sent", "First Interview Booked", "Under Review", "Reviewed"].includes(a.stage),
-      second: (a) => ["Second Interview Invite Sent", "Second Interview Booked", "Reviewed (2nd)"].includes(a.stage),
-      hired: (a) => a.stage === "Hired",
-      rejected: (a) => a.stage.toLowerCase().startsWith("rejected"),
-    }
+  // Enhanced stage options with grouped stages
+  const stageOptions = useMemo(() => [
+    { value: 'all', label: 'All Stages', count: pagination.total || 0 },
+    { value: 'New Application', label: 'New Application' },
+    { value: 'interview', label: 'Interview Stages' },
+    { value: 'review', label: 'Review Stages' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'Hired', label: 'Hired' }
+  ], [pagination.total])
 
-    return data
-      .filter((a) => (stageGroups[stagePreset] ? stageGroups[stagePreset](a) : true))
-      .filter((a) => {
-        if (!q) return true
-        return (
-          a.name.toLowerCase().includes(q) ||
-          a.email.toLowerCase().includes(q) ||
-          (a.phone || "").toLowerCase().includes(q) ||
-          (a.job || "").toLowerCase().includes(q)
-        )
-      })
-  }, [data, query, stagePreset])
+  const handleSearch = useCallback((value) => {
+    setQuery(value)
+    onParamsChange(prev => ({ ...prev, search: value, page: 1 }))
+  }, [onParamsChange])
+
+  const handleStageChange = useCallback((stage) => {
+    setStagePreset(stage)
+    onParamsChange(prev => ({ ...prev, stage, page: 1 }))
+  }, [onParamsChange])
 
   const handleRefresh = useCallback(() => {
-    setQuery("")
-    setStagePreset("all")
-  }, [])
+    onRefresh()
+  }, [onRefresh])
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <Users className="h-6 w-6" />
-        <h1 className="text-xl font-semibold tracking-tight">Applicants</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Applicants</h1>
+          <p className="text-muted-foreground">
+            Manage and track all job applicants
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RotateCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Applicant
+          </Button>
+        </div>
       </div>
 
-      <Card className="border-none shadow-none">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-base font-medium">Manage and track applicants across your pipeline</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleRefresh} className="cursor-pointer bg-transparent">
-                <RotateCw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button>
-              <Button size="sm" onClick={() => setAddOpen(true)} className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Applicant
-              </Button>
-            </div>
-          </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search name, email, phone, job..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 opacity-60" />
-              <Tabs value={stagePreset} onValueChange={setStagePreset} className="w-full">
-                <TabsList className="flex w-full flex-wrap gap-2 rounded-lg bg-muted/30 p-1">
-                  <TabsTrigger value="all" className="cursor-pointer rounded-md px-3 py-1.5">
-                    All
-                  </TabsTrigger>
-                  <TabsTrigger value="new" className="cursor-pointer rounded-md px-3 py-1.5">
-                    New
-                  </TabsTrigger>
-                  <TabsTrigger value="first" className="cursor-pointer rounded-md px-3 py-1.5">
-                    First
-                  </TabsTrigger>
-                  <TabsTrigger value="second" className="cursor-pointer rounded-md px-3 py-1.5">
-                    Second
-                  </TabsTrigger>
-                  <TabsTrigger value="hired" className="cursor-pointer rounded-md px-3 py-1.5">
-                    Hired
-                  </TabsTrigger>
-                  <TabsTrigger value="rejected" className="cursor-pointer rounded-md px-3 py-1.5">
-                    Rejected
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="all" />
-                <TabsContent value="new" />
-                <TabsContent value="first" />
-                <TabsContent value="second" />
-                <TabsContent value="hired" />
-                <TabsContent value="rejected" />
-              </Tabs>
-            </div>
-          </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Search & Filters
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <UsersTable initialRows={filtered} onRowsChange={(nextAll) => setData(nextAll)} allRows={data} />
+        <CardContent className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search by name, email, phone, job, or address..."
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+              disabled={isLoading}
+            />
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Stage Filter */}
+          <div className="flex flex-wrap gap-2">
+            {stageOptions.map((option) => (
+              <Button
+                key={option.value}
+                variant={stagePreset === option.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleStageChange(option.value)}
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                {option.label}
+                {option.count !== undefined && (
+                  <span className="ml-1 px-2 py-0.5 text-xs bg-background/50 rounded-full">
+                    {option.count}
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
+      {/* Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Applicants
+            {pagination.total > 0 && (
+              <span className="text-sm font-normal text-muted-foreground">
+                ({pagination.total} total)
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <UsersTable
+            initialRows={initialApplicants}
+            pagination={pagination}
+            isLoading={isLoading}
+            onPageChange={(page) => onParamsChange(prev => ({ ...prev, page }))}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Add Applicant Dialog */}
       <AddApplicantDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        onAdded={(newApplicants) => {
-          if (!newApplicants || newApplicants.length === 0) return
-          setData((prev) => [...newApplicants, ...prev])
-        }}
+        onApplicantAdded={handleRefresh}
       />
     </div>
   )

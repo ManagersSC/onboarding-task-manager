@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Download, ExternalLink, FileText, ImageIcon, File, AlertCircle, Loader2 } from "lucide-react"
+import { Download, ExternalLink, FileText, ImageIcon, File, AlertCircle, Loader2, Calendar, User, Tag } from "lucide-react"
 import { formatBytes } from "@/lib/utils/format"
 import Image from "next/image"
 
@@ -16,6 +16,7 @@ import {
 } from "@components/ui/dialog"
 import { Button } from "@components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
+import { Badge } from "@components/ui/badge"
 
 export function FileViewerModal({ file, open, onOpenChange }) {
   const [loading, setLoading] = useState(true)
@@ -153,7 +154,8 @@ export function FileViewerModal({ file, open, onOpenChange }) {
   const renderFileDetails = () => {
     return (
       <div className="space-y-4 p-4 h-[400px] overflow-auto">
-        <div className="grid grid-cols-2 gap-2">
+        {/* Basic File Info */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <p className="text-sm font-medium">File Name</p>
             <p className="text-sm text-muted-foreground break-all">{file.title}</p>
@@ -173,6 +175,60 @@ export function FileViewerModal({ file, open, onOpenChange }) {
             </p>
           </div>
         </div>
+
+        {/* Applicant Document Metadata */}
+        {(file.category || file.source || file.uploadedAt) && (
+          <>
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-3">Document Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {file.category && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Tag className="h-3 w-3" />
+                      Category
+                    </p>
+                    <Badge variant="secondary">{file.category}</Badge>
+                  </div>
+                )}
+                {file.source && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <User className="h-3 w-3" />
+                      Source
+                    </p>
+                    <p className="text-sm text-muted-foreground">{file.source}</p>
+                  </div>
+                )}
+                {file.uploadedAt && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="h-3 w-3" />
+                      Upload Date
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(file.uploadedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Additional Metadata */}
+        {file.status && (
+          <div className="border-t pt-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Status</p>
+              <Badge 
+                variant={file.status === 'Completed' ? 'default' : 'secondary'}
+              >
+                {file.status}
+              </Badge>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -188,6 +244,7 @@ export function FileViewerModal({ file, open, onOpenChange }) {
               <DialogDescription className="truncate">
                 {file.mimeType || "Unknown file type"}
                 {file.size && ` • ${formatBytes(file.size)}`}
+                {file.category && ` • ${file.category}`}
               </DialogDescription>
             </div>
           </div>
@@ -218,7 +275,8 @@ export function FileViewerModal({ file, open, onOpenChange }) {
 
         <DialogFooter className="flex flex-row justify-between items-center gap-2 sm:gap-0">
           <div className="text-sm text-muted-foreground">
-            {file.updatedAt && `Last updated ${new Date(file.updatedAt).toLocaleDateString()}`}
+            {file.uploadedAt && `Uploaded ${new Date(file.uploadedAt).toLocaleDateString()}`}
+            {!file.uploadedAt && file.updatedAt && `Last updated ${new Date(file.updatedAt).toLocaleDateString()}`}
           </div>
           <div className="flex gap-2">
             {(file.mimeType && (file.mimeType.startsWith("image/") || file.mimeType.includes("pdf") || file.mimeType.includes("text") || file.mimeType.includes("html"))) && (
