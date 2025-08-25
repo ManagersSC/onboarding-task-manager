@@ -27,6 +27,7 @@ This feature integrates feedback documents from the Airtable `Feedback` table in
 - **Conditional loading**: Only loads when feedback tab is active
 - **Rules of Hooks compliant**: No conditional hook calls
 - **Efficient SWR usage**: Proper deduplication and error handling
+- **File proxy**: Secure file access through authenticated proxy endpoint
 
 ## API Endpoints
 
@@ -80,6 +81,16 @@ This feature integrates feedback documents from the Airtable `Feedback` table in
 **Purpose**: Debug endpoint for troubleshooting feedback document extraction
 
 **Response**: Comprehensive debug information including field mappings and extraction details
+
+### `GET /api/admin/files/proxy`
+
+**Purpose**: Proxy endpoint for secure file access from Airtable
+
+**Authentication**: Requires admin session (`session.userRole === 'admin'`)
+
+**Parameters**: `url` - The Airtable file URL to proxy
+
+**Response**: File content with appropriate headers for preview/download
 
 ## React Hook
 

@@ -139,6 +139,13 @@ export async function GET(request, { params }) {
              uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
              interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
              rating: feedback.get('Rating'),
+             // Add fields that the file viewer expects
+             name: doc.filename || doc.name || 'First Interview Notes',
+             originalName: doc.filename || doc.name || 'First Interview Notes',
+             url: doc.url || doc.link || '',
+             proxyUrl: doc.url || doc.link ? `/api/admin/files/proxy?url=${encodeURIComponent(doc.url || doc.link)}` : '',
+             type: doc.type || 'application/octet-stream',
+             size: doc.size || 0,
              metadata: {
                feedbackRecordId: feedback.id,
                originalField: 'First Interview Questions',
@@ -163,6 +170,13 @@ export async function GET(request, { params }) {
              uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
              interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
              rating: feedback.get('Rating (2nd)'),
+             // Add fields that the file viewer expects
+             name: doc.filename || doc.name || 'Second Interview Notes',
+             originalName: doc.filename || doc.name || 'Second Interview Notes',
+             url: doc.url || doc.link || '',
+             proxyUrl: doc.url || doc.link ? `/api/admin/files/proxy?url=${encodeURIComponent(doc.url || doc.link)}` : '',
+             type: doc.type || 'application/octet-stream',
+             size: doc.size || 0,
              metadata: {
                feedbackRecordId: feedback.id,
                originalField: 'Second Interview Questions',
@@ -187,6 +201,13 @@ export async function GET(request, { params }) {
              uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
              interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
              rating: feedback.get('Rating (2nd)'),
+             // Add fields that the file viewer expects
+             name: doc.filename || doc.name || 'After Second Interview Notes',
+             originalName: doc.filename || doc.name || 'After Second Interview Notes',
+             url: doc.url || doc.link || '',
+             proxyUrl: doc.url || doc.link ? `/api/admin/files/proxy?url=${encodeURIComponent(doc.url || doc.link)}` : '',
+             type: doc.type || 'application/octet-stream',
+             size: doc.size || 0,
              metadata: {
                feedbackRecordId: feedback.id,
                originalField: 'Docs - After Second Interview',

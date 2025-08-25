@@ -25,7 +25,7 @@ import Image from "next/image"
 const getFileType = (file) => {
   if (!file) return "unknown"
   
-  const url = file.fileUrl || file.url || ""
+  const url = file.proxyUrl || file.fileUrl || file.url || ""
   const name = file.name || file.originalName || ""
   const type = file.type || ""
   
@@ -91,7 +91,7 @@ const FilePreview = ({ file, isLoading, error }) => {
     )
   }
   
-  const fileUrl = file.fileUrl || file.url
+  const fileUrl = file.proxyUrl || file.fileUrl || file.url
   
   if (!fileUrl) {
     return (
@@ -270,7 +270,7 @@ export function ApplicantFileViewerModal({ file, open, onOpenChange }) {
   
   if (!file) return null
   
-  const fileUrl = file.fileUrl || file.url
+  const fileUrl = file.proxyUrl || file.fileUrl || file.url
   const fileName = file.name || file.originalName || "Document"
   
   const handleDownload = async () => {

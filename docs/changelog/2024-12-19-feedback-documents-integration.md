@@ -32,6 +32,7 @@ Successfully implemented a comprehensive feedback documents integration system t
 ### Technical Implementation
 - **Dedicated API endpoints**: `/api/admin/users/[id]/feedback-documents`
 - **Debug endpoint**: `/api/admin/users/[id]/debug-feedback`
+- **File proxy endpoint**: `/api/admin/files/proxy` for secure Airtable file access
 - **React hook**: `useFeedbackDocuments` with full SWR integration
 - **Error handling**: Comprehensive error states and user feedback
 - **Authentication**: Proper admin session validation
