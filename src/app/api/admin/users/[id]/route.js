@@ -116,12 +116,11 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
   return allDocuments
 }
 
-// Helper function to format detailed applicant data
-function formatDetailedApplicant(record, allDocuments) {
-  try {
-    // Get linked records for better document tracking
-    const feedbackRecords = record.get('Feedback') || []
-    const jobRecords = record.get('Applying For') || []
+ // Helper function to format detailed applicant data
+ function formatDetailedApplicant(record, allDocuments, feedbackRecords = []) {
+   try {
+     // Use the properly fetched feedback records instead of getting them from the record
+     const jobRecords = record.get('Applying For') || []
     
     // Simplified document tracking - just count what's present
     logger.info(`Processing documents for applicant - focusing on present documents only`)
@@ -187,6 +186,156 @@ function formatDetailedApplicant(record, allDocuments) {
           createdAt: feedback.get('Created Time'),
           interviewer: feedback.get('Interviewer(s)')?.[0]?.get('Name') || 'Unknown'
         })),
+      // Enhanced feedback documents extraction with debug logging
+      feedbackDocuments: (() => {
+        const documents = []
+        
+        logger.info(`Processing ${feedbackRecords.length} feedback records for documents`)
+        
+        feedbackRecords
+          .filter(feedback => feedback && typeof feedback.get === 'function')
+          .forEach((feedback, index) => {
+            logger.info(`Processing feedback record ${index + 1}: ${feedback.id}`)
+            
+            // Debug: Log all available fields in this feedback record
+            const feedbackFields = Object.keys(feedback.fields || {})
+            logger.info(`Feedback record ${index + 1} fields: ${feedbackFields.join(', ')}`)
+            
+            // Try different possible field names for First Interview Questions
+            const firstInterviewFieldNames = [
+              'First Interview Questions',
+              'First Interview Question',
+              'First Interview Questions (Attachments)',
+              'First Interview Questions (Files)'
+            ]
+            
+            let firstInterviewDocs = []
+            for (const fieldName of firstInterviewFieldNames) {
+              const docs = feedback.get(fieldName)
+              if (docs && Array.isArray(docs) && docs.length > 0) {
+                logger.info(`Found First Interview Questions in field: ${fieldName}`)
+                firstInterviewDocs = docs
+                break
+              }
+            }
+            
+            // Try different possible field names for Second Interview Questions
+            const secondInterviewFieldNames = [
+              'Second Interview Questions',
+              'Second Interview Question',
+              'Second Interview Questions (Attachments)',
+              'Second Interview Questions (Files)'
+            ]
+            
+            let secondInterviewDocs = []
+            for (const fieldName of secondInterviewFieldNames) {
+              const docs = feedback.get(fieldName)
+              if (docs && Array.isArray(docs) && docs.length > 0) {
+                logger.info(`Found Second Interview Questions in field: ${fieldName}`)
+                secondInterviewDocs = docs
+                break
+              }
+            }
+            
+            // Try different possible field names for Docs - After Second Interview
+            const afterSecondFieldNames = [
+              'Docs - After Second Interview',
+              'Documents - After Second Interview',
+              'After Second Interview Documents',
+              'After Second Interview Docs'
+            ]
+            
+            let afterSecondDocs = []
+            for (const fieldName of afterSecondFieldNames) {
+              const docs = feedback.get(fieldName)
+              if (docs && Array.isArray(docs) && docs.length > 0) {
+                logger.info(`Found After Second Interview Docs in field: ${fieldName}`)
+                afterSecondDocs = docs
+                break
+              }
+            }
+            
+            logger.info(`Found documents: First Interview: ${firstInterviewDocs.length}, Second Interview: ${secondInterviewDocs.length}, After Second: ${afterSecondDocs.length}`)
+            
+            // Process First Interview Questions
+            firstInterviewDocs.forEach((doc, docIndex) => {
+              logger.info(`Processing First Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+              documents.push({
+                id: `${feedback.id}-first-${docIndex}`,
+                feedbackId: feedback.id,
+                documentType: 'First Interview Questions',
+                interviewStage: feedback.get('Interview Stage') || 'First Interview',
+                fileName: doc.filename || doc.name || 'First Interview Questions',
+                fileUrl: doc.url || doc.link || '',
+                fileSize: doc.size || 0,
+                fileType: doc.type || 'application/octet-stream',
+                uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
+                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                rating: feedback.get('Rating'),
+                notes: feedback.get('First Interview Notes'),
+                metadata: {
+                  feedbackRecordId: feedback.id,
+                  originalField: 'First Interview Questions',
+                  isAttachment: true,
+                  debug: { doc }
+                }
+              })
+            })
+            
+            // Process Second Interview Questions
+            secondInterviewDocs.forEach((doc, docIndex) => {
+              logger.info(`Processing Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+              documents.push({
+                id: `${feedback.id}-second-${docIndex}`,
+                feedbackId: feedback.id,
+                documentType: 'Second Interview Questions',
+                interviewStage: feedback.get('Interview Stage') || 'Second Interview',
+                fileName: doc.filename || doc.name || 'Second Interview Questions',
+                fileUrl: doc.url || doc.link || '',
+                fileSize: doc.size || 0,
+                fileType: doc.type || 'application/octet-stream',
+                uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
+                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                rating: feedback.get('Rating (2nd)'),
+                notes: feedback.get('Second Interview Notes'),
+                metadata: {
+                  feedbackRecordId: feedback.id,
+                  originalField: 'Second Interview Questions',
+                  isAttachment: true,
+                  debug: { doc }
+                }
+              })
+            })
+            
+            // Process Docs - After Second Interview
+            afterSecondDocs.forEach((doc, docIndex) => {
+              logger.info(`Processing After Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+              documents.push({
+                id: `${feedback.id}-after-${docIndex}`,
+                feedbackId: feedback.id,
+                documentType: 'Docs - After Second Interview',
+                interviewStage: feedback.get('Interview Stage') || 'Finished Interviews',
+                fileName: doc.filename || doc.name || 'Document After Second Interview',
+                fileUrl: doc.url || doc.link || '',
+                fileSize: doc.size || 0,
+                fileType: doc.type || 'application/octet-stream',
+                uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
+                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                rating: feedback.get('Rating (2nd)'),
+                notes: feedback.get('Second Interview Notes'),
+                metadata: {
+                  feedbackRecordId: feedback.id,
+                  originalField: 'Docs - After Second Interview',
+                  isAttachment: true,
+                  debug: { doc }
+                }
+              })
+            })
+          })
+        
+        logger.info(`Total feedback documents extracted: ${documents.length}`)
+        return documents
+      })(),
       
       // Additional fields
       source: record.get('Job Board') || '',
@@ -218,6 +367,7 @@ function formatDetailedApplicant(record, allDocuments) {
       feedbackCount: 0,
       feedbackStats: { firstInterview: 0, secondInterview: 0, finished: 0 },
       feedbackFiles: [],
+      feedbackDocuments: [],
       requiredDocs: [],
       allDocuments: [],
       documentsByCategory: {}
@@ -257,7 +407,7 @@ export async function GET(request, { params }) {
     // Get applicant from Airtable with expanded linked records
     const applicantRecords = await base('Applicants').select({
       filterByFormula: `RECORD_ID() = '${id}'`,
-      expand: ['Feedback', 'Applying For'],
+      expand: ['Applying For'],
       maxRecords: 1
     }).firstPage()
 
@@ -271,6 +421,27 @@ export async function GET(request, { params }) {
 
     const applicantRecord = applicantRecords[0]
     logger.info(`Found applicant: ${applicantRecord.get('Name')} (${applicantRecord.get('Email')})`)
+
+    // Get feedback records separately since expand isn't working properly
+    const feedbackRecordIds = applicantRecord.get('Feedback') || []
+    logger.info(`Feedback record IDs: ${JSON.stringify(feedbackRecordIds)}`)
+    
+    let feedbackRecords = []
+    if (feedbackRecordIds.length > 0) {
+      // Fetch feedback records individually
+      const feedbackPromises = feedbackRecordIds.map(async (feedbackId) => {
+        try {
+          const feedbackRecord = await base('Feedback').find(feedbackId)
+          return feedbackRecord
+        } catch (error) {
+          logger.error(`Error fetching feedback record ${feedbackId}:`, error)
+          return null
+        }
+      })
+      
+      feedbackRecords = (await Promise.all(feedbackPromises)).filter(record => record !== null)
+      logger.info(`Successfully fetched ${feedbackRecords.length} feedback records`)
+    }
 
     // Debug: Log what fields are available
     const availableFields = Object.keys(applicantRecord.fields || {})
@@ -309,8 +480,8 @@ export async function GET(request, { params }) {
     // Consolidate all documents
     const allDocuments = consolidateAllDocuments(applicantRecord, documentRecords)
     
-    // Format applicant data with consolidated documents
-    const applicant = formatDetailedApplicant(applicantRecord, allDocuments)
+         // Format applicant data with consolidated documents and proper feedback records
+     const applicant = formatDetailedApplicant(applicantRecord, allDocuments, feedbackRecords)
 
     logger.info(`Successfully formatted applicant ${id} data with ${allDocuments.length} total documents`)
     logger.info(`Document categories found: ${Object.keys(applicant.documentsByCategory || {}).join(', ')}`)

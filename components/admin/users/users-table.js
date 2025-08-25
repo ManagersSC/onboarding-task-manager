@@ -10,6 +10,22 @@ import { Eye, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import ApplicantDrawer from "./applicant-drawer"
 import { stageColor } from "@/lib/stage"
 
+// Helper function for date formatting
+const formatDate = (dateString) => {
+  if (!dateString) return "—"
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return "Invalid date"
+  }
+}
+
 export default function UsersTable({ 
   initialRows = [], 
   pagination = {},
@@ -129,8 +145,8 @@ export default function UsersTable({
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {row.interviewDate ? `First: ${row.interviewDate}` : "First: —"}
-                      {row.secondInterviewDate ? ` • Second: ${row.secondInterviewDate}` : " • Second: —"}
+                      {row.interviewDate ? `First: ${formatDate(row.interviewDate)}` : "First: —"}
+                      {row.secondInterviewDate ? ` • Second: ${formatDate(row.secondInterviewDate)}` : " • Second: —"}
                     </div>
                   </div>
                 </TableCell>
