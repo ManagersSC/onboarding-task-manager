@@ -84,7 +84,7 @@ export default function UsersTable({
             <TableHead>Stage</TableHead>
             <TableHead>Job</TableHead>
             <TableHead>Interview</TableHead>
-            <TableHead>Docs</TableHead>
+            <TableHead>Documents</TableHead>
             <TableHead>Feedback</TableHead>
             <TableHead>Source</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -92,7 +92,7 @@ export default function UsersTable({
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
-            const docsText = `${row.docs.present}/${row.docs.required}`
+            const docsText = row.docs.total || 0
             const [first, last] = (row.name || "").split(" ")
             const initials = `${(first || "").slice(0, 1)}${(last || "").slice(0, 1)}`.trim().toUpperCase() || "A"
             return (
@@ -152,7 +152,7 @@ export default function UsersTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Badge variant={row.docs.present === row.docs.required ? "default" : "outline"}>{docsText}</Badge>
+                    <Badge variant={row.docs.total > 0 ? "default" : "outline"}>{docsText}</Badge>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -187,10 +187,18 @@ export default function UsersTable({
       </Table>
 
       {/* Pagination */}
-      {pagination && (pagination.hasNext || pagination.hasPrev) && (
+      {pagination && (
         <div className="flex items-center justify-between px-4 py-3 border-t">
           <div className="text-sm text-muted-foreground">
-            Showing page {pagination.page} of {pagination.totalPages}
+            {pagination.total > 0 ? (
+              <>
+                Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{" "}
+                {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
+                {pagination.total} applicants
+              </>
+            ) : (
+              "No applicants found"
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -202,6 +210,9 @@ export default function UsersTable({
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
             </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {pagination.page} of {pagination.totalPages || 1}
+            </span>
             <Button
               variant="outline"
               size="sm"

@@ -5,6 +5,7 @@ import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Users, Filter, Plus, RotateCw, Loader2, Search } from "lucide-react"
 import UsersTable from "./users-table"
 import AddApplicantDialog from "./add-applicant-dialog"
@@ -102,25 +103,56 @@ export default function ApplicantsPage({
             )}
           </div>
 
-          {/* Stage Filter */}
-          <div className="flex flex-wrap gap-2">
-            {stageOptions.map((option) => (
-              <Button
-                key={option.value}
-                variant={stagePreset === option.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleStageChange(option.value)}
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Stage Filter */}
+            <div className="flex flex-wrap gap-2">
+              {stageOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={stagePreset === option.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleStageChange(option.value)}
+                  disabled={isLoading}
+                  className="flex items-center gap-2"
+                >
+                  {option.label}
+                  {option.count !== undefined && (
+                    <span className="ml-1 px-2 py-0.5 text-xs bg-background/50 rounded-full">
+                      {option.count}
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
+
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-sm text-muted-foreground">Show:</span>
+              <Select
+                value={pagination.pageSize?.toString() || "25"}
+                onValueChange={(value) => {
+                  console.log('Page size changed to:', value)
+                  onParamsChange(prev => ({ 
+                    ...prev, 
+                    pageSize: parseInt(value), 
+                    page: 1 
+                  }))
+                }}
                 disabled={isLoading}
-                className="flex items-center gap-2"
               >
-                {option.label}
-                {option.count !== undefined && (
-                  <span className="ml-1 px-2 py-0.5 text-xs bg-background/50 rounded-full">
-                    {option.count}
-                  </span>
-                )}
-              </Button>
-            ))}
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">per page</span>
+            </div>
           </div>
         </CardContent>
       </Card>

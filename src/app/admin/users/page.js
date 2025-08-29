@@ -7,7 +7,7 @@ import ApplicantsPage from "@components/admin/users/users-page"
 export default function Page() {
   const [params, setParams] = useState({
     page: 1,
-    limit: 20,
+    pageSize: 25,
     search: '',
     stage: 'all',
     sortBy: 'Created Time',

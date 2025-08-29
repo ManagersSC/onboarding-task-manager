@@ -22,8 +22,7 @@ function formatApplicant(record) {
     interviewDate: record.get('Interview Date') || '',
     secondInterviewDate: record.get('Second Interview Date') || '',
     docs: {
-      present: record.get('Docs Present') || 0,
-      required: record.get('Docs Required') || 0
+      total: record.get('Documents #') || 0
     },
     feedbackCount: record.get('Feedback Count') || 0,
     source: record.get('Job Board') || '',
@@ -91,50 +90,7 @@ function buildFilterFormula(params) {
   }
 }
 
-// Get cached count or fetch from Airtable
-async function getCachedCount(filterFormula, cacheKey) {
-  const now = Date.now()
-  const cached = countCache.get(cacheKey)
-  
-  if (cached && (now - cached.timestamp) < CACHE_TTL) {
-    return cached.count
-  }
-  
-  try {
-    // Get total count with filter
-    const countResult = await base('Applicants').select({
-      filterByFormula: filterFormula,
-      fields: ['Name'], // Only fetch minimal data for counting
-      maxRecords: 1
-    }).firstPage()
-    
-    // Airtable doesn't give us total count directly, so we need to estimate
-    // For now, we'll use a reasonable estimate based on the filter
-    let estimatedCount = 100 // Default estimate
-    
-    if (filterFormula) {
-      // If we have filters, estimate based on typical ratios
-      if (filterFormula.includes('Interview')) {
-        estimatedCount = 30
-      } else if (filterFormula.includes('Review')) {
-        estimatedCount = 20
-      } else if (filterFormula.includes('Rejected')) {
-        estimatedCount = 15
-      }
-    }
-    
-    // Cache the result
-    countCache.set(cacheKey, {
-      count: estimatedCount,
-      timestamp: now
-    })
-    
-    return estimatedCount
-  } catch (error) {
-    logger.error('Error getting count:', error)
-    return 100 // Fallback estimate
-  }
-}
+
 
 export async function GET(request) {
   try {
@@ -157,7 +113,7 @@ export async function GET(request) {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page')) || 1
-    const limit = Math.min(parseInt(searchParams.get('limit')) || 20, 50)
+    const pageSize = Math.min(parseInt(searchParams.get('pageSize')) || 25, 100)
     const search = searchParams.get('search') || ''
     const stage = searchParams.get('stage') || 'all'
     const sortBy = searchParams.get('sortBy') || 'Created Time'
@@ -169,29 +125,36 @@ export async function GET(request) {
     // Create cache key for this filter combination
     const cacheKey = `${filterFormula}-${stage}-${search}`
 
-    // Get applicants from Airtable with enhanced filtering
-    const records = await base('Applicants').select({
+    // Get all applicants from Airtable with filtering
+    // Use .all() to get all records, but don't specify pageSize to avoid the limit error
+    const allRecords = await base('Applicants').select({
       filterByFormula: filterFormula,
-      sort: [{ field: sortBy, direction: sortOrder }],
-      pageSize: limit,
-      offset: (page - 1) * limit
+      sort: [{ field: sortBy, direction: sortOrder }]
     }).all()
+
+    // Apply pagination on the client side
+    const totalCount = allRecords.length
+    const startIndex = (page - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    const records = allRecords.slice(startIndex, endIndex)
 
     // Format applicants
     const applicants = records.map(formatApplicant)
+    
+    // Debug logging
+    logger.info(`Pagination debug: page=${page}, pageSize=${pageSize}, total=${totalCount}, records returned=${records.length}`)
 
-    // Get cached count for better pagination
-    const totalCount = await getCachedCount(filterFormula, cacheKey)
-    const hasNext = records.length === limit && (page * limit) < totalCount
+    // Calculate pagination info
+    const hasNext = endIndex < totalCount
     const hasPrev = page > 1
 
     return new Response(JSON.stringify({
       applicants,
       pagination: {
         page,
-        limit,
+        pageSize,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / limit),
+        totalPages: Math.ceil(totalCount / pageSize),
         hasNext,
         hasPrev
       },

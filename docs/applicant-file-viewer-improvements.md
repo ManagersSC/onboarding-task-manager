@@ -51,6 +51,15 @@ Error: Invalid src prop on `next/image`, hostname "v5.airtableusercontent.com" i
 - Applied to both initial application documents and feedback documents
 - Single files retain their original names without numbering
 
+### 6. Documents Count Display
+**Problem**: The users table showed "0/0" format which was confusing and required multiple API calls to calculate.
+
+**Solution**:
+- Created an Airtable formula field called "Documents #" that automatically calculates total documents
+- Updated the API to use this formula field instead of separate present/required counts
+- Changed the table to show just the total document count (e.g., "5" instead of "5/8")
+- **Performance Benefit**: Zero additional API calls, real-time updates, single source of truth
+
 ## Technical Implementation
 
 ### File Size Formatting
@@ -119,6 +128,20 @@ allDocuments.push({
 })
 ```
 
+### Documents Count API Update
+```javascript
+// Updated API response structure
+function formatApplicant(record) {
+  return {
+    // ... other fields
+    docs: {
+      total: record.get('Documents #') || 0  // Uses Airtable formula field
+    },
+    // ... other fields
+  }
+}
+```
+
 ## User Experience Improvements
 
 ### Visual Enhancements
@@ -131,6 +154,7 @@ allDocuments.push({
 - **Better File Type Recognition**: Clear, user-friendly file type names
 - **Proper Image Loading**: Airtable images now load without errors
 - **Organized File Lists**: Multiple files in the same field are clearly numbered
+- **Simplified Document Counts**: Users see total document count at a glance without confusing "0/0" format
 
 ## Testing
 
@@ -140,6 +164,7 @@ allDocuments.push({
 3. **Image Loading**: Test that Airtable images load without hostname errors
 4. **Multiple Files**: Verify numbering appears for multiple files in same field
 5. **Single Files**: Confirm single files don't get unnecessary numbering
+6. **Document Counts**: Verify total document count displays correctly in users table
 
 ### Browser Compatibility
 - Chrome, Firefox, Safari, Edge

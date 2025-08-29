@@ -14,7 +14,7 @@ const fetcher = async (url) => {
 export function useApplicants(params = {}) {
   const {
     page = 1,
-    limit = 20,
+    pageSize = 25,
     search = '',
     stage = 'all',
     sortBy = 'Created Time',
@@ -28,7 +28,7 @@ export function useApplicants(params = {}) {
   const queryParams = useMemo(() => {
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: limit.toString(),
+      pageSize: pageSize.toString(),
       stage,
       sortBy,
       sortOrder
@@ -40,11 +40,14 @@ export function useApplicants(params = {}) {
     }
     
     return params.toString()
-  }, [page, limit, debouncedSearch, stage, sortBy, sortOrder])
+  }, [page, pageSize, debouncedSearch, stage, sortBy, sortOrder])
 
   const { data, error, mutate, isLoading } = useSWR(
     [`/api/admin/users`, queryParams],
-    ([url, query]) => fetcher(`${url}?${query}`),
+    ([url, query]) => {
+      console.log('Fetching applicants with query:', query)
+      return fetcher(`${url}?${query}`)
+    },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -62,7 +65,7 @@ export function useApplicants(params = {}) {
     applicants: data?.applicants || [],
     pagination: data?.pagination || {
       page: 1,
-      limit: 20,
+      pageSize: 25,
       total: 0,
       totalPages: 0,
       hasNext: false,
