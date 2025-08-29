@@ -15,6 +15,8 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
   // 1. Initial Application Documents (from Applicants table)
   const initialDocFields = [
     { key: 'cv', name: 'CV', field: 'CV', category: 'Application' },
+    { key: 'portfolio', name: 'Portfolio of Cases', field: 'Portfolio of Cases', category: 'Application' },
+    { key: 'testimonials', name: 'Testimonials', field: 'Testimonials', category: 'Application' },
     { key: 'reference1', name: 'Reference 1', field: 'Reference 1', category: 'Application' },
     { key: 'reference2', name: 'Reference 2', field: 'Reference 2', category: 'Application' },
     { key: 'dbs_check', name: 'DBS Check', field: 'DBS Check', category: 'Legal' },
@@ -24,34 +26,58 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
   logger.info(`Checking ${initialDocFields.length} initial document fields`)
   
   initialDocFields.forEach(doc => {
-    const attachments = applicantRecord.get(doc.field)
-    logger.info(`Field "${doc.field}": type=${typeof attachments}, value=${JSON.stringify(attachments)}`)
-    
-    if (Array.isArray(attachments) && attachments.length > 0) {
-      logger.info(`Found ${attachments.length} attachments for ${doc.field}`)
-      attachments.forEach((attachment, index) => {
-        // Handle Airtable attachment objects
-        if (attachment && typeof attachment === 'object') {
-          logger.info(`Processing attachment ${index} for ${doc.field}: ${JSON.stringify(attachment)}`)
-          allDocuments.push({
-            id: `${doc.key}-${index}`,
-            name: doc.name,
-            category: doc.category,
-            source: 'Initial Application',
-            uploadedAt: attachment.createdTime || applicantRecord.get('Created Time') || 'Unknown',
-            fileUrl: attachment.url || attachment.filename || '',
-            status: 'Uploaded',
-            type: attachment.type || 'Unknown',
-            field: doc.field,
-            originalName: attachment.filename || doc.name,
-            size: attachment.size || 0
-          })
-        } else {
-          logger.warn(`Attachment ${index} for ${doc.field} is not an object: ${typeof attachment}`)
-        }
-      })
-    } else {
-      logger.info(`No attachments found for field "${doc.field}"`)
+    try {
+      const attachments = applicantRecord.get(doc.field)
+      logger.info(`Field "${doc.field}": type=${typeof attachments}, value=${JSON.stringify(attachments)}`)
+      
+      if (Array.isArray(attachments) && attachments.length > 0) {
+        logger.info(`Found ${attachments.length} attachments for ${doc.field}`)
+        attachments.forEach((attachment, index) => {
+          try {
+            // Handle Airtable attachment objects
+            if (attachment && typeof attachment === 'object') {
+              logger.info(`Processing attachment ${index} for ${doc.field}: ${JSON.stringify(attachment)}`)
+              allDocuments.push({
+                id: `${doc.key}-${index}`,
+                name: doc.name,
+                category: doc.category,
+                source: 'Initial Application',
+                uploadedAt: attachment.createdTime || applicantRecord.get('Created Time') || 'Unknown',
+                fileUrl: attachment.url || attachment.filename || '',
+                status: 'Uploaded',
+                type: attachment.type || 'Unknown',
+                field: doc.field,
+                originalName: attachment.filename || doc.name,
+                size: attachment.size || 0
+              })
+            } else {
+              logger.warn(`Attachment ${index} for ${doc.field} is not an object: ${typeof attachment}`)
+            }
+          } catch (attachmentError) {
+            logger.error(`Error processing attachment ${index} for ${doc.field}:`, attachmentError)
+          }
+        })
+      } else if (attachments && typeof attachments === 'object' && !Array.isArray(attachments)) {
+        // Handle single attachment object (not in array)
+        logger.info(`Found single attachment for ${doc.field}`)
+        allDocuments.push({
+          id: `${doc.key}-0`,
+          name: doc.name,
+          category: doc.category,
+          source: 'Initial Application',
+          uploadedAt: attachments.createdTime || applicantRecord.get('Created Time') || 'Unknown',
+          fileUrl: attachments.url || attachments.filename || '',
+          status: 'Uploaded',
+          type: attachments.type || 'Unknown',
+          field: doc.field,
+          originalName: attachments.filename || doc.name,
+          size: attachments.size || 0
+        })
+      } else {
+        logger.info(`No attachments found for field "${doc.field}"`)
+      }
+    } catch (fieldError) {
+      logger.error(`Error processing field "${doc.field}":`, fieldError)
     }
   })
   
@@ -74,41 +100,70 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
   logger.info(`Checking ${postHiringDocFields.length} post-hiring document fields`)
   
   documentRecords.forEach((docRecord, docIndex) => {
-    logger.info(`Processing document record ${docIndex}: ${docRecord.id}`)
-    logger.info(`Document record fields: ${Object.keys(docRecord.fields || {}).join(', ')}`)
-    
-    postHiringDocFields.forEach(doc => {
-      const attachments = docRecord.get(doc.field)
-      logger.info(`Field "${doc.field}" in document ${docIndex}: type=${typeof attachments}, value=${JSON.stringify(attachments)}`)
+    try {
+      logger.info(`Processing document record ${docIndex}: ${docRecord.id}`)
+      logger.info(`Document record fields: ${Object.keys(docRecord.fields || {}).join(', ')}`)
       
-      if (Array.isArray(attachments) && attachments.length > 0) {
-        logger.info(`Found ${attachments.length} attachments for ${doc.field} in document ${docIndex}`)
-        attachments.forEach((attachment, index) => {
-          // Handle Airtable attachment objects
-          if (attachment && typeof attachment === 'object') {
-            logger.info(`Processing attachment ${index} for ${doc.field} in document ${docIndex}: ${JSON.stringify(attachment)}`)
+      postHiringDocFields.forEach(doc => {
+        try {
+          const attachments = docRecord.get(doc.field)
+          logger.info(`Field "${doc.field}" in document ${docIndex}: type=${typeof attachments}, value=${JSON.stringify(attachments)}`)
+          
+          if (Array.isArray(attachments) && attachments.length > 0) {
+            logger.info(`Found ${attachments.length} attachments for ${doc.field} in document ${docIndex}`)
+            attachments.forEach((attachment, index) => {
+              try {
+                // Handle Airtable attachment objects
+                if (attachment && typeof attachment === 'object') {
+                  logger.info(`Processing attachment ${index} for ${doc.field} in document ${docIndex}: ${JSON.stringify(attachment)}`)
+                  allDocuments.push({
+                    id: `${doc.key}-${docRecord.id}-${index}`,
+                    name: doc.name,
+                    category: doc.category,
+                    source: 'Post-Hiring',
+                    uploadedAt: docRecord.get('Created TIme') || docRecord.get('Created Time') || 'Unknown',
+                    fileUrl: attachment.url || attachment.filename || '',
+                    status: docRecord.get('Status') || 'Pending',
+                    type: attachment.type || 'Unknown',
+                    field: doc.field,
+                    originalName: attachment.filename || doc.name,
+                    size: attachment.size || 0,
+                    documentRecordId: docRecord.id
+                  })
+                } else {
+                  logger.warn(`Attachment ${index} for ${doc.field} in document ${docIndex} is not an object: ${typeof attachment}`)
+                }
+              } catch (attachmentError) {
+                logger.error(`Error processing attachment ${index} for ${doc.field} in document ${docIndex}:`, attachmentError)
+              }
+            })
+          } else if (attachments && typeof attachments === 'object' && !Array.isArray(attachments)) {
+            // Handle single attachment object (not in array)
+            logger.info(`Found single attachment for ${doc.field} in document ${docIndex}`)
             allDocuments.push({
-              id: `${doc.key}-${docRecord.id}-${index}`,
+              id: `${doc.key}-${docRecord.id}-0`,
               name: doc.name,
               category: doc.category,
               source: 'Post-Hiring',
               uploadedAt: docRecord.get('Created TIme') || docRecord.get('Created Time') || 'Unknown',
-              fileUrl: attachment.url || attachment.filename || '',
+              fileUrl: attachments.url || attachments.filename || '',
               status: docRecord.get('Status') || 'Pending',
-              type: attachment.type || 'Unknown',
+              type: attachments.type || 'Unknown',
               field: doc.field,
-              originalName: attachment.filename || doc.name,
-              size: attachment.size || 0,
+              originalName: attachments.filename || doc.name,
+              size: attachments.size || 0,
               documentRecordId: docRecord.id
             })
           } else {
-            logger.warn(`Attachment ${index} for ${doc.field} in document ${docIndex} is not an object: ${typeof attachment}`)
+            logger.info(`No attachments found for field "${doc.field}" in document ${docIndex}`)
           }
-        })
-      } else {
-        logger.info(`No attachments found for field "${doc.field}" in document ${docIndex}`)
-      }
-    })
+        } catch (fieldError) {
+          logger.error(`Error processing field "${doc.field}" in document ${docIndex}:`, fieldError)
+        }
+      })
+    } catch (recordError) {
+      logger.error(`Error processing document record ${docIndex}:`, recordError)
+    }
   })
   
   logger.info(`Consolidated ${allDocuments.length} documents from ${initialDocFields.length} initial fields and ${documentRecords.length} document records`)
@@ -184,7 +239,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
           notes: feedback.get('First Interview Notes') || feedback.get('Second Interview Notes'),
           rating: feedback.get('Rating') || feedback.get('Rating (2nd)'),
           createdAt: feedback.get('Created Time'),
-          interviewer: feedback.get('Interviewer(s)')?.[0]?.get('Name') || 'Unknown'
+          interviewer: 'Unknown' // Simplified - we'll handle interviewer lookup separately if needed
         })),
       // Enhanced feedback documents extraction with debug logging
       feedbackDocuments: (() => {
@@ -195,6 +250,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
         feedbackRecords
           .filter(feedback => feedback && typeof feedback.get === 'function')
           .forEach((feedback, index) => {
+            try {
             logger.info(`Processing feedback record ${index + 1}: ${feedback.id}`)
             
             // Debug: Log all available fields in this feedback record
@@ -259,8 +315,9 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
             
             // Process First Interview Questions
             firstInterviewDocs.forEach((doc, docIndex) => {
-              logger.info(`Processing First Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
-              documents.push({
+              try {
+                logger.info(`Processing First Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                documents.push({
                 id: `${feedback.id}-first-${docIndex}`,
                 feedbackId: feedback.id,
                 documentType: 'First Interview Questions',
@@ -270,7 +327,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                 fileSize: doc.size || 0,
                 fileType: doc.type || 'application/octet-stream',
                 uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
-                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                interviewer: 'Unknown', // Simplified - we'll handle interviewer lookup separately if needed
                 rating: feedback.get('Rating'),
                 notes: feedback.get('First Interview Notes'),
                 metadata: {
@@ -280,12 +337,16 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                   debug: { doc }
                 }
               })
+              } catch (docError) {
+                logger.error(`Error processing First Interview doc ${docIndex}:`, docError)
+              }
             })
             
             // Process Second Interview Questions
             secondInterviewDocs.forEach((doc, docIndex) => {
-              logger.info(`Processing Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
-              documents.push({
+              try {
+                logger.info(`Processing Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                documents.push({
                 id: `${feedback.id}-second-${docIndex}`,
                 feedbackId: feedback.id,
                 documentType: 'Second Interview Questions',
@@ -295,7 +356,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                 fileSize: doc.size || 0,
                 fileType: doc.type || 'application/octet-stream',
                 uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
-                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                interviewer: 'Unknown', // Simplified - we'll handle interviewer lookup separately if needed
                 rating: feedback.get('Rating (2nd)'),
                 notes: feedback.get('Second Interview Notes'),
                 metadata: {
@@ -305,12 +366,16 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                   debug: { doc }
                 }
               })
+              } catch (docError) {
+                logger.error(`Error processing Second Interview doc ${docIndex}:`, docError)
+              }
             })
             
             // Process Docs - After Second Interview
             afterSecondDocs.forEach((doc, docIndex) => {
-              logger.info(`Processing After Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
-              documents.push({
+              try {
+                logger.info(`Processing After Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                documents.push({
                 id: `${feedback.id}-after-${docIndex}`,
                 feedbackId: feedback.id,
                 documentType: 'Docs - After Second Interview',
@@ -320,7 +385,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                 fileSize: doc.size || 0,
                 fileType: doc.type || 'application/octet-stream',
                 uploadedAt: feedback.get('Created Time') || new Date().toISOString(),
-                interviewer: feedback.get('Interviewer(s)')?.[0]?.get?.('Name') || 'Unknown',
+                interviewer: 'Unknown', // Simplified - we'll handle interviewer lookup separately if needed
                 rating: feedback.get('Rating (2nd)'),
                 notes: feedback.get('Second Interview Notes'),
                 metadata: {
@@ -330,7 +395,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                   debug: { doc }
                 }
               })
+              } catch (docError) {
+                logger.error(`Error processing After Second Interview doc ${docIndex}:`, docError)
+              }
             })
+            } catch (feedbackError) {
+              logger.error(`Error processing feedback record ${index + 1}:`, feedbackError)
+            }
           })
         
         logger.info(`Total feedback documents extracted: ${documents.length}`)
