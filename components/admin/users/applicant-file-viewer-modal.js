@@ -21,6 +21,75 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 
+// Utility functions
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return "Unknown"
+  
+  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  
+  // For better readability, show MB for files larger than 1MB
+  if (i >= 2) {
+    return `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}`
+  } else {
+    // For KB, show whole numbers
+    return `${Math.round(bytes / Math.pow(1024, i))} ${sizes[i]}`
+  }
+}
+
+const getFriendlyFileType = (mimeType, fileName) => {
+  if (!mimeType && !fileName) return "Unknown"
+  
+  // Check by MIME type first
+  if (mimeType) {
+    if (mimeType.includes("pdf")) return "PDF Document"
+    if (mimeType.startsWith("image/")) return "Image"
+    if (mimeType.includes("text/")) return "Text Document"
+    if (mimeType.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) return "Word Document (.docx)"
+    if (mimeType.includes("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) return "Excel Spreadsheet (.xlsx)"
+    if (mimeType.includes("application/vnd.openxmlformats-officedocument.presentationml.presentation")) return "PowerPoint Presentation (.pptx)"
+    if (mimeType.includes("application/msword")) return "Word Document (.doc)"
+    if (mimeType.includes("application/vnd.ms-excel")) return "Excel Spreadsheet (.xls)"
+    if (mimeType.includes("application/vnd.ms-powerpoint")) return "PowerPoint Presentation (.ppt)"
+    if (mimeType.includes("application/zip")) return "ZIP Archive"
+    if (mimeType.includes("application/json")) return "JSON File"
+    if (mimeType.includes("text/html")) return "HTML Document"
+    if (mimeType.includes("text/css")) return "CSS Stylesheet"
+    if (mimeType.includes("text/javascript") || mimeType.includes("application/javascript")) return "JavaScript File"
+  }
+  
+  // Check by file extension as fallback
+  if (fileName) {
+    const extension = fileName.split(".").pop()?.toLowerCase()
+    switch (extension) {
+      case "pdf": return "PDF Document"
+      case "docx": return "Word Document (.docx)"
+      case "doc": return "Word Document (.doc)"
+      case "xlsx": return "Excel Spreadsheet (.xlsx)"
+      case "xls": return "Excel Spreadsheet (.xls)"
+      case "pptx": return "PowerPoint Presentation (.pptx)"
+      case "ppt": return "PowerPoint Presentation (.ppt)"
+      case "txt": return "Text Document"
+      case "rtf": return "Rich Text Document"
+      case "jpg":
+      case "jpeg": return "JPEG Image"
+      case "png": return "PNG Image"
+      case "gif": return "GIF Image"
+      case "webp": return "WebP Image"
+      case "svg": return "SVG Image"
+      case "zip": return "ZIP Archive"
+      case "json": return "JSON File"
+      case "html": return "HTML Document"
+      case "css": return "CSS Stylesheet"
+      case "js": return "JavaScript File"
+      case "md": return "Markdown Document"
+      default: return extension ? `${extension.toUpperCase()} File` : "Unknown File Type"
+    }
+  }
+  
+  return "Unknown File Type"
+}
+
 // File type detection
 const getFileType = (file) => {
   if (!file) return "unknown"
@@ -46,6 +115,19 @@ const getFileType = (file) => {
 // File icon component
 const FileIcon = ({ file }) => {
   const fileType = getFileType(file)
+  const fileName = file.name || file.originalName || ""
+  const extension = fileName.split(".").pop()?.toLowerCase()
+  
+  // Special handling for Office documents
+  if (extension === "docx" || extension === "doc") {
+    return <FileText className="h-6 w-6 text-blue-600" />
+  }
+  if (extension === "xlsx" || extension === "xls") {
+    return <FileText className="h-6 w-6 text-green-600" />
+  }
+  if (extension === "pptx" || extension === "ppt") {
+    return <FileText className="h-6 w-6 text-orange-600" />
+  }
   
   switch (fileType) {
     case "pdf":
@@ -62,6 +144,17 @@ const FileIcon = ({ file }) => {
 // File preview component
 const FilePreview = ({ file, isLoading, error }) => {
   const fileType = getFileType(file)
+  const fileName = file.name || file.originalName || ""
+  const extension = fileName.split(".").pop()?.toLowerCase()
+  
+  // Debug logging
+  console.log('FilePreview Debug:', {
+    fileName,
+    extension,
+    fileType,
+    mimeType: file.type,
+    fileObject: file
+  })
   
   if (isLoading) {
     return (
@@ -99,6 +192,20 @@ const FilePreview = ({ file, isLoading, error }) => {
         <File className="h-16 w-16 text-muted-foreground mb-4" />
         <p className="text-muted-foreground mb-2">File URL not available</p>
         <p className="text-sm text-muted-foreground">Cannot preview this file</p>
+      </div>
+    )
+  }
+  
+  // Special handling for Office documents - no preview available
+  if (extension === "docx" || extension === "doc" || extension === "xlsx" || extension === "xls" || extension === "pptx" || extension === "ppt") {
+    console.log('Office document detected:', extension)
+    return (
+      <div className="flex flex-col items-center justify-center h-[400px]">
+        <div className="p-6 rounded-full bg-muted mb-4">
+          <FileIcon file={file} />
+        </div>
+        <p className="text-muted-foreground mb-2">Preview not available for Office documents</p>
+        <p className="text-sm text-muted-foreground">Use the download button to view this file</p>
       </div>
     )
   }
@@ -151,7 +258,7 @@ const FilePreview = ({ file, isLoading, error }) => {
             <FileIcon file={file} />
           </div>
           <p className="text-muted-foreground mb-2">Preview not available for this file type</p>
-          <p className="text-sm text-muted-foreground">{file.type || "Unknown file type"}</p>
+          <p className="text-sm text-muted-foreground">{getFriendlyFileType(file.type, file.name || file.originalName)}</p>
         </div>
       )
   }
@@ -170,13 +277,6 @@ const FileDetails = ({ file }) => {
     }
   }
   
-  const formatFileSize = (bytes) => {
-    if (!bytes || bytes === 0) return "Unknown"
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}`
-  }
-  
   return (
     <div className="space-y-4 p-4 h-[400px] overflow-auto">
       {/* Basic File Info */}
@@ -189,7 +289,9 @@ const FileDetails = ({ file }) => {
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium">File Type</p>
-          <p className="text-sm text-muted-foreground">{file.type || "Unknown"}</p>
+          <p className="text-sm text-muted-foreground">
+            {getFriendlyFileType(file.type, file.name || file.originalName)}
+          </p>
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium">File Size</p>
@@ -205,45 +307,51 @@ const FileDetails = ({ file }) => {
         </div>
       </div>
 
-      {/* Document Information */}
+      {/* Document Metadata */}
       {(file.category || file.source || file.status) && (
-        <div className="border-t pt-4">
-          <h4 className="text-sm font-medium mb-3">Document Information</h4>
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Document Information</h4>
           <div className="grid grid-cols-2 gap-4">
             {file.category && (
               <div className="space-y-1">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Tag className="h-3 w-3" />
-                  Category
-                </p>
+                <p className="text-sm font-medium">Category</p>
                 <Badge variant="secondary">{file.category}</Badge>
               </div>
             )}
             {file.source && (
               <div className="space-y-1">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <User className="h-3 w-3" />
-                  Source
-                </p>
+                <p className="text-sm font-medium">Source</p>
                 <p className="text-sm text-muted-foreground">{file.source}</p>
               </div>
             )}
             {file.status && (
               <div className="space-y-1">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="h-3 w-3" />
-                  Status
-                </p>
-                <Badge 
-                  variant={file.status === 'Completed' ? 'default' : 'secondary'}
-                >
-                  {file.status}
-                </Badge>
+                <p className="text-sm font-medium">Status</p>
+                <Badge variant="outline">{file.status}</Badge>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Technical Details */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium">Technical Details</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">MIME Type</p>
+            <p className="text-sm text-muted-foreground font-mono">
+              {file.type || "Unknown"}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">File ID</p>
+            <p className="text-sm text-muted-foreground font-mono">
+              {file.id || "Unknown"}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -326,13 +434,13 @@ export function ApplicantFileViewerModal({ file, open, onOpenChange }) {
               <DialogTitle className="truncate">{fileName}</DialogTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-muted-foreground">
-                  {file.type || "Unknown file type"}
+                  {getFriendlyFileType(file.type, fileName)}
                 </span>
                 {file.size && (
                   <>
                     <span className="text-muted-foreground">•</span>
                     <span className="text-sm text-muted-foreground">
-                      {Math.round(file.size / 1024)} KB
+                      {formatFileSize(file.size)}
                     </span>
                   </>
                 )}

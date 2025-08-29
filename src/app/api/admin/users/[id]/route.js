@@ -37,9 +37,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
             // Handle Airtable attachment objects
             if (attachment && typeof attachment === 'object') {
               logger.info(`Processing attachment ${index} for ${doc.field}: ${JSON.stringify(attachment)}`)
+              // Add numbering for multiple files in the same field
+              const fileName = attachment.filename || doc.name
+              const displayName = attachments.length > 1 ? `${doc.name} (${index + 1})` : doc.name
+              
               allDocuments.push({
                 id: `${doc.key}-${index}`,
-                name: doc.name,
+                name: displayName,
                 category: doc.category,
                 source: 'Initial Application',
                 uploadedAt: attachment.createdTime || applicantRecord.get('Created Time') || 'Unknown',
@@ -47,7 +51,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                 status: 'Uploaded',
                 type: attachment.type || 'Unknown',
                 field: doc.field,
-                originalName: attachment.filename || doc.name,
+                originalName: fileName,
                 size: attachment.size || 0
               })
             } else {
@@ -60,6 +64,8 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
       } else if (attachments && typeof attachments === 'object' && !Array.isArray(attachments)) {
         // Handle single attachment object (not in array)
         logger.info(`Found single attachment for ${doc.field}`)
+        const fileName = attachments.filename || doc.name
+        
         allDocuments.push({
           id: `${doc.key}-0`,
           name: doc.name,
@@ -70,7 +76,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
           status: 'Uploaded',
           type: attachments.type || 'Unknown',
           field: doc.field,
-          originalName: attachments.filename || doc.name,
+          originalName: fileName,
           size: attachments.size || 0
         })
       } else {
@@ -116,9 +122,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                 // Handle Airtable attachment objects
                 if (attachment && typeof attachment === 'object') {
                   logger.info(`Processing attachment ${index} for ${doc.field} in document ${docIndex}: ${JSON.stringify(attachment)}`)
+                  // Add numbering for multiple files in the same field
+                  const fileName = attachment.filename || doc.name
+                  const displayName = attachments.length > 1 ? `${doc.name} (${index + 1})` : doc.name
+                  
                   allDocuments.push({
                     id: `${doc.key}-${docRecord.id}-${index}`,
-                    name: doc.name,
+                    name: displayName,
                     category: doc.category,
                     source: 'Post-Hiring',
                     uploadedAt: docRecord.get('Created TIme') || docRecord.get('Created Time') || 'Unknown',
@@ -126,7 +136,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
                     status: docRecord.get('Status') || 'Pending',
                     type: attachment.type || 'Unknown',
                     field: doc.field,
-                    originalName: attachment.filename || doc.name,
+                    originalName: fileName,
                     size: attachment.size || 0,
                     documentRecordId: docRecord.id
                   })
@@ -317,10 +327,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
             firstInterviewDocs.forEach((doc, docIndex) => {
               try {
                 logger.info(`Processing First Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                // Add numbering for multiple files
+                const displayName = firstInterviewDocs.length > 1 ? `First Interview Questions (${docIndex + 1})` : 'First Interview Questions'
+                
                 documents.push({
                 id: `${feedback.id}-first-${docIndex}`,
                 feedbackId: feedback.id,
-                documentType: 'First Interview Questions',
+                documentType: displayName,
                 interviewStage: feedback.get('Interview Stage') || 'First Interview',
                 fileName: doc.filename || doc.name || 'First Interview Questions',
                 fileUrl: doc.url || doc.link || '',
@@ -346,10 +359,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
             secondInterviewDocs.forEach((doc, docIndex) => {
               try {
                 logger.info(`Processing Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                // Add numbering for multiple files
+                const displayName = secondInterviewDocs.length > 1 ? `Second Interview Questions (${docIndex + 1})` : 'Second Interview Questions'
+                
                 documents.push({
                 id: `${feedback.id}-second-${docIndex}`,
                 feedbackId: feedback.id,
-                documentType: 'Second Interview Questions',
+                documentType: displayName,
                 interviewStage: feedback.get('Interview Stage') || 'Second Interview',
                 fileName: doc.filename || doc.name || 'Second Interview Questions',
                 fileUrl: doc.url || doc.link || '',
@@ -375,10 +391,13 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
             afterSecondDocs.forEach((doc, docIndex) => {
               try {
                 logger.info(`Processing After Second Interview doc ${docIndex}: ${JSON.stringify(doc)}`)
+                // Add numbering for multiple files
+                const displayName = afterSecondDocs.length > 1 ? `Docs - After Second Interview (${docIndex + 1})` : 'Docs - After Second Interview'
+                
                 documents.push({
                 id: `${feedback.id}-after-${docIndex}`,
                 feedbackId: feedback.id,
-                documentType: 'Docs - After Second Interview',
+                documentType: displayName,
                 interviewStage: feedback.get('Interview Stage') || 'Finished Interviews',
                 fileName: doc.filename || doc.name || 'Document After Second Interview',
                 fileUrl: doc.url || doc.link || '',
