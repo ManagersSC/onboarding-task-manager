@@ -30,7 +30,8 @@ export default function UsersTable({
   initialRows = [], 
   pagination = {},
   isLoading = false,
-  onPageChange
+  onPageChange,
+  onSelectionChange
 }) {
   const [rows, setRows] = useState(initialRows)
   const [openId, setOpenId] = useState(null)
@@ -48,7 +49,18 @@ export default function UsersTable({
     setSelected(next)
   }
   
-  const toggleOne = (id, checked) => setSelected((prev) => ({ ...prev, [id]: checked }))
+  const toggleOne = (id, checked) => {
+    setSelected((prev) => ({ ...prev, [id]: checked }))
+  }
+
+  // Use useEffect to call onSelectionChange after state updates
+  useEffect(() => {
+    onSelectionChange?.(getSelectedApplicants())
+  }, [selected, rows, onSelectionChange])
+
+  const getSelectedApplicants = (selectionState = selected) => {
+    return rows.filter(row => selectionState[row.id])
+  }
 
   const handlePageChange = (newPage) => {
     onPageChange?.(newPage)

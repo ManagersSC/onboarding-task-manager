@@ -6,9 +6,10 @@ import { Input } from "@components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { Users, Filter, Plus, RotateCw, Loader2, Search } from "lucide-react"
+import { Users, Filter, Plus, RotateCw, Loader2, Search, Trash2 } from "lucide-react"
 import UsersTable from "./users-table"
 import AddApplicantDialog from "./add-applicant-dialog"
+import BulkDeleteModal from "./bulk-delete-modal"
 
 export default function ApplicantsPage({ 
   initialApplicants = [], 
@@ -21,6 +22,8 @@ export default function ApplicantsPage({
   const [query, setQuery] = useState("")
   const [stagePreset, setStagePreset] = useState("all")
   const [addOpen, setAddOpen] = useState(false)
+  const [selectedApplicants, setSelectedApplicants] = useState([])
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
   // Enhanced stage options with grouped stages
   const stageOptions = useMemo(() => [
@@ -43,6 +46,15 @@ export default function ApplicantsPage({
   }, [onParamsChange])
 
   const handleRefresh = useCallback(() => {
+    onRefresh()
+  }, [onRefresh])
+
+  const handleSelectionChange = useCallback((selected) => {
+    setSelectedApplicants(selected)
+  }, [])
+
+  const handleDeleteSuccess = useCallback(() => {
+    setSelectedApplicants([])
     onRefresh()
   }, [onRefresh])
 
@@ -160,13 +172,26 @@ export default function ApplicantsPage({
       {/* Results */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Applicants
-            {pagination.total > 0 && (
-              <span className="text-sm font-normal text-muted-foreground">
-                ({pagination.total} total)
-              </span>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Applicants
+              {pagination.total > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({pagination.total} total)
+                </span>
+              )}
+            </div>
+            {selectedApplicants.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteModalOpen(true)}
+                disabled={isLoading}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedApplicants.length})
+              </Button>
             )}
           </CardTitle>
         </CardHeader>
@@ -176,6 +201,7 @@ export default function ApplicantsPage({
             pagination={pagination}
             isLoading={isLoading}
             onPageChange={(page) => onParamsChange(prev => ({ ...prev, page }))}
+            onSelectionChange={handleSelectionChange}
           />
         </CardContent>
       </Card>
@@ -185,6 +211,14 @@ export default function ApplicantsPage({
         open={addOpen}
         onOpenChange={setAddOpen}
         onApplicantAdded={handleRefresh}
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        selectedApplicants={selectedApplicants}
+        onDeleteSuccess={handleDeleteSuccess}
       />
     </div>
   )
