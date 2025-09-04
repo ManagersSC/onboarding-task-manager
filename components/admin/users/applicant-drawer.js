@@ -450,12 +450,14 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
         </SheetContent>
       </Sheet>
 
-      {/* File Viewer Modal */}
-      <ApplicantFileViewerModal
-        file={selectedFile}
-        open={fileViewerOpen}
-        onOpenChange={handleFileViewerClose}
-      />
+      {/* File Viewer Modal - Only render when there's a selected file */}
+      {selectedFile && (
+        <ApplicantFileViewerModal
+          file={selectedFile}
+          open={fileViewerOpen}
+          onOpenChange={handleFileViewerClose}
+        />
+      )}
     </>
   )
 }

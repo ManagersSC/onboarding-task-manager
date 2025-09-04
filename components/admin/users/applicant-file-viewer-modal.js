@@ -376,10 +376,18 @@ export function ApplicantFileViewerModal({ file, open, onOpenChange }) {
     }
   }, [open, file])
   
-  if (!file) return null
+  // Don't render the modal if there's no file or if it's not open
+  if (!file || !open) return null
   
+  // Ensure we have a valid file object with required properties
   const fileUrl = file.proxyUrl || file.fileUrl || file.url
   const fileName = file.name || file.originalName || "Document"
+  
+  // Validate that we have the minimum required data
+  if (!fileName) {
+    console.warn('ApplicantFileViewerModal: Invalid file object - missing name')
+    return null
+  }
   
   const handleDownload = async () => {
     if (!fileUrl) {
@@ -431,7 +439,7 @@ export function ApplicantFileViewerModal({ file, open, onOpenChange }) {
           <div className="flex items-center gap-2">
             <FileIcon file={file} />
             <div className="flex-1 min-w-0">
-              <DialogTitle className="truncate">{fileName}</DialogTitle>
+              <DialogTitle className="truncate">{fileName || "Document Viewer"}</DialogTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-muted-foreground">
                   {getFriendlyFileType(file.type, fileName)}

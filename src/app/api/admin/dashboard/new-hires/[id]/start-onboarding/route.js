@@ -106,37 +106,64 @@ export async function POST(request, { params }) {
       }
     ])
 
-    // 7. Send webhook to make.com if automation is triggered
-    if (triggerAutomation && process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT) {
+    // 7. Send webhooks to make.com if automation is triggered
+    if (triggerAutomation) {
       try {
-        // Get calculated week and day values
-        const week = updatedRecord[0].fields["Onboarding Week"] || 1
-        const day = updatedRecord[0].fields["Onboarding Week Day"] || 1
+        // Send task assignment webhook
+        if (process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT) {
+          // Get calculated week and day values
+          const week = updatedRecord[0].fields["Onboarding Week"] || 1
+          const day = updatedRecord[0].fields["Onboarding Week Day"] || 1
 
-        const webhookPayload = {
-          action: "initiate",
-          id: applicantId,
-          name: applicantName,
-          email: applicantEmail,
-          week: week,
-          day: day
+          const taskAssignmentPayload = {
+            action: "initiate",
+            id: applicantId,
+            name: applicantName,
+            email: applicantEmail,
+            week: week,
+            day: day
+          }
+
+          logger.debug(`Sending task assignment webhook payload: ${JSON.stringify(taskAssignmentPayload)}`)
+
+          const taskAssignmentResponse = await fetch(process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(taskAssignmentPayload)
+          })
+
+          if (!taskAssignmentResponse.ok) {
+            const errorText = await taskAssignmentResponse.text()
+            logger.error(`Task assignment webhook failed: ${taskAssignmentResponse.status} - ${errorText}`)
+            throw new Error(`Task assignment webhook failed: ${taskAssignmentResponse.statusText}`)
+          }
+
+          logger.info("Task assignment webhook sent successfully to make.com")
         }
 
-        logger.debug(`Sending webhook payload: ${JSON.stringify(webhookPayload)}`)
+        // Send onboarding notification webhook
+        if (process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION) {
+          const notificationPayload = {
+            name: applicantName,
+            recordID: applicantId
+          }
 
-        const webhookResponse = await fetch(process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(webhookPayload)
-        })
+          logger.debug(`Sending onboarding notification webhook payload: ${JSON.stringify(notificationPayload)}`)
 
-        if (!webhookResponse.ok) {
-          const errorText = await webhookResponse.text()
-          logger.error(`Webhook failed: ${webhookResponse.status} - ${errorText}`)
-          throw new Error(`Webhook failed: ${webhookResponse.statusText}`)
+          const notificationResponse = await fetch(process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(notificationPayload)
+          })
+
+          if (!notificationResponse.ok) {
+            const errorText = await notificationResponse.text()
+            logger.error(`Onboarding notification webhook failed: ${notificationResponse.status} - ${errorText}`)
+            throw new Error(`Onboarding notification webhook failed: ${notificationResponse.statusText}`)
+          }
+
+          logger.info("Onboarding notification webhook sent successfully to make.com")
         }
-
-        logger.info("Webhook sent successfully to make.com")
       } catch (webhookError) {
         logger.error("Failed to send webhook:", webhookError)
         // Don't fail the entire request if webhook fails, but log it
