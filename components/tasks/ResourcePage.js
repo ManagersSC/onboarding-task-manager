@@ -8,6 +8,11 @@ import { CreateTaskDialog } from "./CreateTaskDialog"
 
 export function ResourcePage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [selectedTasks, setSelectedTasks] = useState([])
+
+  const handleDialogOpenChange = (open) => {
+    setIsCreateDialogOpen(open)
+  }
 
   return (
     <div className="space-y-6">
@@ -18,13 +23,18 @@ export function ResourcePage() {
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Task
+          Create Resource
         </Button>
       </div>
 
-      <TasksTable onOpenCreateTask={() => setIsCreateDialogOpen(true)} />
+      <TasksTable onOpenCreateTask={() => setIsCreateDialogOpen(true)} onSelectionChange={setSelectedTasks} />
 
-      <CreateTaskDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+      <CreateTaskDialog
+        open={isCreateDialogOpen}
+        onOpenChange={handleDialogOpenChange}
+        mode="bulk"
+        showModeToggle={true}
+      />
     </div>
   )
 }

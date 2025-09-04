@@ -35,11 +35,11 @@ const itemVariants = {
   },
 }
 
-export function CreateTaskForm({ onSuccess, onCancel }) {
+export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
   // Form state
   const [taskName, setTaskName] = useState("")
   const [taskDescription, setTaskDescription] = useState("")
-  const [taskFunction, setTaskFunction] = useState("Core") // "Core" or "Custom"
+  const [taskFunction, setTaskFunction] = useState(resourcesOnly ? "Core" : "Core") // "Core" or "Custom"
   const [taskMedium, setTaskMedium] = useState("") // "Document" or "Video"
   const [taskWeek, setTaskWeek] = useState("")
   const [taskDay, setTaskDay] = useState("")
@@ -138,7 +138,7 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
         <div>
           <div className="font-semibold">Validation Error</div>
           <div className="text-sm opacity-80">Please fix the errors in the form</div>
-        </div>
+        </div>,
       )
       return
     }
@@ -185,7 +185,7 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
         <div>
           <div className="font-semibold">Success</div>
           <div className="text-sm opacity-80">{successMessage}</div>
-        </div>
+        </div>,
       )
 
       // Call the onSuccess callback with the created task data
@@ -197,8 +197,10 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
       toast.error(
         <div>
           <div className="font-semibold">Error</div>
-          <div className="text-sm opacity-80">{error instanceof Error ? error.message : "An unexpected error occurred"}</div>
-        </div>
+          <div className="text-sm opacity-80">
+            {error instanceof Error ? error.message : "An unexpected error occurred"}
+          </div>
+        </div>,
       )
     } finally {
       setIsCreatingTask(false)
@@ -207,28 +209,30 @@ export function CreateTaskForm({ onSuccess, onCancel }) {
 
   return (
     <motion.div className="grid gap-4 py-4" variants={containerVariants} initial="hidden" animate="show">
-      {/* Task Function Selection */}
-      <motion.div className="grid gap-2" variants={itemVariants}>
-        <Label>Task Function</Label>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant={taskFunction === "Core" ? "default" : "outline"}
-            className="flex-1"
-            onClick={() => setTaskFunction("Core")}
-          >
-            Core
-          </Button>
-          <Button
-            type="button"
-            variant={taskFunction === "Custom" ? "default" : "outline"}
-            className="flex-1"
-            onClick={() => setTaskFunction("Custom")}
-          >
-            Custom
-          </Button>
-        </div>
-      </motion.div>
+      {/* Task Function Selection - Only show if not resources-only */}
+      {!resourcesOnly && (
+        <motion.div className="grid gap-2" variants={itemVariants}>
+          <Label>Task Function</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={taskFunction === "Core" ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setTaskFunction("Core")}
+            >
+              Core
+            </Button>
+            <Button
+              type="button"
+              variant={taskFunction === "Custom" ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setTaskFunction("Custom")}
+            >
+              Custom
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
       <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="task-name">Task Name</Label>

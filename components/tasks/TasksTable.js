@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
-import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip } from "lucide-react"
+import { Checkbox } from "@components/ui/checkbox"
+import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -18,9 +19,10 @@ import { PageTransition } from "./table/PageTransition"
 import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
 import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
 import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
+import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 
 // All table filters
-function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount }) {
+function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount, selectedTasks, onDeleteSelected }) {
   const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
 
@@ -90,9 +92,22 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
         </div>
       </div>
 
-      {/* Task Count */}
-      <div className="text-sm text-muted-foreground">
-        {taskCount > 0 && !isLoading ? <span>Showing {taskCount} tasks</span> : null}
+      {/* Task Count and Delete Button */}
+      <div className="flex items-center gap-3">
+        <div className="text-sm text-muted-foreground">
+          {taskCount > 0 && !isLoading ? <span>Showing {taskCount} tasks</span> : null}
+        </div>
+        {selectedTasks.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onDeleteSelected}
+            disabled={isLoading}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete ({selectedTasks.length})
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -124,10 +139,15 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
   )
 }
 
-export function TasksTable({ onOpenCreateTask }) {
+export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // Selection state
+  const [selected, setSelected] = useState({})
+  const selectedTasks = useMemo(() => tasks.filter(task => selected[task.id]), [tasks, selected])
+  const allChecked = useMemo(() => tasks.length > 0 && tasks.every(task => selected[task.id]), [tasks, selected])
 
   const [hoveredResizer, setHoveredResizer] = useState(null)
   // const [sortColumn, setSortColumn] = useState(null)
@@ -146,8 +166,12 @@ export function TasksTable({ onOpenCreateTask }) {
   const [isFileViewerOpen, setIsFileViewerOpen] = useState(false)
   const [currentTaskId, setCurrentTaskId] = useState(null)
 
+  // Bulk Delete Modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+
   // Column resizing - using refs instead of state to avoid stale closures
   const [columnWidths, setColumnWidths] = useState({
+    checkbox: 48,
     title: 200,
     description: 200,
     week: 100,
@@ -343,6 +367,37 @@ export function TasksTable({ onOpenCreateTask }) {
     fetchTasks(pagination.currentCursor)
   }
 
+  // Selection handlers
+  const toggleAll = (checked) => {
+    const next = {}
+    if (checked) tasks.forEach((task) => (next[task.id] = true))
+    setSelected(next)
+  }
+  
+  const toggleOne = (id, checked) => {
+    setSelected((prev) => ({ ...prev, [id]: checked }))
+  }
+
+  const getSelectedTasks = (selectionState = selected) => {
+    return tasks.filter(task => selectionState[task.id])
+  }
+
+  // Use useEffect to call onSelectionChange after state updates
+  useEffect(() => {
+    onSelectionChange?.(getSelectedTasks())
+  }, [selected, tasks, onSelectionChange])
+
+  // Handle bulk delete
+  const handleDeleteSelected = () => {
+    setIsDeleteModalOpen(true)
+  }
+
+  // Handle successful deletion
+  const handleDeleteSuccess = () => {
+    setSelected({}) // Clear selection
+    fetchTasks(pagination.currentCursor) // Refresh the task list
+  }
+
   // Column resize handlers - completely rewritten to use refs
   const handleMouseMove = useCallback((e) => {
     const column = resizingColumnRef.current
@@ -440,6 +495,8 @@ export function TasksTable({ onOpenCreateTask }) {
           onWeekChange={handleWeekChange}
           onDayChange={handleDayChange}
           taskCount={tasks.length}
+          selectedTasks={selectedTasks}
+          onDeleteSelected={handleDeleteSelected}
         />
 
         {/* Active Filters */}
@@ -474,6 +531,14 @@ export function TasksTable({ onOpenCreateTask }) {
           <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
+                <TableHead style={{ width: `${columnWidths.checkbox}px` }}>
+                  <Checkbox 
+                    aria-label="Select all" 
+                    checked={allChecked} 
+                    onCheckedChange={(v) => toggleAll(!!v)}
+                    disabled={loading}
+                  />
+                </TableHead>
                 <TableHead style={{ width: `${columnWidths.title}px` }}>
                   <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
                     <div
@@ -615,13 +680,13 @@ export function TasksTable({ onOpenCreateTask }) {
                 renderSkeletonRows()
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-red-500">
+                  <TableCell colSpan={9} className="h-24 text-center text-red-500">
                     Error: {error}
                   </TableCell>
                 </TableRow>
               ) : tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-auto py-8">
+                  <TableCell colSpan={9} className="h-auto py-8">
                     <AnimatedEmptyState 
                       message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No tasks found"} 
                       actionLabel={searchTerm ? "Clear Search" : "Create Task"}
@@ -645,6 +710,14 @@ export function TasksTable({ onOpenCreateTask }) {
                       }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                     >
+                      <TableCell style={{ width: `${columnWidths.checkbox}px` }}>
+                        <Checkbox
+                          aria-label={`Select ${task.title}`}
+                          checked={!!selected[task.id]}
+                          onCheckedChange={(v) => toggleOne(task.id, !!v)}
+                          disabled={loading}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium" style={{ width: `${columnWidths.title}px` }}>
                         {task.title}
                       </TableCell>
@@ -741,6 +814,14 @@ export function TasksTable({ onOpenCreateTask }) {
             onFilesUpdated={handleFilesUpdated}
           />
         )}
+
+        {/* Bulk Delete Modal */}
+        <BulkDeleteTasksModal
+          open={isDeleteModalOpen}
+          onOpenChange={setIsDeleteModalOpen}
+          selectedTasks={selectedTasks}
+          onDeleteSuccess={handleDeleteSuccess}
+        />
       </div>
     </PageTransition>
   )
