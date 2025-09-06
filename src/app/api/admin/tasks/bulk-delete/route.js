@@ -42,7 +42,10 @@ export async function DELETE(request) {
     userEmail = session.userEmail
     userName = session.userName
 
-    const { taskIds, testMode = false } = await request.json()
+    const { taskIds } = await request.json()
+    
+    // Single source of control for test mode via environment variable
+    const testMode = process.env.BULK_DELETE_TEST_MODE === 'true'
     if (!Array.isArray(taskIds) || taskIds.length === 0) {
       return Response.json({ error: "Invalid request: taskIds is required" }, { status: 400 })
     }

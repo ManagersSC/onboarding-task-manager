@@ -16,6 +16,7 @@
 | GOOGLE_CLIENT_SECRET    | Yes      | Google API client secret                          |
 | GOOGLE_REDIRECT_URI     | Yes      | Google OAuth redirect URI                         |
 | GOOGLE_REFRESH_TOKEN    | Yes      | Google OAuth refresh token                        |
+| BULK_DELETE_TEST_MODE   | No       | Set to 'true' for test mode, 'false' for production (default: false) |
 
 ## How to Set
 - Create a `.env.local` file in the project root

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
-import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip, Trash2 } from "lucide-react"
+import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip, Trash2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -22,7 +22,7 @@ import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
 import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 
 // All table filters
-function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount, selectedTasks, onDeleteSelected }) {
+function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount, selectedTasks, onDeleteSelected, onRefresh }) {
   const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
 
@@ -92,11 +92,21 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
         </div>
       </div>
 
-      {/* Task Count and Delete Button */}
+      {/* Task Count, Refresh Button, and Delete Button */}
       <div className="flex items-center gap-3">
         <div className="text-sm text-muted-foreground">
           {taskCount > 0 && !isLoading ? <span>Showing {taskCount} tasks</span> : null}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh}
+          disabled={isLoading}
+          title="Refresh data"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
         {selectedTasks.length > 0 && (
           <Button
             variant="destructive"
@@ -398,6 +408,11 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
     fetchTasks(pagination.currentCursor) // Refresh the task list
   }
 
+  // Handle refresh - maintains current search parameters and pagination
+  const handleRefresh = () => {
+    fetchTasks(pagination.currentCursor)
+  }
+
   // Column resize handlers - completely rewritten to use refs
   const handleMouseMove = useCallback((e) => {
     const column = resizingColumnRef.current
@@ -497,6 +512,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
           taskCount={tasks.length}
           selectedTasks={selectedTasks}
           onDeleteSelected={handleDeleteSelected}
+          onRefresh={handleRefresh}
         />
 
         {/* Active Filters */}

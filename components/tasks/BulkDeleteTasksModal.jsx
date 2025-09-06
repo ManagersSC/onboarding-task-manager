@@ -34,8 +34,7 @@ export default function BulkDeleteTasksModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          taskIds: selectedTasks.map(task => task.id),
-          testMode: true // Set to false when ready for production
+          taskIds: selectedTasks.map(task => task.id)
         }),
       })
 
