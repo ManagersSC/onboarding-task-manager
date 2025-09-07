@@ -1259,6 +1259,133 @@
                     },
                     "id": "fldpsmLs0gVLKPZeN",
                     "name": "Email Logs"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldUdOK8z1zzz5qpO",
+                    "name": "Manager - Compliance"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld6M2ZhdQFRfQX0D",
+                    "name": "Manager - Changes in Dental Regulations and ICP"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldInrwiZt6pCji2R",
+                    "name": "Manager - Regulatory CQC Inspection"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldyF9K3U4wYp4EPx",
+                    "name": "Manager - Compliance Softwares"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldr1xxsEHf97bAQT",
+                    "name": "Manager - Strategies for Efficiency and Profitability"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld0WlQACPI6CECju",
+                    "name": "Manager - Track KPIs"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldhBEPVNM49OKMvs",
+                    "name": "Manager - Dental Practice Management Software Experience"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldNlS03qOHvyFxT6",
+                    "name": "Manager - Staff Performance Issue "
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldjZH2oxMKvoKv6V",
+                    "name": "Manager - Team Training on Compilance "
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldAlp3FHv2g8zGeV",
+                    "name": "Manager - Patient Complaint"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldh8M0oAdd3TYvZp",
+                    "name": "Manager - Privacy Breach"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldkbNBoGrL4eJ9n8",
+                    "name": "Manager - Work Style"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldRiA7rpA9Vf9UTX",
+                    "name": "Manager - Handling Stress "
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldGzh2d1lAiZhVnH",
+                    "name": "Manager - Professional Mistake"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldTfp4hYOi6i6qtK",
+                    "name": "Manager -Motivation"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldJeUSqHPNIAHipc",
+                    "name": "Manager - Building Trust"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "flduFkn1MQuVGnqDK",
+                    "name": "Manager - Proudest Achievement "
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "COUNTA({fld9qHbu1kqUZVEBI}) +\r\nCOUNTA({fldjWCtxhbArginFc}) +\r\nCOUNTA({fld3uOs8wUN2HiLJ4}) +\r\nCOUNTA({fld7U5dIgUH3zllb6}) +\r\nCOUNTA({fld6S4Uc19OAmMugJ})",
+                        "referencedFieldIds": [
+                            "fld9qHbu1kqUZVEBI",
+                            "fldjWCtxhbArginFc",
+                            "fld3uOs8wUN2HiLJ4",
+                            "fld7U5dIgUH3zllb6",
+                            "fld6S4Uc19OAmMugJ"
+                        ],
+                        "result": {
+                            "type": "number",
+                            "options": {
+                                "precision": 0
+                            }
+                        }
+                    },
+                    "id": "fldlsFWqT4ctzzAWp",
+                    "name": "Documents #",
+                    "description": "Counts the total number of attachments across all applicant document fields."
+                },
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "DATETIME_DIFF(TODAY(), {fldd7rTmfmYj3cOPx}, 'months')",
+                        "referencedFieldIds": [
+                            "fldd7rTmfmYj3cOPx"
+                        ],
+                        "result": {
+                            "type": "number",
+                            "options": {
+                                "precision": 0
+                            }
+                        }
+                    },
+                    "id": "fldx25OBOTevRMAnX",
+                    "name": "Onboarding Month",
+                    "description": "Calculates the number of months from Onboarding Start Date to today."
                 }
             ],
             "views": [
@@ -1330,6 +1457,11 @@
                 {
                     "id": "viwjNBamz07z68itp",
                     "name": "Active Onboardings (Last Month)",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwghQw1ifCOckbOr",
+                    "name": "DOCS",
                     "type": "grid"
                 }
             ]
@@ -2875,10 +3007,26 @@
                                 "id": "selnKt4Y02hfD5dBk",
                                 "name": "Practice Operations",
                                 "color": "yellowLight1"
+                            },
+                            {
+                                "id": "sel9CI2JoGUQxuSnW",
+                                "name": "Other",
+                                "color": "orangeLight1"
                             }
                         ]
                     },
                     "id": "fldCCmzAIO7DiTzwg",
+                    "name": "Folder Names"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl2QCOVl66YiSVYt",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldVv3Wvt3UxXQaO5"
+                    },
+                    "id": "fldbKlRtQqhDnpzCL",
                     "name": "Folder Name"
                 },
                 {
@@ -3303,6 +3451,11 @@
                                         "id": "selnKt4Y02hfD5dBk",
                                         "name": "Practice Operations",
                                         "color": "yellowLight1"
+                                    },
+                                    {
+                                        "id": "sel9CI2JoGUQxuSnW",
+                                        "name": "Other",
+                                        "color": "orangeLight1"
                                     }
                                 ]
                             }
@@ -4788,6 +4941,11 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "sels7fTemr3vrgdzu",
+                                "name": "Bulk Resource Creation",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "sel2w5lXJtiaJheTY",
                                 "name": "Server",
                                 "color": "orangeBright"
@@ -4907,6 +5065,11 @@
                                 "id": "selvUtMsjxEiEKm7O",
                                 "name": "Task Assignment",
                                 "color": "blueLight2"
+                            },
+                            {
+                                "id": "selJPQ86jbBiA3wQ6",
+                                "name": "Task Creation",
+                                "color": "purpleLight2"
                             },
                             {
                                 "id": "sel4tCmCafl8UC2eN",
@@ -5238,6 +5401,84 @@
             "views": [
                 {
                     "id": "viwsf2CjbhykC2pVg",
+                    "name": "Grid view",
+                    "type": "grid"
+                }
+            ]
+        },
+        {
+            "id": "tbl2QCOVl66YiSVYt",
+            "name": "Onboarding Folders",
+            "primaryFieldId": "fldUestadMAkNQFi2",
+            "fields": [
+                {
+                    "type": "singleLineText",
+                    "id": "fldUestadMAkNQFi2",
+                    "name": "Name"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldA80jkisTa6oZRh",
+                    "name": "is_system"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldPl4E7O7WHHCeoV",
+                    "name": "is_inActive"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblPakqoPLP632suo",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldbKlRtQqhDnpzCL"
+                    },
+                    "id": "fldVv3Wvt3UxXQaO5",
+                    "name": "Onboarding Tasks"
+                },
+                {
+                    "type": "count",
+                    "options": {
+                        "isValid": true,
+                        "recordLinkFieldId": "fldVv3Wvt3UxXQaO5"
+                    },
+                    "id": "fldHcQdzxiQfwzbtW",
+                    "name": "usage_count"
+                },
+                {
+                    "type": "createdTime",
+                    "options": {
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldsQvkhNx73hqzzj",
+                    "name": "Created At"
+                }
+            ],
+            "views": [
+                {
+                    "id": "viwWRdnuT4We1YPQV",
                     "name": "Grid view",
                     "type": "grid"
                 }

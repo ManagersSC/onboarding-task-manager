@@ -9,6 +9,8 @@ import { RefreshCw, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
+import { FolderDropdown } from "./FolderDropdown"
+import { JobDropdown } from "./JobDropdown"
 
 // Animation variants for staggered children
 const containerVariants = {
@@ -45,6 +47,8 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
   const [taskDay, setTaskDay] = useState("")
   const [taskLink, setTaskLink] = useState("")
   const [taskUrgency, setTaskUrgency] = useState("Medium")
+  const [taskFolder, setTaskFolder] = useState("")
+  const [taskJob, setTaskJob] = useState("")
   const [currentEmail, setCurrentEmail] = useState("")
   const [assigneeEmails, setAssigneeEmails] = useState([])
   const [isCreatingTask, setIsCreatingTask] = useState(false)
@@ -160,6 +164,8 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
           taskDay: taskFunction === "Core" ? taskDay : "",
           taskLink,
           taskUrgency: taskFunction === "Custom" ? taskUrgency : "",
+          taskFolder: taskFolder || null,
+          taskJob: taskJob || null,
           assigneeEmails: assigneeEmails.length > 0 ? assigneeEmails : null,
         }),
       })
@@ -338,6 +344,28 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
       <motion.div className="grid gap-2" variants={itemVariants}>
         <Label htmlFor="task-link">Resource Link (Optional)</Label>
         <Input id="task-link" placeholder="https://" value={taskLink} onChange={(e) => setTaskLink(e.target.value)} />
+      </motion.div>
+
+      <motion.div className="grid gap-2" variants={itemVariants}>
+        <Label htmlFor="task-folder">Folder (Optional)</Label>
+        <FolderDropdown
+          value={taskFolder}
+          onChange={setTaskFolder}
+          placeholder="Select a folder..."
+          error={validationErrors.taskFolder}
+        />
+        {validationErrors.taskFolder && <p className="text-xs text-red-500">{validationErrors.taskFolder}</p>}
+      </motion.div>
+
+      <motion.div className="grid gap-2" variants={itemVariants}>
+        <Label htmlFor="task-job">Job (Optional)</Label>
+        <JobDropdown
+          value={taskJob}
+          onChange={setTaskJob}
+          placeholder="Select a job..."
+          error={validationErrors.taskJob}
+        />
+        {validationErrors.taskJob && <p className="text-xs text-red-500">{validationErrors.taskJob}</p>}
       </motion.div>
 
       <motion.div className="grid gap-2" variants={itemVariants}>

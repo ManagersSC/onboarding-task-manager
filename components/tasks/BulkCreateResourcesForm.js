@@ -1,551 +1,943 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Badge } from "@components/ui/badge"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog"
 import { toast } from "sonner"
-import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Trash2, Copy, ChevronUp } from "lucide-react"
+import { motion } from "framer-motion"
+import {
+  Plus,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Briefcase,
+  Folder,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react"
+import { cn } from "@components/lib/utils"
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
 }
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24,
-    },
-  },
+  show: { opacity: 1, y: 0 },
 }
 
-const rowVariants = {
-  hidden: { opacity: 0, x: -20 },
-  show: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-  exit: {
-    opacity: 0,
-    x: 20,
-    transition: {
-      duration: 0.2,
-    },
-  },
+function FolderDropdown({
+  value,
+  onChange,
+  placeholder = "Select folder...",
+  disabled = false,
+  error = false,
+  className = "",
+}) {
+  const [folders, setFolders] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetchFolders()
+  }, [])
+
+  const fetchFolders = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/admin/folders")
+      if (!response.ok) {
+        throw new Error("Failed to fetch folders")
+      }
+      const data = await response.json()
+      setFolders(data.folders || [])
+    } catch (error) {
+      console.error("Error fetching folders:", error)
+      toast.error("Failed to load folders")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {loading ? (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading folders...</div>
+        ) : folders.length === 0 ? (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">No folders found</div>
+        ) : (
+          folders.map((folder) => (
+            <SelectItem key={folder.id} value={folder.id}>
+              {folder.name}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
+  )
 }
 
-export function BulkCreateResourcesForm({ onSuccess, onCancel }) {
-  // Form state - array of resource objects
-  const [resources, setResources] = useState([
-    {
-      id: 1,
+function JobDropdown({
+  value,
+  onChange,
+  placeholder = "Select job...",
+  disabled = false,
+  error = false,
+  className = "",
+}) {
+  const [open, setOpen] = useState(false)
+  const [jobs, setJobs] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetchJobs()
+  }, [])
+
+  const fetchJobs = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/admin/jobs")
+      if (!response.ok) {
+        throw new Error("Failed to fetch jobs")
+      }
+      const data = await response.json()
+      setJobs(data.jobs || [])
+    } catch (error) {
+      console.error("Error fetching jobs:", error)
+      toast.error("Failed to load jobs")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const selectedJob = jobs.find((job) => job.id === value)
+
+  return (
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {loading ? (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading jobs...</div>
+        ) : jobs.length === 0 ? (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">No jobs found</div>
+        ) : (
+          jobs.map((job) => (
+            <SelectItem key={job.id} value={job.id}>
+              {job.title}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
+  )
+}
+
+export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateChange, onClearSession }) {
+  const [jobGroups, setJobGroups] = useState([]) // Array of job groups with nested folder groups
+  const [expandedGroups, setExpandedGroups] = useState(new Set())
+  const [isCreating, setIsCreating] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+  const [jobs, setJobs] = useState([])
+  const [folders, setFolders] = useState([])
+  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
+  const [newGroupJob, setNewGroupJob] = useState("")
+  const [newGroupFolder, setNewGroupFolder] = useState("")
+  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false)
+  const [addFolderJobId, setAddFolderJobId] = useState("")
+  const [addFolderFolderId, setAddFolderFolderId] = useState("")
+  const [lastSaved, setLastSaved] = useState(null) // Track when data was last saved
+  const [isAutoSaving, setIsAutoSaving] = useState(false) // Track auto-save status
+
+  // Auto-save functions
+  const saveToSessionStorage = useCallback(async (data) => {
+    setIsAutoSaving(true)
+    try {
+      // Simulate a small delay to show the spinner
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      const saveData = {
+        jobGroups: data,
+        expandedGroups: Array.from(expandedGroups),
+        timestamp: Date.now()
+      }
+      sessionStorage.setItem('bulkCreateResourcesDraft', JSON.stringify(saveData))
+      setLastSaved(Date.now())
+    } catch (error) {
+      console.error('Failed to save draft to session storage:', error)
+    } finally {
+      setIsAutoSaving(false)
+    }
+  }, [expandedGroups])
+
+  const loadFromSessionStorage = useCallback(() => {
+    try {
+      const saved = sessionStorage.getItem('bulkCreateResourcesDraft')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.jobGroups && Array.isArray(parsed.jobGroups)) {
+          setJobGroups(parsed.jobGroups)
+          if (parsed.expandedGroups && Array.isArray(parsed.expandedGroups)) {
+            setExpandedGroups(new Set(parsed.expandedGroups))
+          }
+          setLastSaved(parsed.timestamp)
+          return true
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load draft from session storage:', error)
+    }
+    return false
+  }, [])
+
+  const clearDraft = useCallback(() => {
+    try {
+      sessionStorage.removeItem('bulkCreateResourcesDraft')
+      setLastSaved(null)
+    } catch (error) {
+      console.error('Failed to clear draft from session storage:', error)
+    }
+  }, [])
+
+  const clearAllData = useCallback(() => {
+    clearDraft()
+    setJobGroups([])
+    setExpandedGroups(new Set())
+    setLastSaved(null)
+  }, [clearDraft])
+
+  // Expose clear function to parent component
+  useEffect(() => {
+    if (onClearSession) {
+      onClearSession(clearAllData)
+    }
+  }, [onClearSession, clearAllData])
+
+  // Load draft on component mount
+  useEffect(() => {
+    loadFromSessionStorage()
+  }, [loadFromSessionStorage])
+
+  // Notify parent component of auto-save state changes
+  useEffect(() => {
+    if (onAutoSaveStateChange) {
+      onAutoSaveStateChange(isAutoSaving)
+    }
+  }, [isAutoSaving, onAutoSaveStateChange])
+
+  // Auto-save when jobGroups change
+  useEffect(() => {
+    if (jobGroups.length > 0) {
+      const timeoutId = setTimeout(() => {
+        saveToSessionStorage(jobGroups)
+      }, 3000) // Debounce saves by 3 seconds
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jobGroups, saveToSessionStorage])
+
+  useEffect(() => {
+    const fetchJobsAndFolders = async () => {
+      try {
+        const [jobsResponse, foldersResponse] = await Promise.all([
+          fetch("/api/admin/jobs"),
+          fetch("/api/admin/folders"),
+        ])
+
+        if (jobsResponse.ok) {
+          const jobsData = await jobsResponse.json()
+          setJobs(jobsData.jobs || [])
+        }
+
+        if (foldersResponse.ok) {
+          const foldersData = await foldersResponse.json()
+          setFolders(foldersData.folders || [])
+        }
+      } catch (error) {
+        console.error("Error fetching jobs/folders:", error)
+      }
+    }
+
+    fetchJobsAndFolders()
+  }, [])
+
+  const organizedGroups = jobGroups.reduce((acc, jobGroup) => {
+    acc[jobGroup.id] = jobGroup.folders || []
+    return acc
+  }, {})
+
+  const validateResource = useCallback((resource) => {
+    const errors = {}
+    if (!resource.taskName?.trim()) errors.taskName = "Task name is required"
+    if (!resource.taskWeek || isNaN(resource.taskWeek)) errors.taskWeek = "Valid week number is required"
+    if (!resource.taskDay || isNaN(resource.taskDay)) errors.taskDay = "Valid day number is required"
+    if (!resource.taskMedium) errors.taskMedium = "Medium type is required"
+    return errors
+  }, [])
+
+  const validateAllResources = useCallback(() => {
+    const errors = {}
+    jobGroups.forEach((jobGroup) => {
+      (jobGroup.folders || []).forEach((folderGroup) => {
+        (folderGroup.resources || []).forEach((resource) => {
+          const resourceErrors = validateResource(resource)
+          if (Object.keys(resourceErrors).length > 0) {
+            errors[`resource_${resource.id}`] = resourceErrors
+          }
+        })
+      })
+    })
+    setValidationErrors(errors)
+    return errors
+  }, [jobGroups, validateResource])
+
+  const addResource = (jobGroupId, folderGroupId) => {
+    const newResource = {
+      id: Date.now() + Math.random(),
       taskName: "",
       taskDescription: "",
       taskWeek: "",
       taskDay: "",
       taskMedium: "",
       taskLink: "",
-    },
-  ])
-
-  const [isCreating, setIsCreating] = useState(false)
-  const [validationErrors, setValidationErrors] = useState({})
-  const [showPreview, setShowPreview] = useState(false)
-
-  const resetForm = useCallback(() => {
-    console.log("BulkCreateResourcesForm: resetForm called")
-    setResources([
-      {
-        id: 1,
-        taskName: "",
-        taskDescription: "",
-        taskWeek: "",
-        taskDay: "",
-        taskMedium: "",
-        taskLink: "",
-      },
-    ])
-    setValidationErrors({})
-    setShowPreview(false)
-    setIsCreating(false)
-    console.log("BulkCreateResourcesForm: resetForm completed")
-  }, [])
-
-  const handleCancel = useCallback(() => {
-    resetForm()
-    if (onCancel) {
-      onCancel()
     }
-  }, [resetForm, onCancel])
-
-  // Generate unique ID for new resources
-  const generateId = () => Math.max(...resources.map((r) => r.id), 0) + 1
-
-  // Add a new resource row
-  const addResource = () => {
-    const lastResource = resources[resources.length - 1]
-    const newResource = {
-      id: generateId(),
-      taskName: "",
-      taskDescription: "",
-      taskWeek: lastResource.taskWeek || "",
-      taskDay: lastResource.taskDay || "",
-      taskMedium: lastResource.taskMedium || "",
-      taskLink: "",
-    }
-    setResources([...resources, newResource])
+    
+    setJobGroups((prev) => prev.map((jobGroup) => 
+      jobGroup.id === jobGroupId 
+        ? {
+            ...jobGroup,
+            folders: (jobGroup.folders || []).map((folderGroup) =>
+              folderGroup.id === folderGroupId
+                ? { ...folderGroup, resources: [...(folderGroup.resources || []), newResource] }
+                : folderGroup
+            )
+          }
+        : jobGroup
+    ))
   }
 
-  // Add multiple resources at once
-  const addMultipleResources = (count = 5) => {
-    const newResources = []
-    const lastResource = resources[resources.length - 1]
-
-    for (let i = 0; i < count; i++) {
-      newResources.push({
-        id: generateId() + i,
-        taskName: "",
-        taskDescription: "",
-        taskWeek: lastResource.taskWeek || "",
-        taskDay: lastResource.taskDay || "",
-        taskMedium: lastResource.taskMedium || "",
-        taskLink: "",
-      })
+  const createNewGroup = () => {
+    if (!newGroupJob) {
+      toast.error("Please select a job for the new group")
+      return
     }
-    setResources([...resources, ...newResources])
-  }
 
-  // Remove a resource row
-  const removeResource = (id) => {
-    if (resources.length > 1) {
-      setResources(resources.filter((r) => r.id !== id))
-      // Clear validation errors for removed resource
-      const newErrors = { ...validationErrors }
-      delete newErrors[`resource_${id}`]
-      setValidationErrors(newErrors)
-    }
-  }
-
-  // Clear all resources
-  const clearAllResources = () => {
-    setResources([
-      {
-        id: 1,
-        taskName: "",
-        taskDescription: "",
-        taskWeek: "",
-        taskDay: "",
-        taskMedium: "",
-        taskLink: "",
-      },
-    ])
-    setValidationErrors({})
-  }
-
-  // Update a specific resource field
-  const updateResource = (id, field, value) => {
-    setResources(resources.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
-
-    // Clear validation error for this field
-    const errorKey = `resource_${id}_${field}`
-    if (validationErrors[errorKey]) {
-      setValidationErrors({
-        ...validationErrors,
-        [errorKey]: "",
-      })
-    }
-  }
-
-  // Copy values from previous row
-  const copyFromPrevious = (currentIndex) => {
-    if (currentIndex > 0) {
-      const previousResource = resources[currentIndex - 1]
-      const currentResource = resources[currentIndex]
-
-      setResources(
-        resources.map((r, index) =>
-          index === currentIndex
-            ? {
-                ...r,
-                taskName: previousResource.taskName,
-                taskDescription: previousResource.taskDescription,
-                taskWeek: previousResource.taskWeek,
-                taskDay: previousResource.taskDay,
-                taskMedium: previousResource.taskMedium,
-                taskLink: previousResource.taskLink,
-              }
-            : r,
-        ),
-      )
-    }
-  }
-
-  // Auto-increment week/day
-  const autoIncrement = (currentIndex, field) => {
-    if (currentIndex > 0) {
-      const previousResource = resources[currentIndex - 1]
-      const currentValue = Number.parseInt(previousResource[field]) || 0
-      const newValue = (currentValue + 1).toString()
-
-      updateResource(resources[currentIndex].id, field, newValue)
-    }
-  }
-
-  // Validate all resources
-  const validateAllResources = () => {
-    const errors = {}
-    let hasErrors = false
-
-    resources.forEach((resource, index) => {
-      const resourceErrors = {}
-
-      if (!resource.taskName.trim()) {
-        resourceErrors.taskName = "Task name is required"
-        hasErrors = true
+    const job = jobs.find(j => j.id === newGroupJob)
+    const folder = folders.find(f => f.id === newGroupFolder)
+    
+    // Check if job group already exists
+    const existingJobGroup = jobGroups.find(jg => jg.jobId === newGroupJob)
+    
+    if (existingJobGroup) {
+      // Add folder to existing job group
+      const newFolderGroup = {
+        id: Date.now() + Math.random(),
+        folderId: newGroupFolder === "no-folder" ? null : newGroupFolder,
+        folderName: newGroupFolder === "no-folder" ? "No Folder" : (folder?.name || "No Folder"),
+        resources: []
       }
-
-      if (!resource.taskWeek) {
-        resourceErrors.taskWeek = "Week is required"
-        hasErrors = true
+      
+      setJobGroups((prev) => prev.map((jobGroup) => 
+        jobGroup.id === existingJobGroup.id
+          ? { ...jobGroup, folders: [...(jobGroup.folders || []), newFolderGroup] }
+          : jobGroup
+      ))
+      
+      setExpandedGroups((prev) => new Set([...prev, newFolderGroup.id]))
+      toast.success(`Added folder "${newGroupFolder === "no-folder" ? "No Folder" : (folder?.name || "No Folder")}" to ${job?.title}`)
+    } else {
+      // Create new job group with folder
+      const newJobGroup = {
+        id: Date.now() + Math.random(),
+        jobId: newGroupJob,
+        jobName: job?.title || "",
+        folders: [{
+          id: Date.now() + Math.random() + 1,
+          folderId: newGroupFolder === "no-folder" ? null : newGroupFolder,
+          folderName: newGroupFolder === "no-folder" ? "No Folder" : (folder?.name || "No Folder"),
+          resources: []
+        }]
       }
+      
+      setJobGroups((prev) => [...prev, newJobGroup])
+      setExpandedGroups((prev) => new Set([...prev, newJobGroup.id, newJobGroup.folders[0].id]))
+      toast.success(`Created new job group: ${job?.title}`)
+    }
 
-      if (!resource.taskDay) {
-        resourceErrors.taskDay = "Day is required"
-        hasErrors = true
-      }
+    setShowNewGroupDialog(false)
+    setNewGroupJob("")
+    setNewGroupFolder("")
+  }
 
-      if (!resource.taskMedium) {
-        resourceErrors.taskMedium = "Medium is required"
-        hasErrors = true
-      }
+  const addFolderToJob = () => {
+    if (!addFolderFolderId) {
+      toast.error("Please select a folder")
+      return
+    }
 
-      if (Object.keys(resourceErrors).length > 0) {
-        errors[`resource_${resource.id}`] = resourceErrors
-      }
+    const folder = folders.find(f => f.id === addFolderFolderId)
+    const jobGroup = jobGroups.find(jg => jg.id === addFolderJobId)
+    
+    const newFolderGroup = {
+      id: Date.now() + Math.random(),
+      folderId: addFolderFolderId === "no-folder" ? null : addFolderFolderId,
+      folderName: addFolderFolderId === "no-folder" ? "No Folder" : (folder?.name || "No Folder"),
+      resources: []
+    }
+    
+    setJobGroups((prev) => prev.map((jobGroup) => 
+      jobGroup.id === addFolderJobId
+        ? { ...jobGroup, folders: [...(jobGroup.folders || []), newFolderGroup] }
+        : jobGroup
+    ))
+    
+    setExpandedGroups((prev) => new Set([...prev, newFolderGroup.id]))
+    setShowAddFolderDialog(false)
+    setAddFolderJobId("")
+    setAddFolderFolderId("")
+    toast.success(`Added folder "${folder?.name || 'No Folder'}" to ${jobGroup?.jobName}`)
+  }
+
+  const updateResource = (jobGroupId, folderGroupId, resourceId, field, value) => {
+    setJobGroups((prev) => prev.map((jobGroup) => 
+      jobGroup.id === jobGroupId 
+        ? {
+            ...jobGroup,
+            folders: (jobGroup.folders || []).map((folderGroup) =>
+              folderGroup.id === folderGroupId
+                ? {
+                    ...folderGroup,
+                    resources: (folderGroup.resources || []).map((resource) => 
+                      resource.id === resourceId ? { ...resource, [field]: value } : resource
+                    )
+                  }
+                : folderGroup
+            )
+          }
+        : jobGroup
+    ))
+  }
+
+  const removeResource = (jobGroupId, folderGroupId, resourceId) => {
+    setJobGroups((prev) => prev.map((jobGroup) => 
+      jobGroup.id === jobGroupId 
+        ? {
+            ...jobGroup,
+            folders: (jobGroup.folders || []).map((folderGroup) =>
+              folderGroup.id === folderGroupId
+                ? {
+                    ...folderGroup,
+                    resources: (folderGroup.resources || []).filter((resource) => resource.id !== resourceId)
+                  }
+                : folderGroup
+            )
+          }
+        : jobGroup
+    ))
+  }
+
+  const removeFolderGroup = (jobGroupId, folderGroupId) => {
+    setJobGroups((prev) => prev.map((jobGroup) => 
+      jobGroup.id === jobGroupId 
+        ? {
+            ...jobGroup,
+            folders: (jobGroup.folders || []).filter((folderGroup) => folderGroup.id !== folderGroupId)
+          }
+        : jobGroup
+    ))
+    
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(folderGroupId)
+      return newSet
     })
-
-    setValidationErrors(errors)
-    return !hasErrors
   }
+
+  const removeJobGroup = (jobGroupId) => {
+    setJobGroups((prev) => prev.filter((jobGroup) => jobGroup.id !== jobGroupId))
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(jobGroupId)
+      return newSet
+    })
+  }
+
+  const toggleGroupExpansion = (groupKey) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey)
+      } else {
+        newSet.add(groupKey)
+      }
+      return newSet
+    })
+  }
+
 
   const handleBulkCreate = async () => {
-    if (!validateAllResources()) {
-      toast.error(
-        <div>
-          <div className="font-semibold">Validation Error</div>
-          <div className="text-sm opacity-80">Please fix the errors in the form</div>
-        </div>,
+    const errors = validateAllResources()
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fix validation errors before creating resources")
+      return
+    }
+
+    const allResources = jobGroups.flatMap(jobGroup => 
+      (jobGroup.folders || []).flatMap(folderGroup =>
+        (folderGroup.resources || []).map(resource => ({
+          ...resource,
+          taskJob: jobGroup.jobId || null,
+          taskFolder: folderGroup.folderId || null
+        }))
       )
+    )
+
+
+    if (allResources.length === 0) {
+      toast.error("Please add at least one resource")
       return
     }
 
     setIsCreating(true)
-
     try {
-      const response = await fetch("/api/admin/tasks/bulk-create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resources: resources.map((r) => ({
-            taskName: r.taskName,
-            taskDescription: r.taskDescription,
-            taskWeek: r.taskWeek,
-            taskDay: r.taskDay,
-            taskMedium: r.taskMedium,
-            taskLink: r.taskLink,
-          })),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create resources")
-      }
-
-      const successMessage = data.testMode
-        ? `TEST MODE: Would create ${data.createdIds.length} resource${data.createdIds.length === 1 ? "" : "s"}`
-        : `Successfully created ${data.createdIds.length} resource${data.createdIds.length === 1 ? "" : "s"}`
-
-      toast.success(
-        <div>
-          <div className="font-semibold">Success</div>
-          <div className="text-sm opacity-80">{successMessage}</div>
-        </div>,
-      )
-
-      console.log("BulkCreateResourcesForm: Resetting form state")
-      resetForm()
-
-      console.log("BulkCreateResourcesForm: Calling onSuccess")
-      if (onSuccess) {
-        onSuccess(data)
-      }
+      await onSuccess(allResources)
+      // Note: Session clearing is handled by parent component on success
     } catch (error) {
-      console.error("Error creating resources:", error)
-      toast.error(
-        <div>
-          <div className="font-semibold">Error</div>
-          <div className="text-sm opacity-80">
-            {error instanceof Error ? error.message : "An unexpected error occurred"}
-          </div>
-        </div>,
-      )
+      // Don't clear session data on error - preserve user's work
+      toast.error("Failed to create resources")
     } finally {
       setIsCreating(false)
     }
   }
 
+  const handleCancel = () => {
+    onCancel()
+  }
+
+  const totalResources = jobGroups.reduce((total, jobGroup) => 
+    total + (jobGroup.folders || []).reduce((folderTotal, folderGroup) => 
+      folderTotal + (folderGroup.resources || []).length, 0
+    ), 0
+  )
+  const resourcesWithErrors = Object.keys(validationErrors).length
+  const validResources = totalResources - resourcesWithErrors
+
   return (
-    <motion.div className="space-y-6" variants={containerVariants} initial="hidden" animate="show">
-      {/* Bulk action buttons */}
-      <motion.div className="flex gap-2 flex-wrap" variants={itemVariants}>
-        <Button type="button" variant="outline" size="sm" onClick={addResource}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Row
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => addMultipleResources(5)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add 5 Rows
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={clearAllResources}>
-          <Trash2 className="h-4 w-4 mr-2" />
-          Clear All
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
-          {showPreview ? "Hide Summary" : "Show Summary"}
-        </Button>
-      </motion.div>
-
-      {/* Resource rows */}
-      <div className="space-y-4 max-h-96 overflow-y-auto">
-        <AnimatePresence>
-          {resources.map((resource, index) => (
-            <motion.div
-              key={resource.id}
-              variants={rowVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-              className="border rounded-lg p-4 space-y-4 bg-muted/20"
-            >
-              {/* Row header */}
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Resource {index + 1}</h4>
-                <div className="flex gap-2">
-                  {index > 0 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyFromPrevious(index)}
-                      title="Copy from previous row"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {resources.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeResource(resource.id)}
-                      title="Remove this row"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+    <div className="max-h-[80vh] flex flex-col">
+      <motion.div
+        className="flex-1 space-y-6 overflow-hidden"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={itemVariants}>
+          <div className="flex items-center justify-between mb-6 mt-4">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-semibold text-foreground">Resource Groups</h3>
+              {isAutoSaving ? (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                  Auto-saving...
                 </div>
-              </div>
-
-              {/* Form fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Task Name */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-name-${resource.id}`}>Task Name</Label>
-                  <Input
-                    id={`task-name-${resource.id}`}
-                    placeholder="Enter task name"
-                    value={resource.taskName}
-                    onChange={(e) => updateResource(resource.id, "taskName", e.target.value)}
-                    className={validationErrors[`resource_${resource.id}`]?.taskName ? "border-red-500" : ""}
-                  />
-                  {validationErrors[`resource_${resource.id}`]?.taskName && (
-                    <p className="text-xs text-red-500">{validationErrors[`resource_${resource.id}`].taskName}</p>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-description-${resource.id}`}>Description</Label>
-                  <Textarea
-                    id={`task-description-${resource.id}`}
-                    placeholder="Enter task description"
-                    value={resource.taskDescription}
-                    onChange={(e) => updateResource(resource.id, "taskDescription", e.target.value)}
-                    rows={2}
-                  />
-                </div>
-
-                {/* Week */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-week-${resource.id}`}>Week</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id={`task-week-${resource.id}`}
-                      placeholder="1"
-                      value={resource.taskWeek}
-                      onChange={(e) => updateResource(resource.id, "taskWeek", e.target.value)}
-                      className={validationErrors[`resource_${resource.id}`]?.taskWeek ? "border-red-500" : ""}
-                    />
-                    {index > 0 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => autoIncrement(index, "taskWeek")}
-                        title="Auto-increment from previous"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {validationErrors[`resource_${resource.id}`]?.taskWeek && (
-                    <p className="text-xs text-red-500">{validationErrors[`resource_${resource.id}`].taskWeek}</p>
-                  )}
-                </div>
-
-                {/* Day */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-day-${resource.id}`}>Day</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id={`task-day-${resource.id}`}
-                      placeholder="1"
-                      value={resource.taskDay}
-                      onChange={(e) => updateResource(resource.id, "taskDay", e.target.value)}
-                      className={validationErrors[`resource_${resource.id}`]?.taskDay ? "border-red-500" : ""}
-                    />
-                    {index > 0 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => autoIncrement(index, "taskDay")}
-                        title="Auto-increment from previous"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {validationErrors[`resource_${resource.id}`]?.taskDay && (
-                    <p className="text-xs text-red-500">{validationErrors[`resource_${resource.id}`].taskDay}</p>
-                  )}
-                </div>
-
-                {/* Medium Type */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-medium-${resource.id}`}>Medium Type</Label>
-                  <Select
-                    value={resource.taskMedium}
-                    onValueChange={(value) => updateResource(resource.id, "taskMedium", value)}
-                  >
-                    <SelectTrigger
-                      className={validationErrors[`resource_${resource.id}`]?.taskMedium ? "border-red-500" : ""}
-                    >
-                      <SelectValue placeholder="Select medium type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Document">Document</SelectItem>
-                      <SelectItem value="Video">Video</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {validationErrors[`resource_${resource.id}`]?.taskMedium && (
-                    <p className="text-xs text-red-500">{validationErrors[`resource_${resource.id}`].taskMedium}</p>
-                  )}
-                </div>
-
-                {/* Resource Link */}
-                <div className="space-y-2">
-                  <Label htmlFor={`task-link-${resource.id}`}>Resource Link</Label>
-                  <Input
-                    id={`task-link-${resource.id}`}
-                    placeholder="https://example.com"
-                    value={resource.taskLink}
-                    onChange={(e) => updateResource(resource.id, "taskLink", e.target.value)}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Preview section */}
-      {showPreview && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border rounded-lg p-4 bg-muted/10"
-        >
-          <h4 className="font-medium mb-3">Preview ({resources.length} resources)</h4>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {resources.map((resource, index) => (
-              <div key={resource.id} className="text-sm p-2 bg-background rounded border">
-                <strong>{index + 1}.</strong> {resource.taskName || "Untitled Resource"}
-                {resource.taskWeek && resource.taskDay && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    - Week {resource.taskWeek}, Day {resource.taskDay}
-                  </span>
-                )}
-                {resource.taskMedium && <span className="text-muted-foreground"> - {resource.taskMedium}</span>}
-              </div>
-            ))}
+              ) : lastSaved ? (
+                <span className="text-xs text-muted-foreground">
+                  Last saved: {new Date(lastSaved).toLocaleTimeString()}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={resourcesWithErrors > 0 ? "destructive" : "default"} className="gap-1.5 px-2 py-1">
+                {resourcesWithErrors > 0 ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                {validResources}/{totalResources} Valid
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewGroupDialog(true)}
+                className="gap-1.5 h-7 px-3 text-xs border-dashed hover:border-solid"
+              >
+                <Plus className="h-3 w-3" />
+                New Group
+              </Button>
+            </div>
           </div>
         </motion.div>
-      )}
 
-      {/* Action buttons */}
-      <motion.div className="flex justify-end gap-2 pt-4 border-t" variants={itemVariants}>
-        <Button type="button" variant="outline" onClick={handleCancel} disabled={isCreating}>
-          Cancel
-        </Button>
-        <Button type="button" onClick={handleBulkCreate} disabled={isCreating}>
-          {isCreating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Creating {resources.length} Resources...
-            </>
-          ) : (
-            `Create ${resources.length} Resource${resources.length === 1 ? "" : "s"}`
-          )}
-        </Button>
+        {jobGroups.map((jobGroup) => (
+          <motion.div key={jobGroup.id} variants={itemVariants} className="space-y-4">
+            <div className="border rounded-lg overflow-hidden bg-card">
+              <Collapsible
+                open={expandedGroups.has(jobGroup.id)}
+                onOpenChange={() => toggleGroupExpansion(jobGroup.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <div className="cursor-pointer hover:bg-muted/30 transition-colors p-4 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {expandedGroups.has(jobGroup.id) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Briefcase className="h-4 w-4 text-blue-500" />
+                        <div>
+                          <h4 className="font-semibold text-sm">{jobGroup.jobName}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {(jobGroup.folders || []).length} folder{(jobGroup.folders || []).length !== 1 ? "s" : ""} • 
+                            {(jobGroup.folders || []).reduce((total, folder) => total + (folder.resources || []).length, 0)} resources
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {(jobGroup.folders || []).reduce((total, folder) => total + (folder.resources || []).length, 0)}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setAddFolderJobId(jobGroup.id)
+                            setShowAddFolderDialog(true)
+                          }}
+                          className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeJobGroup(jobGroup.id)
+                          }}
+                          className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-4 space-y-4 max-h-64 overflow-y-auto custom-scrollbar">
+                    {(jobGroup.folders || []).map((folderGroup) => (
+                      <div key={folderGroup.id} className="border rounded-md bg-background/50">
+                        <Collapsible
+                          open={expandedGroups.has(folderGroup.id)}
+                          onOpenChange={() => toggleGroupExpansion(folderGroup.id)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <div className="cursor-pointer hover:bg-muted/30 transition-colors p-3 border-b">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {expandedGroups.has(folderGroup.id) ? (
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                  <Folder className="h-3.5 w-3.5 text-amber-500" />
+                                  <span className="text-sm font-medium">{folderGroup.folderName}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {(folderGroup.resources || []).length} resources
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeFolderGroup(jobGroup.id, folderGroup.id)
+                                  }}
+                                  className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="p-3 space-y-3">
+                          {(folderGroup.resources || []).map((resource, index) => (
+                            <div key={resource.id} className="border rounded-md p-3 space-y-3 bg-background/30">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{resource.taskName || `Resource ${index + 1}`}</span>
+                                  {validationErrors[`resource_${resource.id}`] && (
+                                    <Badge variant="destructive" className="gap-1 text-xs h-5">
+                                      <AlertCircle className="h-2.5 w-2.5" />
+                                      Invalid
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeResource(jobGroup.id, folderGroup.id, resource.id)}
+                                  className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Task Name</Label>
+                                  <Input
+                                    placeholder="Enter task name"
+                                    value={resource.taskName}
+                                    onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskName", e.target.value)}
+                                    className={cn(
+                                      "h-7 text-xs",
+                                      validationErrors[`resource_${resource.id}`]?.taskName ? "border-destructive" : "",
+                                    )}
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Description</Label>
+                                  <Textarea
+                                    placeholder="Enter description"
+                                    value={resource.taskDescription}
+                                    onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskDescription", e.target.value)}
+                                    rows={1}
+                                    className="min-h-7 resize-none text-xs"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Week</Label>
+                                  <Input
+                                    placeholder="1"
+                                    value={resource.taskWeek}
+                                    onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskWeek", e.target.value)}
+                                    className={cn(
+                                      "h-7 text-xs",
+                                      validationErrors[`resource_${resource.id}`]?.taskWeek ? "border-destructive" : "",
+                                    )}
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Day</Label>
+                                  <Input
+                                    placeholder="1"
+                                    value={resource.taskDay}
+                                    onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskDay", e.target.value)}
+                                    className={cn(
+                                      "h-7 text-xs",
+                                      validationErrors[`resource_${resource.id}`]?.taskDay ? "border-destructive" : "",
+                                    )}
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Medium</Label>
+                                  <Select
+                                    value={resource.taskMedium}
+                                    onValueChange={(value) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskMedium", value)}
+                                  >
+                                    <SelectTrigger
+                                      className={cn(
+                                        "h-7 text-xs",
+                                        validationErrors[`resource_${resource.id}`]?.taskMedium ? "border-destructive" : "",
+                                      )}
+                                    >
+                                      <SelectValue placeholder="Select medium" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Document">Document</SelectItem>
+                                      <SelectItem value="Video">Video</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Resource Link</Label>
+                                  <Input
+                                    placeholder="https://example.com"
+                                    value={resource.taskLink}
+                                    onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskLink", e.target.value)}
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addResource(jobGroup.id, folderGroup.id)}
+                                className="w-full gap-2 h-8 border-dashed hover:border-solid bg-transparent"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Add Resource to {folderGroup.folderName}
+                              </Button>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </motion.div>
+        ))}
+
+        <motion.div className="flex justify-end gap-3 pt-4 border-t" variants={itemVariants}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isCreating}
+            className="px-6 bg-transparent"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleBulkCreate}
+            disabled={isCreating || resourcesWithErrors > 0 || totalResources === 0}
+            className="px-6"
+          >
+            {isCreating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Creating {totalResources} Resources...
+              </>
+            ) : (
+              `Create ${totalResources} Resource${totalResources !== 1 ? "s" : ""}`
+            )}
+          </Button>
+        </motion.div>
       </motion.div>
-    </motion.div>
+
+      {/* New Group Creation Dialog */}
+      <Dialog open={showNewGroupDialog} onOpenChange={setShowNewGroupDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Group</DialogTitle>
+            <DialogDescription>Select a job and optional folder for the new resource group.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Job *</Label>
+              <JobDropdown
+                value={newGroupJob}
+                onChange={setNewGroupJob}
+                placeholder="Select a job..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Folder (Optional)</Label>
+              <Select value={newGroupFolder} onValueChange={setNewGroupFolder}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-folder">No Folder</SelectItem>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowNewGroupDialog(false)
+                setNewGroupJob("")
+                setNewGroupFolder("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={createNewGroup} disabled={!newGroupJob}>
+              Create Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Folder to Job Dialog */}
+      <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Folder to Job</DialogTitle>
+            <DialogDescription>Select a folder to add to this job group.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Folder</Label>
+              <Select value={addFolderFolderId} onValueChange={setAddFolderFolderId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    const currentJobGroup = jobGroups.find(jg => jg.id === addFolderJobId)
+                    const hasNoFolderGroup = currentJobGroup?.folders?.some(fg => fg.folderId === null)
+                    
+                    return (
+                      <>
+                        {!hasNoFolderGroup && <SelectItem value="no-folder">No Folder</SelectItem>}
+                        {folders.map((folder) => (
+                          <SelectItem key={folder.id} value={folder.id}>
+                            {folder.name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddFolderDialog(false)
+                setAddFolderJobId("")
+                setAddFolderFolderId("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={addFolderToJob} disabled={!addFolderFolderId}>
+              Add Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

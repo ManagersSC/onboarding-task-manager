@@ -12,6 +12,7 @@ import {
 import { Button } from "@components/ui/button"
 import { CreateTaskForm } from "./CreateTaskForm"
 import { BulkCreateResourcesForm } from "./BulkCreateResourcesForm"
+import { toast } from "sonner"
 
 export function CreateTaskDialog({
   trigger,
@@ -23,15 +24,61 @@ export function CreateTaskDialog({
   showModeToggle = false,
 }) {
   const [currentMode, setCurrentMode] = useState(mode)
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [clearSessionData, setClearSessionData] = useState(null)
 
   const handleSuccess = useCallback(
-    (data) => {
-      // Close dialog immediately without setTimeout to prevent race conditions
-      if (onOpenChange) {
-        onOpenChange(false)
+    async (data) => {
+      try {
+        // For bulk mode, call the bulk-create API
+        if (currentMode === "bulk") {
+          
+          const response = await fetch("/api/admin/tasks/bulk-create", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ resources: data }),
+          })
+
+          const result = await response.json()
+
+          if (!response.ok) {
+            throw new Error(result.error || "Failed to create resources")
+          }
+
+          // Show success message
+          toast.success(
+            <div>
+              <div className="font-semibold">Success</div>
+              <div className="text-sm opacity-80">{result.message}</div>
+            </div>,
+          )
+
+          // Clear session data only on successful API response
+          if (clearSessionData) {
+            clearSessionData()
+          }
+        }
+
+        // Close dialog after successful API call
+        if (onOpenChange) {
+          onOpenChange(false)
+        }
+      } catch (error) {
+        console.error("Error creating resources:", error)
+        toast.error(
+          <div>
+            <div className="font-semibold">Error</div>
+            <div className="text-sm opacity-80">
+              {error instanceof Error ? error.message : "An unexpected error occurred"}
+            </div>
+          </div>,
+        )
+        // Don't close dialog on error
       }
     },
-    [onOpenChange],
+    [onOpenChange, currentMode],
   )
 
   const handleCancel = useCallback(() => {
@@ -39,6 +86,14 @@ export function CreateTaskDialog({
       onOpenChange(false)
     }
   }, [onOpenChange])
+
+  const handleAutoSaveStateChange = useCallback((saving) => {
+    setIsAutoSaving(saving)
+  }, [])
+
+  const handleClearSession = useCallback((clearFn) => {
+    setClearSessionData(() => clearFn)
+  }, [])
 
   // Update mode when prop changes
   useEffect(() => {
@@ -67,6 +122,10 @@ export function CreateTaskDialog({
   const handleOpenChange = useCallback(
     (newOpen) => {
       if (!newOpen) {
+        // Prevent closing if auto-saving is in progress
+        if (isAutoSaving) {
+          return
+        }
         // Ensure proper cleanup when closing
         setCurrentMode("single")
       }
@@ -74,7 +133,7 @@ export function CreateTaskDialog({
         onOpenChange(newOpen)
       }
     },
-    [onOpenChange],
+    [onOpenChange, isAutoSaving],
   )
 
   // Get dynamic title and description based on mode
@@ -94,7 +153,7 @@ export function CreateTaskDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        className={currentMode === "bulk" ? "sm:max-w-[800px] max-h-[90vh]" : "sm:max-w-[500px]"}
+        className={currentMode === "bulk" ? "sm:max-w-[900px] max-h-[98vh]" : "sm:max-w-[500px]"}
       >
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -131,7 +190,12 @@ export function CreateTaskDialog({
             resourcesOnly={currentMode === "single" && showModeToggle}
           />
         ) : (
-          <BulkCreateResourcesForm onSuccess={handleSuccess} onCancel={handleCancel} />
+          <BulkCreateResourcesForm 
+            onSuccess={handleSuccess} 
+            onCancel={handleCancel} 
+            onAutoSaveStateChange={handleAutoSaveStateChange}
+            onClearSession={handleClearSession}
+          />
         )}
       </DialogContent>
     </Dialog>

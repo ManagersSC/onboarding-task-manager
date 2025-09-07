@@ -60,6 +60,8 @@ export async function POST(request) {
       taskDay,
       taskLink,
       taskUrgency,
+      taskFolder,
+      taskJob,
       assigneeEmails,
     } = body
 
@@ -85,7 +87,7 @@ export async function POST(request) {
       try {
         logger.debug(`${taskName}, ${taskWeek}, ${taskDay}, ${taskLink}, ${taskFunction}`)
         // Create a new record in the Onboarding Task table
-        const taskRecord = await base("Onboarding Tasks").create({
+        const taskFields = {
           Task: taskName,
           "Task Body": taskDescription || "",
           "Week Number": taskWeek || "",
@@ -93,7 +95,19 @@ export async function POST(request) {
           Type: taskFunction, // Core
           "Type": taskType, // Doc or Video
           Link: taskLink || "",
-        })
+        }
+
+        // Add folder if provided
+        if (taskFolder) {
+          taskFields["Folder Name"] = [taskFolder]
+        }
+
+        // Add job if provided
+        if (taskJob) {
+          taskFields["Job"] = [taskJob]
+        }
+
+        const taskRecord = await base("Onboarding Tasks").create(taskFields)
 
         taskRecordId = taskRecord.id
         logger.debug(`Created task record: ${taskRecordId}`)

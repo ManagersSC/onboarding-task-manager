@@ -109,16 +109,106 @@ export async function GET(request) {
     const records = rawRecords || []
     const nextCursor = offset || null
 
-    // 7. Format tasks for frontend
+    // 7. Initialize Airtable base for folder fetching
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
+      .base(process.env.AIRTABLE_BASE_ID)
+
+    // 8. Get folder names for linked records
+    const folderIds = new Set()
+    records.forEach(rec => {
+      const folderField = rec.fields['Folder Name']
+      if (folderField && Array.isArray(folderField)) {
+        folderField.forEach(id => folderIds.add(id))
+      }
+    })
+
+    // Fetch folder details
+    const folderMap = new Map()
+    if (folderIds.size > 0) {
+      try {
+        const folderRecords = await base('Onboarding Folders')
+          .select({
+            filterByFormula: `OR(${Array.from(folderIds).map(id => `RECORD_ID() = '${id}'`).join(',')})`
+          })
+          .all()
+        
+        folderRecords.forEach(folder => {
+          folderMap.set(folder.id, {
+            name: folder.get('Name') || '',
+            is_system: folder.get('is_system') || false,
+            usage_count: folder.get('usage_count') || 0
+          })
+        })
+      } catch (error) {
+        logger.error('Error fetching folder details:', error)
+      }
+    }
+
+    // 9. Get job names for linked records
+    const jobIds = new Set()
+    records.forEach(rec => {
+      const jobField = rec.fields['Job']
+      if (jobField && Array.isArray(jobField)) {
+        jobField.forEach(id => jobIds.add(id))
+      }
+    })
+
+    // Fetch job details
+    const jobMap = new Map()
+    if (jobIds.size > 0) {
+      try {
+        const jobRecords = await base('Jobs')
+          .select({
+            filterByFormula: `OR(${Array.from(jobIds).map(id => `RECORD_ID() = '${id}'`).join(',')})`
+          })
+          .all()
+        
+        jobRecords.forEach(job => {
+          jobMap.set(job.id, {
+            title: job.get('Title') || '',
+            description: job.get('Description') || '',
+            jobStatus: job.get('Job Status') || '',
+            requiredExperience: job.get('Required Experience') || ''
+          })
+        })
+      } catch (error) {
+        logger.error('Error fetching job details:', error)
+      }
+    }
+
+    // 10. Format tasks for frontend
     const tasks = records.map(rec => {
       const rawAttachments = rec.fields['File(s)'] || [];
+      const folderField = rec.fields['Folder Name']
+      let folderName = ''
+      let folderInfo = null
+      
+      if (folderField && Array.isArray(folderField) && folderField.length > 0) {
+        const folderId = folderField[0] // Take the first folder if multiple
+        folderInfo = folderMap.get(folderId)
+        folderName = folderInfo?.name || ''
+      }
+
+      const jobField = rec.fields['Job']
+      let jobTitle = ''
+      let jobInfo = null
+      
+      if (jobField && Array.isArray(jobField) && jobField.length > 0) {
+        const jobId = jobField[0] // Take the first job if multiple
+        jobInfo = jobMap.get(jobId)
+        jobTitle = jobInfo?.title || ''
+      }
+      
       return {
         id: rec.id,
         title:        rec.fields['Task'] || 'Untitled Task',
         description:  rec.fields['Task Body'] || '',
         week:         rec.fields['Week Number'] || '',
         day:          rec.fields['Day Number'] || '',
-        folderName:   rec.fields['Folder Name'] || '',
+        folderName:   folderName,
+        folderInfo:   folderInfo,
+        jobTitle:     jobTitle,
+        jobInfo:      jobInfo,
         type:         rec.fields['Type'] || '',
         taskFunction: rec.fields['Task Function'] || '',
         job:          rec.fields['Job'] || '',
@@ -130,7 +220,7 @@ export async function GET(request) {
       }
     })
 
-    // 8. Return JSON with pagination info
+    // 11. Return JSON with pagination info
     return Response.json({
       tasks,
       pagination: {

@@ -178,8 +178,7 @@ export async function POST(request) {
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
-      .base(process.env.AIRTABLE_BASE_ID)
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
     const createdIds = []
     const failedResources = []
@@ -200,8 +199,19 @@ export async function POST(request) {
           "Task Body": resource.taskDescription || "",
           "Week Number": resource.taskWeek.toString(),
           "Day Number": resource.taskDay.toString(),
+          "Task Function": "Core", // All bulk resources are Core tasks
           "Type": mediumMapping[resource.taskMedium] || resource.taskMedium,
           "Link": resource.taskLink || ""
+        }
+
+        // Add folder if provided
+        if (resource.taskFolder) {
+          fields["Folder Name"] = [resource.taskFolder]
+        }
+
+        // Add job if provided
+        if (resource.taskJob) {
+          fields["Job"] = [resource.taskJob]
         }
 
         if (testMode) {

@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import { Folder } from 'lucide-react'
 import { cn } from "@components/lib/utils"
 
-export function FolderBadge({ name }) {
+export function FolderBadge({ name, usageCount, isSystem = false, className = "" }) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
@@ -31,11 +31,13 @@ export function FolderBadge({ name }) {
         scale: 1.05,
         transition: { duration: 0.2 }
       }}
+      className={className}
     >
       <Badge
         className={cn(
           "font-normal text-xs px-2 py-0.5 truncate max-w-[150px] flex items-center gap-1",
-          textColor
+          textColor,
+          className
         )}
         style={{
           backgroundColor: bgColor,
@@ -49,7 +51,13 @@ export function FolderBadge({ name }) {
         >
           <Folder className="h-3 w-3" />
         </motion.div>
-        <span>{name}</span>
+        <span className="truncate">{name}</span>
+        {isSystem && (
+          <span className="text-xs opacity-75">(S)</span>
+        )}
+        {usageCount > 0 && (
+          <span className="text-xs opacity-75">({usageCount})</span>
+        )}
       </Badge>
     </motion.div>
   )

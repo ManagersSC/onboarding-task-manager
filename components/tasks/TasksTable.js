@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
+import { Badge } from "@components/ui/badge"
 import { ExternalLink, ChevronLeft, ChevronRight, Search, X, Loader2, Paperclip, Trash2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
@@ -187,6 +188,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
     week: 100,
     day: 100,
     folder: 150,
+    job: 150,
     attachments: 120,
     resource: 100,
     edit: 100,
@@ -650,6 +652,25 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
                     />
                   </div>
                 </TableHead>
+                <TableHead style={{ width: `${columnWidths.job}px` }}>
+                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
+                    <div
+                      onClick={() => handleSort("job")}
+                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
+                      style={{ paddingRight: "24px" }}
+                    >
+                      Job
+                      {sortColumn === "job" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
+                        hoveredResizer === "job" && "opacity-100",
+                      )}
+                      onMouseDown={(e) => handleResizeStart(e, "job")}
+                    />
+                  </div>
+                </TableHead>
                 <TableHead style={{ width: `${columnWidths.attachments}px` }}>
                   <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
                     <div
@@ -745,7 +766,25 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
                       </TableCell>
                       <TableCell style={{ width: `${columnWidths.day}px` }}>{task.day ? `Day ${task.day}` : "—"}</TableCell>
                       <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                        {task.folderName ? <FolderBadge name={task.folderName} /> : "—"}
+                        {task.folderName ? (
+                          <FolderBadge 
+                            name={task.folderName} 
+                            usageCount={task.folderInfo?.usage_count}
+                            isSystem={task.folderInfo?.is_system}
+                          />
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell style={{ width: `${columnWidths.job}px` }}>
+                        {task.jobTitle ? (
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{task.jobTitle}</span>
+                            {task.jobInfo?.jobStatus && (
+                              <Badge variant="secondary" className="text-xs">
+                                {task.jobInfo.jobStatus}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : "—"}
                       </TableCell>
                       {/* Attachments Cell */}
                       <TableCell style={{ width: `${columnWidths.attachments}px` }}>
