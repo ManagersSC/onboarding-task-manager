@@ -28,6 +28,9 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  Link,
+  FileText as DescriptionIcon,
+  X,
 } from "lucide-react"
 import { cn } from "@components/lib/utils"
 
@@ -167,6 +170,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
   const [addFolderFolderId, setAddFolderFolderId] = useState("")
   const [lastSaved, setLastSaved] = useState(null) // Track when data was last saved
   const [isAutoSaving, setIsAutoSaving] = useState(false) // Track auto-save status
+  const [showPreviewModal, setShowPreviewModal] = useState(false) // Track preview modal
 
   // Auto-save functions
   const saveToSessionStorage = useCallback(async (data) => {
@@ -806,31 +810,44 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
           </motion.div>
         ))}
 
-        <motion.div className="flex justify-end gap-3 pt-4 border-t" variants={itemVariants}>
+
+        <motion.div className="flex justify-between items-center pt-4 border-t" variants={itemVariants}>
           <Button
             type="button"
             variant="outline"
-            onClick={handleCancel}
-            disabled={isCreating}
-            className="px-6 bg-transparent"
+            onClick={() => setShowPreviewModal(true)}
+            disabled={totalResources === 0}
+            className="px-4 gap-2"
           >
-            Cancel
+            <FileText className="h-4 w-4" />
+            Generate Preview
           </Button>
-          <Button
-            type="button"
-            onClick={handleBulkCreate}
-            disabled={isCreating || resourcesWithErrors > 0 || totalResources === 0}
-            className="px-6"
-          >
-            {isCreating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Creating {totalResources} Resources...
-              </>
-            ) : (
-              `Create ${totalResources} Resource${totalResources !== 1 ? "s" : ""}`
-            )}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isCreating}
+              className="px-6 bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleBulkCreate}
+              disabled={isCreating || resourcesWithErrors > 0 || totalResources === 0}
+              className="px-6"
+            >
+              {isCreating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Creating {totalResources} Resources...
+                </>
+              ) : (
+                `Create ${totalResources} Resource${totalResources !== 1 ? "s" : ""}`
+              )}
+            </Button>
+          </div>
         </motion.div>
       </motion.div>
 
@@ -934,6 +951,115 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
             </Button>
             <Button type="button" onClick={addFolderToJob} disabled={!addFolderFolderId}>
               Add Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Resource Preview</DialogTitle>
+            <DialogDescription>
+              Review all {totalResources} resource{totalResources !== 1 ? "s" : ""} before creating them.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto custom-scrollbar">
+              <div className="space-y-2 p-2">
+                {jobGroups.map((jobGroup) => (
+                  <div key={jobGroup.id} className="space-y-1">
+                    {/* Job Level */}
+                    <div className="flex items-center gap-2 p-2 bg-primary/10 rounded border-l-2 border-primary">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                      <span className="font-medium">{jobGroup.jobName}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({(jobGroup.folders || []).reduce((total, folder) => total + (folder.resources || []).length, 0)} resources)
+                      </span>
+                    </div>
+                    
+                    {/* Folder Level */}
+                    {(jobGroup.folders || []).map((folderGroup) => (
+                      <div key={folderGroup.id} className="ml-4 space-y-1">
+                        <div className="flex items-center gap-2 p-1.5 bg-muted/50 rounded border-l border-muted-foreground/30">
+                          <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{folderGroup.folderName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(folderGroup.resources || []).length} resources)
+                          </span>
+                        </div>
+                        
+                        {/* Resource Level */}
+                        <div className="ml-4 space-y-0.5">
+                          {(folderGroup.resources || []).map((resource, index) => {
+                            const errors = validationErrors[`resource_${resource.id}`] || {}
+                            const hasErrors = Object.keys(errors).length > 0
+                            
+                            return (
+                              <div 
+                                key={resource.id} 
+                                className={`px-2 py-1 rounded border-l-2 ${
+                                  hasErrors 
+                                    ? "border-red-500 bg-red-50 dark:bg-red-950/20" 
+                                    : "border-green-500 bg-green-50 dark:bg-green-950/20"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-shrink-0">
+                                    {resource.taskMedium === "Document" ? (
+                                      <FileText className="h-3 w-3 text-blue-600" />
+                                    ) : (
+                                      <div className="h-3 w-3 text-purple-600">▶</div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-xs">
+                                        {resource.taskName || `Resource ${index + 1}`}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        W{resource.taskWeek}D{resource.taskDay}
+                                      </span>
+                                      <div className={`flex items-center ${resource.taskDescription ? 'text-green-600' : 'text-red-600'}`}>
+                                        <DescriptionIcon className="h-3 w-3" />
+                                      </div>
+                                      <div className={`flex items-center ${resource.taskLink ? 'text-green-600' : 'text-red-600'}`}>
+                                        {resource.taskLink ? (
+                                          <Link className="h-3 w-3" />
+                                        ) : (
+                                          <X className="h-3 w-3" />
+                                        )}
+                                      </div>
+                                      {hasErrors && (
+                                        <span className="text-xs text-red-600 font-medium">
+                                          Missing: {Object.keys(errors).join(', ')}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              Close Preview
             </Button>
           </DialogFooter>
         </DialogContent>
