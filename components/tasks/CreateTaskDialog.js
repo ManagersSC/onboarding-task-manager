@@ -155,34 +155,67 @@ export function CreateTaskDialog({
       <DialogContent
         className={currentMode === "bulk" ? "sm:max-w-[900px] max-h-[98vh]" : "sm:max-w-[500px]"}
       >
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>{getTitle()}</DialogTitle>
-              <DialogDescription>{getDescription()}</DialogDescription>
-            </div>
-            {showModeToggle && (
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={currentMode === "single" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentMode("single")}
-                >
-                  Single
-                </Button>
-                <Button
-                  type="button"
-                  variant={currentMode === "bulk" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentMode("bulk")}
-                >
-                  Bulk
-                </Button>
+        {currentMode === "bulk" && (
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>{getTitle()}</DialogTitle>
+                <DialogDescription>{getDescription()}</DialogDescription>
               </div>
-            )}
-          </div>
-        </DialogHeader>
+              {showModeToggle && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={currentMode === "single" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentMode("single")}
+                  >
+                    Single
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentMode === "bulk" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentMode("bulk")}
+                  >
+                    Bulk
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+        )}
+        
+        {currentMode === "single" && (
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>{getTitle()}</DialogTitle>
+                <DialogDescription>{getDescription()}</DialogDescription>
+              </div>
+              {showModeToggle && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={currentMode === "single" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentMode("single")}
+                  >
+                    Single
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentMode === "bulk" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentMode("bulk")}
+                  >
+                    Bulk
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+        )}
         {currentMode === "single" ? (
           <CreateTaskForm
             onSuccess={handleSuccess}

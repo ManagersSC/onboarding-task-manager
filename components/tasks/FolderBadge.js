@@ -55,9 +55,6 @@ export function FolderBadge({ name, usageCount, isSystem = false, className = ""
         {isSystem && (
           <span className="text-xs opacity-75">(S)</span>
         )}
-        {usageCount > 0 && (
-          <span className="text-xs opacity-75">({usageCount})</span>
-        )}
       </Badge>
     </motion.div>
   )

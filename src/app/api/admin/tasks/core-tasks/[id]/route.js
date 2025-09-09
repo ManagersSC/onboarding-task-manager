@@ -38,6 +38,44 @@ export async function GET(request, { params }) {
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
   try {
     const record = await base('Onboarding Tasks').find(id)
+    
+    // Resolve folder name from linked record
+    let folderName = ''
+    let folderInfo = null
+    const folderField = record.fields['Folder Name']
+    if (folderField && Array.isArray(folderField) && folderField.length > 0) {
+      try {
+        const folderRecord = await base('Onboarding Folders').find(folderField[0])
+        folderName = folderRecord.get('Name') || ''
+        folderInfo = {
+          name: folderName,
+          is_system: folderRecord.get('is_system') || false,
+          usage_count: folderRecord.get('usage_count') || 0
+        }
+      } catch (error) {
+        logger.error('Error fetching folder details:', error)
+      }
+    }
+
+    // Resolve job name from linked record
+    let jobTitle = ''
+    let jobInfo = null
+    const jobField = record.fields['Job']
+    if (jobField && Array.isArray(jobField) && jobField.length > 0) {
+      try {
+        const jobRecord = await base('Jobs').find(jobField[0])
+        jobTitle = jobRecord.get('Title') || ''
+        jobInfo = {
+          title: jobTitle,
+          description: jobRecord.get('Description') || '',
+          jobStatus: jobRecord.get('Job Status') || '',
+          requiredExperience: jobRecord.get('Required Experience') || ''
+        }
+      } catch (error) {
+        logger.error('Error fetching job details:', error)
+      }
+    }
+    
     const task = {
       id: record.id,
       title: record.fields['Task'] || '',
@@ -45,7 +83,10 @@ export async function GET(request, { params }) {
       type: record.fields['Type'] || '',
       week: record.fields['Week Number']?.toString() || '',
       day: record.fields['Day Number']?.toString() || '',
-      folderName: record.fields['Folder Name'] || '',
+      folderName: folderName,
+      folderInfo: folderInfo,
+      jobTitle: jobTitle,
+      jobInfo: jobInfo,
       job: record.fields['Job'] || '',
       location: record.fields['Location'] || '',
       resourceUrl: record.fields['Link'] || '',

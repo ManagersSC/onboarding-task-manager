@@ -43,7 +43,7 @@ const taskFormSchema = z.object({
   week: z.string().optional(),
   day: z.string().optional(),
   folderName: z.string().optional(),
-  job: z.string().optional(),
+  jobTitle: z.string().optional(),
   location: z.string().optional(),
   resourceUrl: z.string().url("Must be a valid URL").or(z.string().length(0)).optional(),
   attachments: z.array(z.any()).optional(),
@@ -63,6 +63,10 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
 
   // Track if form has been modified
   const [formModified, setFormModified] = useState(false)
+  
+  // Unsaved changes confirmation modal
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false)
+  const [pendingClose, setPendingClose] = useState(false)
 
   // Form definition
   const form = useForm({
@@ -74,7 +78,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
       week: "",
       day: "",
       folderName: "",
-      job: "",
+      jobTitle: "",
       location: "",
       resourceUrl: "",
       attachments: [],
@@ -233,7 +237,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
             week: task.week || "",
             day: task.day || "",
             folderName: task.folderName || "",
-            job: task.job || "",
+            jobTitle: task.jobTitle || "",
             location: task.location || "",
             resourceUrl: task.resourceUrl || "",
             attachments: task.attachments || [],
@@ -320,6 +324,29 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
     setPendingLinkChange(null)
   }
 
+  // Handle unsaved changes confirmation
+  const handleCloseWithUnsavedChanges = (isOpen) => {
+    if (!isOpen && formModified) {
+      setPendingClose(true)
+      setShowUnsavedChangesModal(true)
+      return
+    }
+    onOpenChange(isOpen)
+  }
+
+  // Confirm close with unsaved changes
+  const confirmCloseWithUnsavedChanges = () => {
+    setShowUnsavedChangesModal(false)
+    setPendingClose(false)
+    onOpenChange(false)
+  }
+
+  // Cancel close with unsaved changes
+  const cancelCloseWithUnsavedChanges = () => {
+    setShowUnsavedChangesModal(false)
+    setPendingClose(false)
+  }
+
   // Fetch folder options (simulated)
   useEffect(() => {
     if (open) {
@@ -357,10 +384,12 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
       // Create FormData for file uploads
       const formData = new FormData()
 
-      // Add regular form fields
+      // Add regular form fields with proper mapping
       Object.keys(data).forEach((key) => {
         if (key !== "attachments") {
-          formData.append(key, data[key])
+          // Map jobTitle back to job for the API
+          const fieldName = key === "jobTitle" ? "job" : key
+          formData.append(fieldName, data[key])
         }
       })
 
@@ -410,16 +439,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
         {open && (
           <Sheet
             open={open}
-            onOpenChange={(isOpen) => {
-              // Confirm before closing if there are unsaved changes
-              if (!isOpen && formModified) {
-                if (confirm("You have unsaved changes. Are you sure you want to close?")) {
-                  onOpenChange(false)
-                }
-                return
-              }
-              onOpenChange(isOpen)
-            }}
+            onOpenChange={handleCloseWithUnsavedChanges}
           >
             <SheetContent className="sm:max-w-md overflow-y-auto">
               <SheetHeader className="pb-4 border-b">
@@ -723,7 +743,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                       {/* Job */}
                       <FormField
                         control={form.control}
-                        name="job"
+                        name="jobTitle"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Job</FormLabel>
@@ -735,7 +755,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                   <FormControl>
                                     <SelectTrigger
                                       className={cn(
-                                        isFieldModified("job") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
+                                        isFieldModified("jobTitle") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                       )}
                                     >
                                       <SelectValue placeholder="Select job role" />
@@ -749,10 +769,10 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                {isFieldModified("job") && (
+                                {isFieldModified("jobTitle") && (
                                   <p className="text-xs text-muted-foreground flex items-center">
                                     <AlertCircle className="h-3 w-3 mr-1" />
-                                    Original: {originalData.job}
+                                    Original: {originalData.jobTitle}
                                   </p>
                                 )}
                                 <FormMessage />
@@ -1034,6 +1054,74 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelLinkChange}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmLinkChange}>Confirm Change</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsaved Changes Confirmation Dialog */}
+      <AlertDialog open={showUnsavedChangesModal} onOpenChange={setShowUnsavedChangesModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Unsaved Changes
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes to this task. Are you sure you want to close without saving? All your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Your changes include:
+                </p>
+                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                  {isFieldModified("title") && (
+                    <li>• Task name: "{originalData?.title}" → "{formValues.title}"</li>
+                  )}
+                  {isFieldModified("description") && (
+                    <li>• Description has been modified</li>
+                  )}
+                  {isFieldModified("type") && (
+                    <li>• Type: "{originalData?.type}" → "{formValues.type}"</li>
+                  )}
+                  {isFieldModified("week") && (
+                    <li>• Week: "{originalData?.week}" → "{formValues.week}"</li>
+                  )}
+                  {isFieldModified("day") && (
+                    <li>• Day: "{originalData?.day}" → "{formValues.day}"</li>
+                  )}
+                  {isFieldModified("folderName") && (
+                    <li>• Folder: "{originalData?.folderName}" → "{formValues.folderName}"</li>
+                  )}
+                  {isFieldModified("jobTitle") && (
+                    <li>• Job: "{originalData?.jobTitle}" → "{formValues.jobTitle}"</li>
+                  )}
+                  {isFieldModified("location") && (
+                    <li>• Location: "{originalData?.location}" → "{formValues.location}"</li>
+                  )}
+                  {isFieldModified("resourceUrl") && (
+                    <li>• Resource URL has been modified</li>
+                  )}
+                  {isFieldModified("attachments") && (
+                    <li>• Attachments have been modified</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelCloseWithUnsavedChanges}>
+              Keep Editing
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCloseWithUnsavedChanges}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard Changes
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
