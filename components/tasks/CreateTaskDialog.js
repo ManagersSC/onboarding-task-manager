@@ -55,10 +55,7 @@ export function CreateTaskDialog({
             </div>,
           )
 
-          // Clear session data only on successful API response
-          if (clearSessionData) {
-            clearSessionData()
-          }
+          // Note: Session clearing is now handled by BulkCreateResourcesForm component
         }
 
         // Close dialog after successful API call

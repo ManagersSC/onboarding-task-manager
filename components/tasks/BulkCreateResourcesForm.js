@@ -295,6 +295,17 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
     if (!resource.taskWeek || isNaN(resource.taskWeek)) errors.taskWeek = "Valid week number is required"
     if (!resource.taskDay || isNaN(resource.taskDay)) errors.taskDay = "Valid day number is required"
     if (!resource.taskMedium) errors.taskMedium = "Medium type is required"
+    if (!resource.taskLink?.trim()) errors.taskLink = "Resource link is required"
+    
+    // Validate URL format if link is provided
+    if (resource.taskLink?.trim()) {
+      try {
+        new URL(resource.taskLink)
+      } catch {
+        errors.taskLink = "Please enter a valid URL (e.g., https://example.com)"
+      }
+    }
+    
     return errors
   }, [])
 
@@ -422,23 +433,46 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
   }
 
   const updateResource = (jobGroupId, folderGroupId, resourceId, field, value) => {
-    setJobGroups((prev) => prev.map((jobGroup) => 
-      jobGroup.id === jobGroupId 
-        ? {
-            ...jobGroup,
-            folders: (jobGroup.folders || []).map((folderGroup) =>
-              folderGroup.id === folderGroupId
-                ? {
-                    ...folderGroup,
-                    resources: (folderGroup.resources || []).map((resource) => 
-                      resource.id === resourceId ? { ...resource, [field]: value } : resource
-                    )
-                  }
-                : folderGroup
-            )
+    setJobGroups((prev) => {
+      const updatedJobGroups = prev.map((jobGroup) => 
+        jobGroup.id === jobGroupId 
+          ? {
+              ...jobGroup,
+              folders: (jobGroup.folders || []).map((folderGroup) =>
+                folderGroup.id === folderGroupId
+                  ? {
+                      ...folderGroup,
+                      resources: (folderGroup.resources || []).map((resource) => 
+                        resource.id === resourceId ? { ...resource, [field]: value } : resource
+                      )
+                    }
+                  : folderGroup
+              )
+            }
+          : jobGroup
+      )
+      
+      // Find the updated resource and validate it immediately
+      const updatedResource = updatedJobGroups
+        .find(jg => jg.id === jobGroupId)
+        ?.folders?.find(fg => fg.id === folderGroupId)
+        ?.resources?.find(r => r.id === resourceId)
+      
+      if (updatedResource) {
+        const resourceErrors = validateResource(updatedResource)
+        setValidationErrors(prev => {
+          const newErrors = { ...prev }
+          if (Object.keys(resourceErrors).length > 0) {
+            newErrors[`resource_${resourceId}`] = resourceErrors
+          } else {
+            delete newErrors[`resource_${resourceId}`]
           }
-        : jobGroup
-    ))
+          return newErrors
+        })
+      }
+      
+      return updatedJobGroups
+    })
   }
 
   const removeResource = (jobGroupId, folderGroupId, resourceId) => {
@@ -524,7 +558,8 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
     setIsCreating(true)
     try {
       await onSuccess(allResources)
-      // Note: Session clearing is handled by parent component on success
+      // Clear local state and session data on successful API call
+      clearAllData()
     } catch (error) {
       // Don't clear session data on error - preserve user's work
       toast.error("Failed to create resources")
@@ -777,13 +812,21 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label className="text-xs text-muted-foreground">Resource Link</Label>
+                                  <Label className="text-xs text-muted-foreground">Resource Link *</Label>
                                   <Input
                                     placeholder="https://example.com"
                                     value={resource.taskLink}
                                     onChange={(e) => updateResource(jobGroup.id, folderGroup.id, resource.id, "taskLink", e.target.value)}
-                                    className="h-7 text-xs"
+                                    className={cn(
+                                      "h-7 text-xs",
+                                      validationErrors[`resource_${resource.id}`]?.taskLink ? "border-destructive" : "",
+                                    )}
                                   />
+                                  {validationErrors[`resource_${resource.id}`]?.taskLink && (
+                                    <p className="text-xs text-destructive">
+                                      {validationErrors[`resource_${resource.id}`].taskLink}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1026,8 +1069,8 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                       <div className={`flex items-center ${resource.taskDescription ? 'text-green-600' : 'text-red-600'}`}>
                                         <DescriptionIcon className="h-3 w-3" />
                                       </div>
-                                      <div className={`flex items-center ${resource.taskLink ? 'text-green-600' : 'text-red-600'}`}>
-                                        {resource.taskLink ? (
+                                      <div className={`flex items-center ${resource.taskLink && !errors.taskLink ? 'text-green-600' : 'text-red-600'}`}>
+                                        {resource.taskLink && !errors.taskLink ? (
                                           <Link className="h-3 w-3" />
                                         ) : (
                                           <X className="h-3 w-3" />
