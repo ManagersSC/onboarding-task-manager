@@ -57,7 +57,7 @@ export async function POST(request) {
     }
     
     const { resources } = requestBody
-    const testMode = true // Force production mode
+    const testMode = false // Force production mode
     
     if (!Array.isArray(resources) || resources.length === 0) {
       logger.error("Invalid request: resources array is required or empty", { resources })
