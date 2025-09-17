@@ -937,7 +937,7 @@ export function TaskManagement() {
 
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Created By</Label>
-                      <p className="mt-2 text-sm">{selectedTask.createdBy || "Unknown"}</p>
+                      <p className="mt-2 text-sm">{getStaffName(selectedTask.createdBy) || "Unknown"}</p>
                     </div>
 
                     {selectedTask.flaggedReason && (
