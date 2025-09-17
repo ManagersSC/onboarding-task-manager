@@ -470,7 +470,6 @@ export function NewHireTracker() {
         },
         body: JSON.stringify({
           onboardingStartDate: startDate,
-          triggerAutomation: true,
         }),
       })
 
@@ -488,14 +487,15 @@ export function NewHireTracker() {
             ? {
                 ...hire,
                 onboardingStartDate: startDate,
-                onboardingStarted: true,
-                onboardingInitiationFlow: true,
+                onboardingStarted: result.record.onboardingStarted,
+                onboardingInitiationFlow: result.record.onboardingInitiationFlow,
               }
             : hire,
         ),
       )
 
-      toast.success(`Onboarding started for ${selectedHireForStartDate.name}`)
+      // Show appropriate success message
+      toast.success(result.message)
 
       setStartDateModalOpen(false)
       setSelectedHireForStartDate(null)

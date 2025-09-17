@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
 
     // 2. Parse request body
     const body = await request.json()
-    const { onboardingStartDate, triggerAutomation = true } = body
+    const { onboardingStartDate } = body
 
     if (!onboardingStartDate) {
       return Response.json({ error: "Onboarding start date is required" }, { status: 400 })
@@ -71,7 +71,14 @@ export async function POST(request, { params }) {
       return Response.json({ error: error.message }, { status: 400 })
     }
 
-    // 4. Airtable setup
+    // 4. Check if start date is today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startDate = new Date(validatedDate)
+    startDate.setHours(0, 0, 0, 0)
+    const isToday = startDate.getTime() === today.getTime()
+
+    // 5. Airtable setup
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       logger.error("Server configuration error: Missing Airtable credentials")
       return Response.json({ error: "Server configuration error" }, { status: 500 })
@@ -79,7 +86,7 @@ export async function POST(request, { params }) {
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-    // 5. Get applicant record
+    // 6. Get applicant record
     const applicantId = params.id
     let applicantRecord
     try {
@@ -91,12 +98,13 @@ export async function POST(request, { params }) {
 
     const applicantName = applicantRecord.fields["Name"] || "Unknown"
     const applicantEmail = applicantRecord.fields["Email"] || ""
+    const jobID = applicantRecord.fields["Applying For"] || ""
 
-    // 6. Update Airtable fields
+    // 7. Update Airtable fields
     const fieldsToUpdate = {
       "Onboarding Start Date": validatedDate,
-      "Onboarding Started": true,
-      "Onboarding Initiation Flow": true
+      "Onboarding Initiation Flow": true,
+      ...(isToday && { "Onboarding Started": true })
     }
 
     const updatedRecord = await base("Applicants").update([
@@ -106,22 +114,18 @@ export async function POST(request, { params }) {
       }
     ])
 
-    // 7. Send webhooks to make.com if automation is triggered
-    if (triggerAutomation) {
+    // 8. Send webhook to make.com only if start date is today
+    if (isToday) {
       try {
         // Send task assignment webhook
         if (process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT) {
-          // Get calculated week and day values
-          const week = updatedRecord[0].fields["Onboarding Week"] || 1
-          const day = updatedRecord[0].fields["Onboarding Week Day"] || 1
-
           const taskAssignmentPayload = {
             action: "initiate",
             id: applicantId,
             name: applicantName,
             email: applicantEmail,
-            week: week,
-            day: day
+            jobID: jobID,
+            startDate: validatedDate
           }
 
           logger.debug(`Sending task assignment webhook payload: ${JSON.stringify(taskAssignmentPayload)}`)
@@ -179,7 +183,7 @@ export async function POST(request, { params }) {
       }
     }
 
-    // 8. Log successful onboarding start
+    // 9. Log successful onboarding start
     await logAuditEvent({
       eventType: "Onboarding Start Date Set",
       eventStatus: "Success",
@@ -190,16 +194,19 @@ export async function POST(request, { params }) {
       request
     })
 
-    // 9. Return success response
+    // 10. Return success response
     return Response.json({
       success: true,
-      message: "Onboarding started successfully",
+      message: isToday 
+        ? "Onboarding started successfully and tasks assigned!" 
+        : `Onboarding scheduled for ${validatedDate}. Tasks will be assigned on start date.`,
       record: {
         id: applicantId,
         onboardingStartDate: validatedDate,
-        onboardingStarted: true,
+        onboardingStarted: isToday,
         onboardingInitiationFlow: true
-      }
+      },
+      webhookSent: isToday
     })
 
   } catch (error) {
