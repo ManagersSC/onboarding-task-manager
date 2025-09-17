@@ -75,9 +75,10 @@ export async function GET(req) {
       description: task.fields["📖 Task Detail"] || "",
       rawDueDate: task.fields["📆 Due Date"] || "",
       priority: task.fields["🚨 Urgency"] || "medium",
-      status: (task.fields["🚀 Status"] || "").toLowerCase().trim(),
+      status: task.fields["🚀 Status"] || "", // Keep original case for select options
       createdBy: Array.isArray(task.fields["👩 Created By"]) ? task.fields["👩 Created By"][0] : (task.fields["👩 Created By"] || ""),
-      for: Array.isArray(task.fields["Assigned Staff Name"]) ? task.fields["Assigned Staff Name"][0] : (task.fields["Assigned Staff Name"] || ""),
+      for: Array.isArray(task.fields["👨 Assigned Staff"]) ? task.fields["👨 Assigned Staff"][0] : (task.fields["👨 Assigned Staff"] || ""), // Use record ID, not name
+      forName: Array.isArray(task.fields["Assigned Staff Name"]) ? task.fields["Assigned Staff Name"][0] : (task.fields["Assigned Staff Name"] || ""), // Store name separately
       flaggedReason: task.fields["Flagged Reason"] || "",
     }));
 

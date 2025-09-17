@@ -194,7 +194,13 @@ export async function editStaffTask(taskId, fields) {
   if (fields.flaggedReason !== undefined) airtableFields["Flagged Reason"] = fields.flaggedReason;
   if (fields.priority !== undefined) airtableFields["🚨 Urgency"] = fields.priority;
   if (fields.status !== undefined) airtableFields["🚀 Status"] = fields.status;
-  if (fields.dueDate !== undefined) airtableFields["📆 Due Date"] = fields.dueDate;
+  // Handle due date - only include if it's not null/empty
+  if (fields.dueDate !== undefined && fields.dueDate !== null && fields.dueDate !== "") {
+    airtableFields["📆 Due Date"] = fields.dueDate;
+  } else if (fields.dueDate === null || fields.dueDate === "") {
+    // Clear the due date field
+    airtableFields["📆 Due Date"] = null;
+  }
   if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
   // createdBy is not editable
 
@@ -207,6 +213,7 @@ export async function editStaffTask(taskId, fields) {
     ]);
     return updated[0];
   } catch (e) {
+    logger.error("Error updating task:", e);
     throw e;
   }
 }

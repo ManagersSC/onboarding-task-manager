@@ -71,7 +71,7 @@ const priorityOrder = {
 
 // Add this near the other utility functions
 const formatDueDate = (rawDate) => {
-  if (!rawDate) return "No date"
+  if (!rawDate) return "No due date"
   try {
     // Handle different date formats from Airtable
     const date = new Date(rawDate)
@@ -104,11 +104,11 @@ function getStatusGroup(status) {
 }
 
 const statusMap = {
-  "in-progress": "In-Progress",
-  completed: "Completed",
-  flagged: "Flagged",
-  overdue: "Overdue",
-  today: "In-Progress",
+  "in-progress": "In-progress",
+  "completed": "Completed",
+  "flagged": "Flagged",
+  "overdue": " Overdue",
+  "today": "In-progress",
 }
 
 // Shared normalization functions
@@ -255,41 +255,38 @@ export function TaskManagement() {
     }
   }
 
-  const deleteTask = (taskId) => {
-    let deletedTask
-    const newTasks = { ...tasks }
-    for (const key of Object.keys(newTasks)) {
-      const idx = newTasks[key].findIndex((t) => t.id === taskId)
-      if (idx !== -1) {
-        deletedTask = newTasks[key][idx]
-        newTasks[key] = [...newTasks[key].slice(0, idx), ...newTasks[key].slice(idx + 1)]
-        break
+  const deleteTask = async (taskId) => {
+    try {
+      // First, make the API call to delete the task
+      const response = await fetch(`/api/dashboard/tasks/${taskId}`, { 
+        method: "DELETE" 
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete task")
       }
-    }
-    setTasks(newTasks)
 
-    toast(
-      <div>
-        <span>Task deleted.</span>
-        <Button onClick={() => handleUndoDelete(deletedTask)} size="sm" variant="outline" className="ml-2">
-          Undo
-        </Button>
-      </div>,
-      {
-        duration: 10000,
-        onAutoClose: async () => {
-          if (deletedTask) {
-            try {
-              const res = await fetch(`/api/dashboard/tasks/${deletedTask.id}`, { method: "DELETE" })
-              if (!res.ok) throw new Error("Failed to delete task")
-              toast.success("Task permanently deleted.")
-            } catch (err) {
-              toast.error("Error deleting task: " + err.message)
-            }
-          }
-        },
-      },
-    )
+      // If API call succeeds, remove from local state
+      let deletedTask
+      const newTasks = { ...tasks }
+      for (const key of Object.keys(newTasks)) {
+        const idx = newTasks[key].findIndex((t) => t.id === taskId)
+        if (idx !== -1) {
+          deletedTask = newTasks[key][idx]
+          newTasks[key] = [...newTasks[key].slice(0, idx), ...newTasks[key].slice(idx + 1)]
+          break
+        }
+      }
+      setTasks(newTasks)
+
+      // Show success message
+      toast.success("Task deleted successfully!")
+      
+    } catch (err) {
+      console.error("Error deleting task:", err)
+      toast.error("Error deleting task: " + err.message)
+    }
   }
 
   const handleUndoDelete = (task) => {
@@ -320,26 +317,50 @@ export function TaskManagement() {
 
   const saveChanges = async () => {
     try {
+      // Validate required fields
+      if (!editedTask.title?.trim()) {
+        toast.error("Title is required")
+        return
+      }
+      if (!editedTask.priority?.trim()) {
+        toast.error("Priority is required")
+        return
+      }
+      if (!editedTask.status?.trim()) {
+        toast.error("Status is required")
+        return
+      }
+      if (editedTask.status === "Flagged" && !editedTask.flaggedReason?.trim()) {
+        toast.error("Flagged reason is required when status is Flagged")
+        return
+      }
+
       const response = await fetch(`/api/dashboard/tasks/${editedTask.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "edit",
           title: editedTask.title,
-          description: editedTask.description,
-          flaggedReason: editedTask.flaggedReason,
+          description: editedTask.description || "",
+          flaggedReason: editedTask.flaggedReason || "",
           priority: editedTask.priority,
           status: editedTask.status,
-          dueDate: editedTask.dueDate,
-          for: editedTask.for ? [editedTask.for] : [],
+          dueDate: editedTask.dueDate || null,
+          for: editedTask.for && editedTask.for !== "unassigned" ? [editedTask.for] : [],
         }),
       })
-      if (!response.ok) throw new Error("Failed to update task")
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update task")
+      }
+      
       fetchTasks()
       setEditDialogOpen(false)
       setHasChanges(false)
-      toast.success("Task updated!")
+      toast.success("Task updated successfully!")
     } catch (err) {
+      console.error("Error updating task:", err)
       toast.error("Error updating task: " + err.message)
     }
   }
@@ -477,14 +498,14 @@ export function TaskManagement() {
                         {getStaffInitials(task.for)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate">{getStaffName(task.for)}</span>
+                    <span className="truncate">{task.forName || getStaffName(task.for)}</span>
                   </>
                 )}
               </div>
               <Separator orientation="vertical" className="h-3 flex-shrink-0" />
               <div className="flex items-center gap-1 flex-shrink-0">
                 <Clock className="h-3 w-3" />
-                <span className={tabId === "overdue" ? "text-red-500 font-medium" : ""}>
+                <span className={tabId === "overdue" ? "text-red-500 font-medium" : task.rawDueDate ? "" : "text-muted-foreground italic"}>
                   {formatDueDate(task.rawDueDate)}
                 </span>
               </div>
@@ -504,22 +525,22 @@ export function TaskManagement() {
           <div className="flex items-center justify-end w-20 flex-shrink-0">
             <Badge
               className={`text-xs px-2 py-1 font-medium border-0 ${
-                task.status === "overdue"
+                task.status === " Overdue" || task.status === "overdue"
                   ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
-                  : task.status === "in-progress" || task.status === "today"
+                  : task.status === "In-progress" || task.status === "in-progress" || task.status === "today"
                     ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                    : task.status === "flagged"
+                    : task.status === "Flagged" || task.status === "flagged"
                       ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                       : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
               }`}
               variant="secondary"
             >
-              {task.status}
+              {task.status?.trim() || task.status}
             </Badge>
           </div>
 
-          {/* Actions - Properly hidden until hover */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+          {/* Actions - Always visible */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {isGlobalTask(task) ? (
               <TooltipProvider>
                 <Tooltip>
@@ -730,7 +751,7 @@ export function TaskManagement() {
     setEditedTask({
       ...task,
       dueDate: task.dueDate || "",
-      for: task.for || "",
+      for: task.for || "unassigned",
     })
     setEditDialogOpen(true)
   }
@@ -902,7 +923,7 @@ export function TaskManagement() {
                                   {getStaffInitials(selectedTask.for)}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm">{getStaffName(selectedTask.for)}</span>
+                              <span className="text-sm">{selectedTask.forName || getStaffName(selectedTask.for)}</span>
                             </>
                           )}
                         </div>
@@ -1005,9 +1026,9 @@ export function TaskManagement() {
                     Cancel
                   </Button>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (taskToDelete) {
-                        deleteTask(taskToDelete.id)
+                        await deleteTask(taskToDelete.id)
                         setDeleteTaskDialogOpen(false)
                       }
                     }}
@@ -1030,17 +1051,17 @@ export function TaskManagement() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-2xl p-6 shadow-2xl my-8"
+                className="bg-background border border-border rounded-xl w-full max-w-lg p-4 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Pencil className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <Pencil className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-foreground">Edit Task</h2>
+                      <h2 className="text-lg font-semibold text-foreground">Edit Task</h2>
                       {hasChanges && (
-                        <Badge className="bg-amber-500 text-white font-medium px-2 py-1 mt-1">Unsaved Changes</Badge>
+                        <Badge className="bg-amber-500 text-white font-medium px-2 py-0.5 text-xs mt-1">Unsaved Changes</Badge>
                       )}
                     </div>
                   </div>
@@ -1048,31 +1069,31 @@ export function TaskManagement() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setEditDialogOpen(false)}
-                    className="h-8 w-8 rounded-lg"
+                    className="h-7 w-7 rounded-lg"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
 
-                <p className="text-muted-foreground text-sm mb-6">ID: {editedTask.id}</p>
+                <p className="text-muted-foreground text-xs mb-4">ID: {editedTask.id}</p>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="title" className="text-foreground mb-2 block font-medium">
-                      Title
+                    <Label htmlFor="title" className="text-foreground mb-1 block font-medium text-sm">
+                      Title <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="title"
                       name="title"
                       value={editedTask.title}
                       onChange={handleInputChange}
-                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20 h-9"
                       placeholder="Enter task title"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="description" className="text-foreground mb-2 block font-medium">
+                    <Label htmlFor="description" className="text-foreground mb-1 block font-medium text-sm">
                       Description
                     </Label>
                     <Textarea
@@ -1081,35 +1102,37 @@ export function TaskManagement() {
                       value={editedTask.description}
                       onChange={handleInputChange}
                       className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
-                      rows={3}
+                      rows={2}
                       placeholder="Enter task description"
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="flaggedReason" className="text-foreground mb-2 block font-medium">
-                      Flagged Reason (if any)
-                    </Label>
-                    <Input
-                      id="flaggedReason"
-                      name="flaggedReason"
-                      value={editedTask.flaggedReason}
-                      onChange={handleInputChange}
-                      className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
-                      placeholder="Enter reason for flagging"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {editedTask.status === "Flagged" && (
                     <div>
-                      <Label htmlFor="priority" className="text-foreground mb-2 block font-medium">
-                        Priority
+                      <Label htmlFor="flaggedReason" className="text-foreground mb-1 block font-medium text-sm">
+                        Flagged Reason <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="flaggedReason"
+                        name="flaggedReason"
+                        value={editedTask.flaggedReason}
+                        onChange={handleInputChange}
+                        className="bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20 h-9"
+                        placeholder="Enter reason for flagging"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="priority" className="text-foreground mb-1 block font-medium text-sm">
+                        Priority <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={editedTask.priority}
                         onValueChange={(value) => handleSelectChange("priority", value)}
                       >
-                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20 h-9">
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border-border">
@@ -1123,32 +1146,32 @@ export function TaskManagement() {
                     </div>
 
                     <div>
-                      <Label htmlFor="status" className="text-foreground mb-2 block font-medium">
-                        Status
+                      <Label htmlFor="status" className="text-foreground mb-1 block font-medium text-sm">
+                        Status <span className="text-red-500">*</span>
                       </Label>
                       <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
-                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20 h-9">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border-border">
-                          <SelectItem value="In-Progress">In-Progress</SelectItem>
+                          <SelectItem value="In-progress">In-progress</SelectItem>
                           <SelectItem value="Completed">Completed</SelectItem>
                           <SelectItem value="Flagged">Flagged</SelectItem>
-                          <SelectItem value="Overdue">Overdue</SelectItem>
+                          <SelectItem value=" Overdue">Overdue</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="dueDate" className="text-foreground mb-2 block font-medium">
-                      Due Date
+                    <Label htmlFor="dueDate" className="text-foreground mb-1 block font-medium text-sm">
+                      Due Date <span className="text-muted-foreground">(Optional)</span>
                     </Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-left font-normal bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                          className="w-full justify-start text-left font-normal bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20 h-9"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {editedTask.dueDate && isValid(parse(editedTask.dueDate, "yyyy-MM-dd", new Date()))
@@ -1177,49 +1200,68 @@ export function TaskManagement() {
                             }}
                           />
                         </div>
+                        {editedTask.dueDate && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditedTask((prev) => ({
+                                ...prev,
+                                dueDate: "",
+                              }))
+                              setHasChanges(true)
+                            }}
+                            className="w-full"
+                          >
+                            Clear Date
+                          </Button>
+                        )}
                       </PopoverContent>
                     </Popover>
                   </div>
 
-                  <div>
-                    <Label htmlFor="for" className="text-foreground mb-2 block font-medium">
-                      Assigned To
-                    </Label>
-                    <Select value={editedTask.for || ""} onValueChange={(value) => handleSelectChange("for", value)}>
-                      <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20">
-                        <SelectValue placeholder="Select staff" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border-border">
-                        {staff.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="for" className="text-foreground mb-1 block font-medium text-sm">
+                        Assigned To
+                      </Label>
+                      <Select value={editedTask.for || "unassigned"} onValueChange={(value) => handleSelectChange("for", value)}>
+                        <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20 h-9">
+                          <SelectValue placeholder="Select staff" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {staff.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="createdBy" className="text-foreground mb-2 block font-medium">
-                      Created By
-                    </Label>
-                    <Input
-                      id="createdBy"
-                      value={editedTask.createdBy}
-                      disabled
-                      className="bg-muted border-border text-muted-foreground cursor-not-allowed"
-                    />
+                    <div>
+                      <Label htmlFor="createdBy" className="text-foreground mb-1 block font-medium text-sm">
+                        Created By
+                      </Label>
+                      <Input
+                        id="createdBy"
+                        value={getStaffName(editedTask.createdBy)}
+                        disabled
+                        className="bg-muted border-border text-muted-foreground cursor-not-allowed h-9"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 mt-8">
-                  <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="shadow-sm">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="shadow-sm h-9">
                     Cancel
                   </Button>
                   <Button
                     onClick={saveChanges}
                     disabled={!hasChanges}
-                    className={`flex items-center gap-2 shadow-sm ${
+                    className={`flex items-center gap-2 shadow-sm h-9 ${
                       hasChanges
                         ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                         : "bg-muted text-muted-foreground cursor-not-allowed"
