@@ -104,22 +104,96 @@ export async function POST(request) {
     // 3. Generate New Interface Message.
     const applicantId = applicantRecord.id;
     const applicantName = applicantRecord.fields["Name"] || "Unknown";
-    const taskTitle = taskLogRecord.fields["Task Title"] || "a task";
+    // Fix: Handle taskTitle as array (extract first element if it's an array)
+    const rawTaskTitle = taskLogRecord.fields["Task Title"] || "a task";
+    const taskTitle = Array.isArray(rawTaskTitle) ? rawTaskTitle[0] : rawTaskTitle;
     const interfaceMessage = applicantRecord.fields["Interface Message - Onboarding Status Update"] || "";
     const currentDateTime = new Date().toLocaleString("en-GB");
 
     const newLine = `- ${applicantName} has completed ${taskTitle} with record ID: ${taskId} at ${currentDateTime}`;
     const updatedMessage = interfaceMessage ? `${interfaceMessage}\n${newLine}` : newLine;
 
-    // 4. Send the response immediately.
+    // 4. Create Tasks table record for completed task (NEW FUNCTIONALITY)
+    let tasksRecordId = null;
+    try {
+      // Get the current date for completion tracking
+      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Get System staff record ID for Created By field
+      const systemStaff = await base("Staff")
+        .select({
+          filterByFormula: "{Name}='System'",
+          maxRecords: 1,
+        })
+        .firstPage();
+      
+      const systemStaffId = systemStaff.length > 0 ? systemStaff[0].id : null;
+      
+      // Prepare the Tasks table record using field IDs for reliability
+      const tasksRecord = {
+        fields: {
+          // Field ID mappings for Tasks table (tblCOusVRFrciv4Ck):
+          // fldBSR0tivzKCwIYX = "📌 Task"
+          // fld5zfFg0A2Kzfw8W = "📖 Task Detail" 
+          // fldwLSc95ITdPTA7j = "🚨 Urgency"
+          // fldcOYboUu2vDASCl = "🚀 Status"
+          // fldHx3or8FILZuGE2 = "👩 Created By"
+          // fld15xSpsrFIO0ONh = "👨 Assigned Staff"
+          // fldo7oJ0uwiwhNzmH = "👤 Assigned Applicant"
+          // fldJ6mb4TsamGXMFh = "📆 Due Date"
+          // fldyq3GebxaY3S9oM = "Onboarding Task ID"
+          // flddxTSDbSiHOD0a2 = "Completed Date"
+          // fldcXwC0PBEjUX9ZB = "Flagged Reason"
+          
+          "fldBSR0tivzKCwIYX": taskTitle || "Unknown Task", // 📌 Task - Original task title
+          "fld5zfFg0A2Kzfw8W": `Completed by ${applicantName} on ${currentDateTime}`, // 📖 Task Detail - Description with completion info
+          "fldwLSc95ITdPTA7j": "Low", // 🚨 Urgency - Completed tasks are low priority
+          "fldcOYboUu2vDASCl": "In-progress", // 🚀 Status
+          "fldHx3or8FILZuGE2": systemStaffId ? [systemStaffId] : [], // 👩 Created By - System staff
+          "fld15xSpsrFIO0ONh": [], // 👨 Assigned Staff - Empty (global task)
+          "fldo7oJ0uwiwhNzmH": [applicantId], // 👤 Assigned Applicant - The hire who completed it
+          "fldJ6mb4TsamGXMFh": null, // 📆 Due Date - No due date for completed tasks
+          "fldyq3GebxaY3S9oM": taskId, // Onboarding Task ID - Original Onboarding Tasks Logs record ID
+          "flddxTSDbSiHOD0a2": currentDate, // Completed Date - When it was completed
+          "fldcXwC0PBEjUX9ZB": "" // Flagged Reason - Empty for completed tasks
+        }
+      };
+
+      // Create the record in Tasks table
+      const createdTaskRecord = await base("Tasks").create([tasksRecord]);
+      tasksRecordId = createdTaskRecord[0].id;
+      
+      logger.info("Successfully created Tasks record for completed task:", {
+        taskId: taskId,
+        applicantName: applicantName,
+        tasksRecordId: tasksRecordId,
+        completedDate: currentDate
+      });
+
+    } catch (tasksError) {
+      // Log the error and include it in the response
+      logger.error("Failed to create Tasks record for completed task:", {
+        taskId: taskId,
+        applicantName: applicantName,
+        error: tasksError.message,
+        stack: tasksError.stack
+      });
+      
+      // Don't fail the entire operation, but log the error
+      console.error("Tasks creation failed:", tasksError);
+    }
+
+    // 5. Send the response with Tasks creation status
     const responsePayload = {
       message: `Task completed successfully for applicant: ${applicantName}`,
       recordId: applicantId,
       interfaceMessage: updatedMessage,
+      tasksRecordCreated: tasksRecordId ? true : false,
+      tasksRecordId: tasksRecordId
     };
     const response = Response.json(responsePayload);
 
-    // 5. Non-critical operations: update interface message and log audit event.
+    // 6. Non-critical operations: update interface message and log audit event.
     base("Applicants").update([
       {
         id: applicantId,

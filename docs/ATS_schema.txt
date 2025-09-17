@@ -1906,6 +1906,17 @@
                     "type": "singleLineText",
                     "id": "fldxy0aGb7UYf3mmM",
                     "name": "Onboarding - Quizzes copy"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblPakqoPLP632suo",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldsEdyEwatVrYYhT"
+                    },
+                    "id": "fld68E2eRbiDcZ9bZ",
+                    "name": "Onboarding Tasks"
                 }
             ],
             "views": [
@@ -2712,6 +2723,17 @@
                     "name": "📆 Due Date"
                 },
                 {
+                    "type": "date",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        }
+                    },
+                    "id": "flddxTSDbSiHOD0a2",
+                    "name": "Completed Date"
+                },
+                {
                     "type": "createdTime",
                     "options": {
                         "result": {
@@ -2731,6 +2753,11 @@
                     },
                     "id": "fldE8hei9MYIz3x2j",
                     "name": "📆 Created Time"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldyq3GebxaY3S9oM",
+                    "name": "Onboarding Task ID"
                 },
                 {
                     "type": "formula",
@@ -2767,6 +2794,15 @@
                     },
                     "id": "fldkDwNffHkGlxweP",
                     "name": "isDueLastMonth"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldU0KMcNOw0xrGaD",
+                    "name": "Requires Verification"
                 }
             ],
             "views": [
@@ -3030,17 +3066,37 @@
                     "name": "Folder Name"
                 },
                 {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblSrLl0u8iWBmTRX",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fld68E2eRbiDcZ9bZ"
+                    },
+                    "id": "fldsEdyEwatVrYYhT",
+                    "name": "Job"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld3dIpMeRwz2Hy8z",
+                    "name": "Task Body"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldFiyt0T2MkxCQhx",
+                    "name": "Requires Verification"
+                },
+                {
                     "type": "multipleAttachments",
                     "options": {
                         "isReversed": false
                     },
                     "id": "fld5WQf1coi4zNkX1",
                     "name": "File(s)"
-                },
-                {
-                    "type": "multilineText",
-                    "id": "fld3dIpMeRwz2Hy8z",
-                    "name": "Task Body"
                 },
                 {
                     "type": "singleSelect",
@@ -3079,35 +3135,6 @@
                     },
                     "id": "fldSO9vjQQiXTEnnc",
                     "name": "Manager Stage"
-                },
-                {
-                    "type": "singleSelect",
-                    "options": {
-                        "choices": [
-                            {
-                                "id": "seldJOMm39FLy2JYP",
-                                "name": "Nurse",
-                                "color": "blueLight2"
-                            },
-                            {
-                                "id": "selAewe715LkVdcYc",
-                                "name": "Dentist",
-                                "color": "cyanLight2"
-                            },
-                            {
-                                "id": "selnuZkGcTCF16gLe",
-                                "name": "Receptionist",
-                                "color": "tealLight2"
-                            },
-                            {
-                                "id": "selAuAliQAAFZJkfJ",
-                                "name": "Manager",
-                                "color": "greenLight2"
-                            }
-                        ]
-                    },
-                    "id": "fldsEdyEwatVrYYhT",
-                    "name": "Job"
                 },
                 {
                     "type": "singleSelect",
