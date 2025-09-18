@@ -39,6 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import { format, parse, isValid } from "date-fns"
 import { Separator } from "@components/ui/separator"
+import { Skeleton } from "@components/ui/skeleton"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
@@ -717,6 +718,7 @@ export function TaskManagement() {
           {/* Actions - Always visible */}
           <div className="flex items-center gap-1 flex-shrink-0">
             {isGlobalTask(task) ? (
+              <>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -747,6 +749,28 @@ export function TaskManagement() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedTask(task)
+                        setShowTaskDetails(true)
+                      }}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View Details</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              </>
             ) : (
               <>
                 <TooltipProvider>
@@ -1592,7 +1616,13 @@ export function TaskManagement() {
 
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Created By</Label>
-                      <p className="mt-2 text-sm">{getStaffName(selectedTask.createdBy) || "Unknown"}</p>
+                      <div className="mt-2">
+                        {staff && staff.length > 0 ? (
+                          <p className="text-sm">{getStaffName(selectedTask.createdBy) || "Unknown"}</p>
+                        ) : (
+                          <Skeleton className="h-4 w-40" />
+                        )}
+                      </div>
                     </div>
 
                     {selectedTask.flaggedReason && (
@@ -1617,31 +1647,33 @@ export function TaskManagement() {
                       </div>
                     )}
 
-                    <div className="flex gap-2 pt-4">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          completeTask(selectedTask.id)
-                          setShowTaskDetails(false)
-                        }}
-                        className="flex-1"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Complete
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          openEditDialog(selectedTask)
-                          setShowTaskDetails(false)
-                        }}
-                        className="flex-1"
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                    </div>
+                    {!isGlobalTask(selectedTask) && (
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            completeTask(selectedTask.id)
+                            setShowTaskDetails(false)
+                          }}
+                          className="flex-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Complete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            openEditDialog(selectedTask)
+                            setShowTaskDetails(false)
+                          }}
+                          className="flex-1"
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -1912,12 +1944,16 @@ export function TaskManagement() {
                       <Label htmlFor="createdBy" className="text-foreground mb-1 block font-medium text-sm">
                         Created By
                       </Label>
-                      <Input
-                        id="createdBy"
-                        value={getStaffName(editedTask.createdBy)}
-                        disabled
-                        className="bg-muted border-border text-muted-foreground cursor-not-allowed h-9"
-                      />
+                      {staff && staff.length > 0 ? (
+                        <Input
+                          id="createdBy"
+                          value={getStaffName(editedTask.createdBy)}
+                          disabled
+                          className="bg-muted border-border text-muted-foreground cursor-not-allowed h-9"
+                        />
+                      ) : (
+                        <Skeleton className="h-9 w-full rounded-md" />
+                      )}
                     </div>
                   </div>
                 </div>
