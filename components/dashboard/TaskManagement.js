@@ -177,6 +177,7 @@ export function TaskManagement() {
   const [staff, setStaff] = useState([])
   const [viewMode, setViewMode] = useState("list") // list, grid, calendar
   const [searchQuery, setSearchQuery] = useState("")
+  const lastTasksRef = useRef(null)
   const [selectedTask, setSelectedTask] = useState(null)
   const [showTaskDetails, setShowTaskDetails] = useState(false)
   const [showGroupsModal, setShowGroupsModal] = useState(false)
@@ -200,13 +201,11 @@ export function TaskManagement() {
     return !task?.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
   }
 
-  // Build groups of unclaimed global tasks by applicant
+  // Build groups of tasks by applicant (both unclaimed and claimed)
   const applicantGroups = (() => {
     const groups = {}
     const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
     for (const t of all) {
-      const isGlobal = isGlobalTask(t)
-      if (!isGlobal) continue
       if (!t.applicantId) continue
       const key = t.applicantId
       if (!groups[key]) {
@@ -361,8 +360,14 @@ export function TaskManagement() {
         return res.json()
       })
       .then((data) => {
-        console.log("Fetched tasks:", data.tasks)
-        setTasks(data.tasks || { upcoming: [], overdue: [], flagged: [] })
+        const incoming = data.tasks || { upcoming: [], overdue: [], flagged: [] }
+        const prev = lastTasksRef.current
+        const stringify = (obj) => JSON.stringify(obj)
+        // Avoid resetting state if structurally equal to prevent re-animations
+        if (!prev || stringify(prev) !== stringify(incoming)) {
+          setTasks(incoming)
+          lastTasksRef.current = incoming
+        }
         setLoading(false)
       })
       .catch((err) => {
@@ -603,7 +608,7 @@ export function TaskManagement() {
       .slice(0, 2) // Limit to 2 characters
   }
 
-  const filteredTasks = (taskList) => {
+  const filteredTasks = (taskList, tabId) => {
     if (!searchQuery) return taskList
     return taskList.filter(
       (task) =>
@@ -618,7 +623,7 @@ export function TaskManagement() {
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2, delay: index * 0.05 }}
@@ -648,25 +653,26 @@ export function TaskManagement() {
               <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1 min-w-0">
-              {isGlobalTask(task) ? (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                  <span className="text-emerald-600 font-medium">Global Task</span>
-                  {task.applicantName && (
-                    <>
-                      <Separator orientation="vertical" className="h-3 flex-shrink-0" />
-                      <span className="truncate">{task.applicantName}</span>
-                    </>
-                  )}
-                </div>
-              ) : (
+              <div className="flex items-center gap-2 min-w-0">
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] px-2 py-0.5 font-medium border-0 ${
+                    isGlobalTask(task)
+                      ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+                      : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                  }`}
+                >
+                  {isGlobalTask(task) ? "Unclaimed" : "Claimed"}
+                </Badge>
+                {task.applicantName && (
                   <>
-                    <Avatar className="h-4 w-4 flex-shrink-0">
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {getStaffInitials(task.for)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Separator orientation="vertical" className="h-3 flex-shrink-0" />
+                    <span className="truncate">{task.applicantName}</span>
+                  </>
+                )}
+                {!isGlobalTask(task) && (
+                  <>
+                    <Separator orientation="vertical" className="h-3 flex-shrink-0" />
                     <span className="truncate">{task.forName || getStaffName(task.for)}</span>
                   </>
                 )}
@@ -690,10 +696,10 @@ export function TaskManagement() {
             </div>
           </div>
 
-          {/* Status Badge - Fixed width for alignment */}
-          <div className="flex items-center justify-end w-20 flex-shrink-0">
+          {/* Compact Status Pill */}
+          <div className="ml-auto flex items-center flex-shrink-0">
             <Badge
-              className={`text-xs px-2 py-1 font-medium border-0 ${
+              className={`text-[10px] px-2 py-0.5 font-medium border-0 rounded-md ${
                 task.status === " Overdue" || task.status === "overdue"
                   ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
                   : task.status === "In-progress" || task.status === "in-progress" || task.status === "today"
@@ -791,20 +797,38 @@ export function TaskManagement() {
                     {!isGlobalTask(task) && (
                       <DropdownMenuItem
                         onClick={() => {
-                          fetch(`/api/dashboard/tasks/${task.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action: "unclaim" }),
-                          })
-                            .then(async (res) => {
+                          const key = `unclaim-${task.id}`
+                          const t = setTimeout(async () => {
+                            try {
+                              const res = await fetch(`/api/dashboard/tasks/${task.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "unclaim" }),
+                              })
                               if (!res.ok) {
                                 const d = await res.json()
                                 throw new Error(d.error || "Failed to unclaim")
                               }
-                              toast.success("Task unclaimed")
                               fetchTasks()
-                            })
-                            .catch((e) => toast.error(e.message))
+                            } catch (e) {
+                              toast.error(e.message)
+                            }
+                          }, 4000)
+                          pendingTimersRef.current.set(key, t)
+                          toast.success("Task will be unclaimed", {
+                            duration: 4000,
+                            action: {
+                              label: "Undo",
+                              onClick: () => {
+                                const timer = pendingTimersRef.current.get(key)
+                                if (timer) {
+                                  clearTimeout(timer)
+                                  pendingTimersRef.current.delete(key)
+                                  toast.success("Unclaim cancelled")
+                                }
+                              },
+                            },
+                          })
                         }}
                       >
                         <X className="h-3 w-3 mr-2" />
@@ -899,7 +923,11 @@ export function TaskManagement() {
   }
 
   const renderTaskList = (taskList, tabId) => {
-    const filtered = filteredTasks(taskList)
+    let filtered = filteredTasks(taskList, tabId)
+    // Upcoming should not show claimed tasks (they appear in My Queue)
+    if (tabId === "upcoming") {
+      filtered = filtered.filter((t) => isGlobalTask(t))
+    }
 
     if (filtered.length === 0) {
       return renderEmptyState(tabId)
@@ -914,7 +942,7 @@ export function TaskManagement() {
 
     return (
       <div className="space-y-2">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {sortedTasks.map((task, index) => (
             <TaskItem key={task.id} task={task} index={index} tabId={tabId} />
           ))}
@@ -1254,19 +1282,89 @@ export function TaskManagement() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Badge
-                                      className={`text-xs px-2 py-1 font-medium border-0 whitespace-nowrap ${
-                                        t.status === " Overdue" || t.status === "overdue"
-                                          ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
-                                          : t.status === "In-progress" || t.status === "in-progress" || t.status === "today"
-                                            ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                                            : t.status === "Flagged" || t.status === "flagged"
-                                              ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                                              : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                                      }`}
                                       variant="secondary"
+                                      className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
+                                        isGlobalTask(t)
+                                          ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+                                          : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                      }`}
                                     >
-                                      {t.status?.trim() || t.status}
+                                      {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
                                     </Badge>
+                                    {/* Actions mirroring the main component */}
+                                    {isGlobalTask(t) ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={() => handleClaimTask(t.id)}
+                                      >
+                                        <Plus className="h-3 w-3 mr-2" /> Claim
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8"
+                                          onClick={() => completeTask(t.id)}
+                                        >
+                                          <CheckCircle2 className="h-3 w-3 mr-2" /> Complete
+                                        </Button>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-8">
+                                              <MoreHorizontal className="h-3 w-3" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-44">
+                                            <DropdownMenuItem onClick={() => { setSelectedTask(t); setShowTaskDetails(true); }}>
+                                              <Eye className="h-3 w-3 mr-2" /> View Details
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => openEditDialog(t)}>
+                                              <Pencil className="h-3 w-3 mr-2" /> Edit Task
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => openFlagDialog(t)}>
+                                              <Flag className="h-3 w-3 mr-2" /> Flag
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                const key = `unclaim-${t.id}`
+                                                const timer = setTimeout(async () => {
+                                                  try {
+                                                    const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
+                                                      method: "PATCH",
+                                                      headers: { "Content-Type": "application/json" },
+                                                      body: JSON.stringify({ action: "unclaim" }),
+                                                    })
+                                                    if (!res.ok) {
+                                                      const d = await res.json()
+                                                      throw new Error(d.error || "Failed to unclaim")
+                                                    }
+                                                    fetchTasks()
+                                                  } catch (e) {
+                                                    toast.error(e.message)
+                                                  }
+                                                }, 4000)
+                                                pendingTimersRef.current.set(key, timer)
+                                                toast.success("Task will be unclaimed", {
+                                                  duration: 4000,
+                                                  action: {
+                                                    label: "Undo",
+                                                    onClick: () => {
+                                                      const tt = pendingTimersRef.current.get(key)
+                                                      if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
+                                                    },
+                                                  },
+                                                })
+                                              }}
+                                            >
+                                              <X className="h-3 w-3 mr-2" /> Unclaim
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -1274,14 +1372,6 @@ export function TaskManagement() {
                                       onClick={() => openFlagDialog(t)}
                                     >
                                       <Flag className="h-3 w-3 mr-2" /> Flag
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8"
-                                      onClick={() => handleClaimTask(t.id)}
-                                    >
-                                      <Plus className="h-3 w-3 mr-2" /> Claim
                                     </Button>
                                   </div>
                                 </div>

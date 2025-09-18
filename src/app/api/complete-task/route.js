@@ -145,8 +145,13 @@ export async function POST(request) {
           // flddxTSDbSiHOD0a2 = "Completed Date"
           // fldcXwC0PBEjUX9ZB = "Flagged Reason"
           
-          "fldBSR0tivzKCwIYX": taskTitle || "Unknown Task", // 📌 Task - Original task title
-          "fld5zfFg0A2Kzfw8W": `Completed by ${applicantName} on ${currentDateTime}`, // 📖 Task Detail - Description with completion info
+          // 📌 Task - Admin-facing, clear, professional
+          // Example: "Verify completion – Shannon Mantle: Online payments via Stripe"
+          "fldBSR0tivzKCwIYX": `Verify completion – ${applicantName}: ${taskTitle || "Task"}`,
+          // 📖 Task Detail - What happened and what the admin should do next
+          "fld5zfFg0A2Kzfw8W": `${applicantName} marked "${taskTitle}" as completed on ${currentDateTime}.
+
+Please review and confirm the task has been completed to the expected standard. If evidence or documentation is missing, flag the task with a clear reason. If the task is satisfactory, mark this admin task as Completed.`,
           "fldwLSc95ITdPTA7j": "Low", // 🚨 Urgency - Completed tasks are low priority
           "fldcOYboUu2vDASCl": "In-progress", // 🚀 Status
           "fldHx3or8FILZuGE2": systemStaffId ? [systemStaffId] : [], // 👩 Created By - System staff
