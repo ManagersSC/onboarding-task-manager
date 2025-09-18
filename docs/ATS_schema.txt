@@ -1695,6 +1695,28 @@
                     },
                     "id": "fldpEIySTM8zFD2R3",
                     "name": "Email Logs"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblCOusVRFrciv4Ck",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldtmqhschTQG0BLw"
+                    },
+                    "id": "fldJF3SReCx7Xwr1G",
+                    "name": "Tasks 3"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblCOusVRFrciv4Ck",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldS28s9A4cJoq3mH"
+                    },
+                    "id": "fldVP4YF8fRrxZCvX",
+                    "name": "Tasks 4"
                 }
             ],
             "views": [
@@ -2812,13 +2834,63 @@
                     "name": "isDueLastMonth"
                 },
                 {
-                    "type": "checkbox",
+                    "type": "multipleRecordLinks",
                     "options": {
-                        "icon": "check",
-                        "color": "greenBright"
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldJF3SReCx7Xwr1G"
                     },
-                    "id": "fldU0KMcNOw0xrGaD",
-                    "name": "Requires Verification"
+                    "id": "fldtmqhschTQG0BLw",
+                    "name": "Flagged By"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldqaOZiXihM1circ",
+                    "name": "Flagged At"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldVP4YF8fRrxZCvX"
+                    },
+                    "id": "fldS28s9A4cJoq3mH",
+                    "name": "Flagged Resolved By"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldeajCdUH8GTf5yM",
+                    "name": "Flagged Resolved At"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldzYQy1iZLI9SZvg",
+                    "name": "Resolution Note"
                 }
             ],
             "views": [
@@ -4986,6 +5058,11 @@
                             {
                                 "id": "sels7fTemr3vrgdzu",
                                 "name": "Bulk Resource Creation",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selc2tkQiyTFk9haK",
+                                "name": "Webhook",
                                 "color": "cyanBright"
                             },
                             {

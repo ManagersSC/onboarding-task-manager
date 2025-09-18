@@ -204,6 +204,21 @@ export async function editStaffTask(taskId, fields) {
     airtableFields["📆 Due Date"] = null;
   }
   if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
+  if (fields.claimedDate !== undefined) airtableFields["Claimed Date"] = fields.claimedDate;
+  // Flagging metadata (using field IDs from ATS schema)
+  if (fields.flaggedById !== undefined) {
+    airtableFields["fldtmqhschTQG0BLw"] = Array.isArray(fields.flaggedById)
+      ? fields.flaggedById
+      : (fields.flaggedById ? [fields.flaggedById] : []);
+  }
+  if (fields.flaggedAt !== undefined) airtableFields["fldqaOZiXihM1circ"] = fields.flaggedAt || null;
+  if (fields.flagResolvedById !== undefined) {
+    airtableFields["fldS28s9A4cJoq3mH"] = Array.isArray(fields.flagResolvedById)
+      ? fields.flagResolvedById
+      : (fields.flagResolvedById ? [fields.flagResolvedById] : []);
+  }
+  if (fields.flagResolvedAt !== undefined) airtableFields["fldeajCdUH8GTf5yM"] = fields.flagResolvedAt || null;
+  if (fields.resolutionNote !== undefined) airtableFields["fldzYQy1iZLI9SZvg"] = fields.resolutionNote;
   // createdBy is not editable
 
   try {

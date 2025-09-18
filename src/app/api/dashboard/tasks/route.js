@@ -113,6 +113,7 @@ export async function GET(req) {
         applicantId,
         applicantName: applicantId ? (applicantNameById[applicantId] || "Unknown") : "",
         flaggedReason: task.fields["Flagged Reason"] || "",
+        resolutionNote: task.fields["Resolution Note"] || "",
       });
     });
 

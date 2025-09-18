@@ -181,6 +181,7 @@ export function TaskManagement() {
   const [showTaskDetails, setShowTaskDetails] = useState(false)
   const [showGroupsModal, setShowGroupsModal] = useState(false)
   const [selectedApplicantId, setSelectedApplicantId] = useState(null)
+  const [groupSearch, setGroupSearch] = useState("")
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
@@ -192,6 +193,7 @@ export function TaskManagement() {
   const [hasChanges, setHasChanges] = useState(false)
 
   const [claimingTaskId, setClaimingTaskId] = useState(null)
+  const pendingTimersRef = useRef(new Map())
 
   // Helper: global task when no assigned staff
   function isGlobalTask(task) {
@@ -273,6 +275,84 @@ export function TaskManagement() {
     }
   }
 
+  // Flag actions
+  const [flagDialogTask, setFlagDialogTask] = useState(null)
+  const [flagReason, setFlagReason] = useState("")
+
+  const openFlagDialog = (task) => {
+    setFlagDialogTask(task)
+    setFlagReason(task?.flaggedReason || "")
+  }
+
+  const submitFlag = async () => {
+    if (!flagDialogTask?.id) return
+    if (!flagReason.trim()) {
+      toast.error("Flag reason is required")
+      return
+    }
+    try {
+      const res = await fetch(`/api/dashboard/tasks/${flagDialogTask.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "flag", flaggedReason: flagReason }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || "Failed to flag task")
+      }
+      toast.success("Task flagged")
+      setFlagDialogTask(null)
+      setFlagReason("")
+      fetchTasks()
+    } catch (e) {
+      toast.error(e.message)
+    }
+  }
+
+  const [resolveDialogTask, setResolveDialogTask] = useState(null)
+  const [resolveNote, setResolveNote] = useState("")
+
+  const openResolveDialog = (task) => {
+    setResolveDialogTask(task)
+    setResolveNote("")
+  }
+
+  const resolveFlag = async (taskId, note = "") => {
+    const key = `resolve-${taskId}`
+    if (pendingTimersRef.current.has(key)) return
+    const timer = setTimeout(async () => {
+      pendingTimersRef.current.delete(key)
+      try {
+        const res = await fetch(`/api/dashboard/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "resolveFlag", resolutionNote: note }),
+        })
+        if (!res.ok) {
+          const d = await res.json()
+          throw new Error(d.error || "Failed to resolve flag")
+        }
+        fetchTasks()
+      } catch (e) {
+        toast.error(e.message)
+      }
+    }, 5000)
+    pendingTimersRef.current.set(key, timer)
+    toast.success("Flag will be resolved", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const t = pendingTimersRef.current.get(key)
+          if (t) {
+            clearTimeout(t)
+            pendingTimersRef.current.delete(key)
+          }
+        },
+      },
+    })
+  }
+
   const fetchTasks = () => {
     setLoading(true)
     fetch("/api/dashboard/tasks")
@@ -293,18 +373,49 @@ export function TaskManagement() {
   }
 
   const completeTask = async (taskId) => {
-    try {
-      const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "complete" }),
-      })
-      if (!response.ok) throw new Error("Failed to complete task")
-      fetchTasks()
-      toast.success("Task marked as complete!")
-    } catch (err) {
-      toast.error("Error completing task: " + err.message)
-    }
+    const key = `complete-${taskId}`
+    if (pendingTimersRef.current.has(key)) return
+    // Optimistic remove from UI for smooth UX
+    setTasks((prev) => {
+      const next = { upcoming: [...prev.upcoming], overdue: [...prev.overdue], flagged: [...prev.flagged] }
+      for (const group of ["upcoming", "overdue", "flagged"]) {
+        const idx = next[group].findIndex((t) => t.id === taskId)
+        if (idx !== -1) next[group].splice(idx, 1)
+      }
+      return next
+    })
+    const timer = setTimeout(async () => {
+      pendingTimersRef.current.delete(key)
+      try {
+        const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "complete" }),
+        })
+        if (!response.ok) throw new Error("Failed to complete task")
+        // Backend done; no need to refetch immediately due to optimistic update
+      } catch (err) {
+        toast.error("Error completing task: " + err.message)
+        // Revert optimistic removal on error
+        fetchTasks()
+      }
+    }, 5000)
+    pendingTimersRef.current.set(key, timer)
+    toast.success("Task will be marked complete", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const t = pendingTimersRef.current.get(key)
+          if (t) {
+            clearTimeout(t)
+            pendingTimersRef.current.delete(key)
+            // Restore by refetching
+            fetchTasks()
+          }
+        },
+      },
+    })
   }
 
   const deleteTask = async (taskId) => {
@@ -537,13 +648,19 @@ export function TaskManagement() {
               <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1 min-w-0">
-                {isGlobalTask(task) ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-emerald-600 font-medium">Global Task</span>
-                  </div>
-                ) : (
+            <div className="flex items-center gap-1 min-w-0">
+              {isGlobalTask(task) ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-emerald-600 font-medium">Global Task</span>
+                  {task.applicantName && (
+                    <>
+                      <Separator orientation="vertical" className="h-3 flex-shrink-0" />
+                      <span className="truncate">{task.applicantName}</span>
+                    </>
+                  )}
+                </div>
+              ) : (
                   <>
                     <Avatar className="h-4 w-4 flex-shrink-0">
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -671,6 +788,29 @@ export function TaskManagement() {
                       <Pencil className="h-3 w-3 mr-2" />
                       Edit Task
                     </DropdownMenuItem>
+                    {!isGlobalTask(task) && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          fetch(`/api/dashboard/tasks/${task.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "unclaim" }),
+                          })
+                            .then(async (res) => {
+                              if (!res.ok) {
+                                const d = await res.json()
+                                throw new Error(d.error || "Failed to unclaim")
+                              }
+                              toast.success("Task unclaimed")
+                              fetchTasks()
+                            })
+                            .catch((e) => toast.error(e.message))
+                        }}
+                      >
+                        <X className="h-3 w-3 mr-2" />
+                        Unclaim
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={() => {
                         setDeleteTaskDialogOpen(true)
@@ -683,7 +823,74 @@ export function TaskManagement() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Flag available for claimed tasks too */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openFlagDialog(task)
+                        }}
+                      >
+                        <Flag className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Flag</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </>
+            )}
+            {isGlobalTask(task) && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openFlagDialog(task)
+                      }}
+                    >
+                      <Flag className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Flag</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {!isGlobalTask(task) && task.status === "Flagged" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openResolveDialog(task)
+                      }}
+                    >
+                      Resolve
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Resolve flag</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
@@ -736,9 +943,20 @@ export function TaskManagement() {
         description: "All clear! No tasks require special attention right now.",
         color: "text-amber-500",
       },
+      queue: {
+        icon: Users,
+        title: "No items in your queue",
+        description: "Claim tasks to start reviewing.",
+        color: "text-emerald-500",
+      },
     }
 
-    const config = emptyStateConfig[tabId]
+    const config = emptyStateConfig[tabId] || {
+      icon: Clock,
+      title: "No items",
+      description: "Nothing to show here right now.",
+      color: "text-muted-foreground",
+    }
     const Icon = config.icon
 
     return (
@@ -814,6 +1032,12 @@ export function TaskManagement() {
     flagged: tasks.flagged.length,
   }
 
+  // My Queue: tasks assigned to me (non-global) across all groups
+  const myQueue = (() => {
+    const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
+    return all.filter((t) => !isGlobalTask(t))
+  })()
+
   return (
     <TooltipProvider>
       <motion.div
@@ -877,7 +1101,7 @@ export function TaskManagement() {
 
           <CardContent className="pt-0">
             <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/30 p-1 rounded-lg h-11">
+              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/30 p-1 rounded-lg h-11">
                 <TabsTrigger
                   value="upcoming"
                   className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
@@ -908,6 +1132,16 @@ export function TaskManagement() {
                     {tabCounts.flagged}
                   </Badge>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="queue"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">My Queue</span>
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600/90 text-white text-xs" variant="secondary">
+                    {myQueue.length}
+                  </Badge>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="upcoming" className="mt-0">
@@ -920,6 +1154,10 @@ export function TaskManagement() {
 
               <TabsContent value="flagged" className="mt-0">
                 {renderTaskList(tasks.flagged, "flagged")}
+              </TabsContent>
+
+              <TabsContent value="queue" className="mt-0">
+                {renderTaskList(myQueue, "queue")}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -934,7 +1172,7 @@ export function TaskManagement() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-3xl p-5 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
+                className="bg-background border border-border rounded-xl w-full max-w-5xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -977,31 +1215,66 @@ export function TaskManagement() {
                     <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
                       {(() => {
                         const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
-                        const tasksFor = selected ? selected.tasks : []
+                        const tasksForRaw = selected ? selected.tasks : []
+                        const tasksFor = groupSearch
+                          ? tasksForRaw.filter((t) => (t.title || "").toLowerCase().includes(groupSearch.toLowerCase()))
+                          : tasksForRaw
                         const headerName = selected ? selected.applicantName : ""
                         return (
                           <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <div>
+                            <div className="flex items-center justify-between mb-3 gap-3">
+                              <div className="min-w-0">
                                 <h3 className="text-base font-semibold">{headerName}</h3>
                                 <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
                               </div>
-                              {selected && (
-                                <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
-                                  <Plus className="h-3 w-3 mr-2" /> Claim All
-                                </Button>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <Input
+                                    value={groupSearch}
+                                    onChange={(e) => setGroupSearch(e.target.value)}
+                                    placeholder="Search tasks..."
+                                    className="pl-7 h-8 w-48"
+                                  />
+                                </div>
+                                {selected && (
+                                  <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
+                                    <Plus className="h-3 w-3 mr-2" /> Claim All
+                                  </Button>
+                                )}
+                              </div>
                             </div>
 
                             <div className="space-y-2">
                               {tasksFor.map((t) => (
                                 <div key={t.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium truncate">{t.title}</div>
+                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
                                     <div className="text-xs text-muted-foreground truncate">ID: {t.id}</div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="text-xs">{t.status?.trim() || t.status}</Badge>
+                                    <Badge
+                                      className={`text-xs px-2 py-1 font-medium border-0 whitespace-nowrap ${
+                                        t.status === " Overdue" || t.status === "overdue"
+                                          ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                                          : t.status === "In-progress" || t.status === "in-progress" || t.status === "today"
+                                            ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                                            : t.status === "Flagged" || t.status === "flagged"
+                                              ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                                              : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+                                      }`}
+                                      variant="secondary"
+                                    >
+                                      {t.status?.trim() || t.status}
+                                    </Badge>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8"
+                                      onClick={() => openFlagDialog(t)}
+                                    >
+                                      <Flag className="h-3 w-3 mr-2" /> Flag
+                                    </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -1020,6 +1293,137 @@ export function TaskManagement() {
                     </div>
                   </div>
                 )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Flag Dialog */}
+        <AnimatePresence>
+          {flagDialogTask && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-amber/10">
+                      <Flag className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold">Flag Task</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setFlagDialogTask(null)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm">Reason <span className="text-red-500">*</span></Label>
+                    <Textarea value={flagReason} onChange={(e) => setFlagReason(e.target.value)} rows={3} className="mt-1" placeholder="Why is this task being flagged?" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="outline" onClick={() => setFlagDialogTask(null)}>Cancel</Button>
+                  <Button onClick={submitFlag}>Flag</Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Resolve Flag Dialog */}
+        <AnimatePresence>
+          {resolveDialogTask && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-emerald/10">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold">Resolve Flag</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setResolveDialogTask(null)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm">Resolution Note (optional)</Label>
+                    <Textarea value={resolveNote} onChange={(e) => setResolveNote(e.target.value)} rows={3} className="mt-1" placeholder="What changed or why is this resolved?" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="outline" onClick={() => setResolveDialogTask(null)}>Cancel</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setResolveDialogTask(null); resolveFlag(resolveDialogTask.id, resolveNote); }}
+                  >
+                    Resolve
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setResolveDialogTask(null)
+                      const key = `resolve-complete-${resolveDialogTask.id}`
+                      if (pendingTimersRef.current.has(key)) return
+                      const timer = setTimeout(async () => {
+                        pendingTimersRef.current.delete(key)
+                        try {
+                          const res = await fetch(`/api/dashboard/tasks/${resolveDialogTask.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "resolveAndComplete", resolutionNote: resolveNote }),
+                          })
+                          if (!res.ok) {
+                            const d = await res.json()
+                            throw new Error(d.error || "Failed to resolve & complete")
+                          }
+                          // Optimistic remove for smooth UX
+                          setTasks((prev) => {
+                            const next = { upcoming: [...prev.upcoming], overdue: [...prev.overdue], flagged: [...prev.flagged] }
+                            for (const group of ["upcoming", "overdue", "flagged"]) {
+                              const idx = next[group].findIndex((t) => t.id === resolveDialogTask.id)
+                              if (idx !== -1) next[group].splice(idx, 1)
+                            }
+                            return next
+                          })
+                        } catch (e) {
+                          toast.error(e.message)
+                          fetchTasks()
+                        }
+                      }, 5000)
+                      pendingTimersRef.current.set(key, timer)
+                      toast.success("Flag will be resolved and task completed", {
+                        duration: 5000,
+                        action: {
+                          label: "Undo",
+                          onClick: () => {
+                            const t = pendingTimersRef.current.get(key)
+                            if (t) {
+                              clearTimeout(t)
+                              pendingTimersRef.current.delete(key)
+                              fetchTasks()
+                            }
+                          },
+                        },
+                      })
+                    }}
+                  >
+                    Resolve & Complete
+                  </Button>
+                </div>
               </motion.div>
             </div>
           )}
@@ -1106,6 +1510,19 @@ export function TaskManagement() {
                         <Label className="text-sm font-medium text-muted-foreground">Flagged Reason</Label>
                         <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
                           <p className="text-sm text-amber-800 dark:text-amber-200">{selectedTask.flaggedReason}</p>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => resolveFlag(selectedTask.id)}>
+                            Resolve Flag
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {!selectedTask.flaggedReason && selectedTask.resolutionNote && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Resolution Note</Label>
+                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                          <p className="text-sm text-emerald-800 dark:text-emerald-200">{selectedTask.resolutionNote}</p>
                         </div>
                       </div>
                     )}
