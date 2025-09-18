@@ -1084,6 +1084,13 @@ export function TaskManagement() {
     flagged: tasks.flagged.length,
   }
 
+  // Accurate count for Unclaimed (across all groups, excluding completed which is not returned)
+  const unclaimedCount = [
+    ...(tasks.upcoming || []),
+    ...(tasks.overdue || []),
+    ...(tasks.flagged || []),
+  ].filter((t) => isGlobalTask(t)).length
+
   // My Queue: tasks assigned to me (non-global) across all groups
   const myQueue = (() => {
     const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
@@ -1159,9 +1166,9 @@ export function TaskManagement() {
                   className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
                 >
                   <Clock className="h-4 w-4" />
-                  <span className="hidden sm:inline">Upcoming</span>
+                  <span className="hidden sm:inline">Unclaimed</span>
                   <Badge className="bg-blue-500 hover:bg-blue-500/90 text-white text-xs" variant="secondary">
-                    {tabCounts.upcoming}
+                    {unclaimedCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
