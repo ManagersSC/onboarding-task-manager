@@ -160,7 +160,9 @@ export async function completeStaffTask(taskId){
     {
       id: taskId,
       fields: {
-        "🚀 Status": "Completed"
+        "🚀 Status": "Completed",
+        "👨 Assigned Staff": [],
+        "Claimed Date": null,
       }
     }
   ]);
@@ -252,6 +254,7 @@ export async function claimStaffTask(taskId, userId) {
         id: taskId,
         fields: {
           "👨 Assigned Staff": [userId],
+          "Claimed Date": new Date().toISOString(),
         },
       },
     ]);

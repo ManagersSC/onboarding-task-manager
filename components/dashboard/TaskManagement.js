@@ -21,6 +21,7 @@ import {
   Eye,
   Search,
   TrendingUp,
+  Users,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
@@ -178,6 +179,8 @@ export function TaskManagement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTask, setSelectedTask] = useState(null)
   const [showTaskDetails, setShowTaskDetails] = useState(false)
+  const [showGroupsModal, setShowGroupsModal] = useState(false)
+  const [selectedApplicantId, setSelectedApplicantId] = useState(null)
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
@@ -190,7 +193,34 @@ export function TaskManagement() {
 
   const [claimingTaskId, setClaimingTaskId] = useState(null)
 
-  const isGlobalTask = (task) => !task.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
+  // Helper: global task when no assigned staff
+  function isGlobalTask(task) {
+    return !task?.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
+  }
+
+  // Build groups of unclaimed global tasks by applicant
+  const applicantGroups = (() => {
+    const groups = {}
+    const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
+    for (const t of all) {
+      const isGlobal = isGlobalTask(t)
+      if (!isGlobal) continue
+      if (!t.applicantId) continue
+      const key = t.applicantId
+      if (!groups[key]) {
+        groups[key] = {
+          applicantId: t.applicantId,
+          applicantName: t.applicantName || "Unknown",
+          tasks: [],
+        }
+      }
+      groups[key].tasks.push(t)
+    }
+    const arr = Object.values(groups)
+    // Sort by number of tasks desc then name
+    arr.sort((a, b) => (b.tasks.length - a.tasks.length) || a.applicantName.localeCompare(b.applicantName))
+    return arr
+  })()
 
   const handleClaimTask = async (taskId) => {
     setClaimingTaskId(taskId)
@@ -218,6 +248,28 @@ export function TaskManagement() {
       toast.error("Error claiming task: " + err.message)
     } finally {
       setClaimingTaskId(null)
+    }
+  }
+
+  const handleClaimAllForApplicant = async (applicantId) => {
+    try {
+      const res = await fetch(`/api/dashboard/tasks/claim-all`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicantId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to claim tasks")
+      }
+      const claimedCount = (data.claimed || []).length
+      const alreadyCount = (data.alreadyClaimed || []).length
+      toast.success(
+        `Claimed ${claimedCount} task${claimedCount === 1 ? "" : "s"}${alreadyCount ? `, ${alreadyCount} already claimed` : ""}`,
+      )
+      fetchTasks()
+    } catch (e) {
+      toast.error(`Claim all failed: ${e.message}`)
     }
   }
 
@@ -796,6 +848,15 @@ export function TaskManagement() {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setShowGroupsModal(true)}
+                  className="shadow-sm hover:shadow-md transition-shadow bg-transparent"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Hire Completions
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={fetchTasks}
                   className="shadow-sm hover:shadow-md transition-shadow bg-transparent"
                 >
@@ -863,6 +924,106 @@ export function TaskManagement() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Hire Completions Modal */}
+        <AnimatePresence>
+          {showGroupsModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-3xl p-5 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-foreground">Hire Completions</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {applicantGroups.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Left: Applicants */}
+                    <div className="md:col-span-1 border rounded-lg p-3 bg-card/50">
+                      <div className="space-y-2">
+                        {applicantGroups.map((g) => (
+                          <button
+                            key={g.applicantId}
+                            onClick={() => setSelectedApplicantId(g.applicantId)}
+                            className={`w-full text-left px-3 py-2 rounded-md border transition ${
+                              selectedApplicantId === g.applicantId ? "bg-primary/10 border-primary/30" : "hover:bg-muted/40"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium truncate">{g.applicantName}</span>
+                              <Badge className="text-xs bg-blue-500 text-white" variant="secondary">{g.tasks.length}</Badge>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right: Tasks for selected applicant */}
+                    <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
+                      {(() => {
+                        const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
+                        const tasksFor = selected ? selected.tasks : []
+                        const headerName = selected ? selected.applicantName : ""
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h3 className="text-base font-semibold">{headerName}</h3>
+                                <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
+                              </div>
+                              {selected && (
+                                <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
+                                  <Plus className="h-3 w-3 mr-2" /> Claim All
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {tasksFor.map((t) => (
+                                <div key={t.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium truncate">{t.title}</div>
+                                    <div className="text-xs text-muted-foreground truncate">ID: {t.id}</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="text-xs">{t.status?.trim() || t.status}</Badge>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8"
+                                      onClick={() => handleClaimTask(t.id)}
+                                    >
+                                      <Plus className="h-3 w-3 mr-2" /> Claim
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Task Details Sidebar */}
         <AnimatePresence>

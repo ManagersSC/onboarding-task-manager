@@ -172,7 +172,7 @@ export async function POST(request, { params }) {
         logger.error("Failed to send webhook:", webhookError)
         // Don't fail the entire request if webhook fails, but log it
         await logAuditEvent({
-          eventType: "Onboarding Webhook Error",
+          eventType: "Webhook",
           eventStatus: "Error",
           userRole: userRole,
           userName: userName,

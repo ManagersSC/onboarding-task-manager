@@ -2760,6 +2760,22 @@
                     "name": "Onboarding Task ID"
                 },
                 {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldExdpb2dPzlR8zV",
+                    "name": "Claimed Date"
+                },
+                {
                     "type": "formula",
                     "options": {
                         "isValid": true,
