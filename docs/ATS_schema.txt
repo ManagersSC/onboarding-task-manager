@@ -1695,6 +1695,28 @@
                     },
                     "id": "fldpEIySTM8zFD2R3",
                     "name": "Email Logs"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblCOusVRFrciv4Ck",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldtmqhschTQG0BLw"
+                    },
+                    "id": "fldJF3SReCx7Xwr1G",
+                    "name": "Tasks 3"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblCOusVRFrciv4Ck",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldS28s9A4cJoq3mH"
+                    },
+                    "id": "fldVP4YF8fRrxZCvX",
+                    "name": "Tasks 4"
                 }
             ],
             "views": [
@@ -1906,6 +1928,17 @@
                     "type": "singleLineText",
                     "id": "fldxy0aGb7UYf3mmM",
                     "name": "Onboarding - Quizzes copy"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblPakqoPLP632suo",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldsEdyEwatVrYYhT"
+                    },
+                    "id": "fld68E2eRbiDcZ9bZ",
+                    "name": "Onboarding Tasks"
                 }
             ],
             "views": [
@@ -2712,6 +2745,17 @@
                     "name": "📆 Due Date"
                 },
                 {
+                    "type": "date",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        }
+                    },
+                    "id": "flddxTSDbSiHOD0a2",
+                    "name": "Completed Date"
+                },
+                {
                     "type": "createdTime",
                     "options": {
                         "result": {
@@ -2731,6 +2775,27 @@
                     },
                     "id": "fldE8hei9MYIz3x2j",
                     "name": "📆 Created Time"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldyq3GebxaY3S9oM",
+                    "name": "Onboarding Task ID"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldExdpb2dPzlR8zV",
+                    "name": "Claimed Date"
                 },
                 {
                     "type": "formula",
@@ -2767,6 +2832,65 @@
                     },
                     "id": "fldkDwNffHkGlxweP",
                     "name": "isDueLastMonth"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldJF3SReCx7Xwr1G"
+                    },
+                    "id": "fldtmqhschTQG0BLw",
+                    "name": "Flagged By"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldqaOZiXihM1circ",
+                    "name": "Flagged At"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldVP4YF8fRrxZCvX"
+                    },
+                    "id": "fldS28s9A4cJoq3mH",
+                    "name": "Flagged Resolved By"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldeajCdUH8GTf5yM",
+                    "name": "Flagged Resolved At"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldzYQy1iZLI9SZvg",
+                    "name": "Resolution Note"
                 }
             ],
             "views": [
@@ -3030,17 +3154,37 @@
                     "name": "Folder Name"
                 },
                 {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblSrLl0u8iWBmTRX",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fld68E2eRbiDcZ9bZ"
+                    },
+                    "id": "fldsEdyEwatVrYYhT",
+                    "name": "Job"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld3dIpMeRwz2Hy8z",
+                    "name": "Task Body"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldFiyt0T2MkxCQhx",
+                    "name": "Requires Verification"
+                },
+                {
                     "type": "multipleAttachments",
                     "options": {
                         "isReversed": false
                     },
                     "id": "fld5WQf1coi4zNkX1",
                     "name": "File(s)"
-                },
-                {
-                    "type": "multilineText",
-                    "id": "fld3dIpMeRwz2Hy8z",
-                    "name": "Task Body"
                 },
                 {
                     "type": "singleSelect",
@@ -3079,35 +3223,6 @@
                     },
                     "id": "fldSO9vjQQiXTEnnc",
                     "name": "Manager Stage"
-                },
-                {
-                    "type": "singleSelect",
-                    "options": {
-                        "choices": [
-                            {
-                                "id": "seldJOMm39FLy2JYP",
-                                "name": "Nurse",
-                                "color": "blueLight2"
-                            },
-                            {
-                                "id": "selAewe715LkVdcYc",
-                                "name": "Dentist",
-                                "color": "cyanLight2"
-                            },
-                            {
-                                "id": "selnuZkGcTCF16gLe",
-                                "name": "Receptionist",
-                                "color": "tealLight2"
-                            },
-                            {
-                                "id": "selAuAliQAAFZJkfJ",
-                                "name": "Manager",
-                                "color": "greenLight2"
-                            }
-                        ]
-                    },
-                    "id": "fldsEdyEwatVrYYhT",
-                    "name": "Job"
                 },
                 {
                     "type": "singleSelect",
@@ -4943,6 +5058,11 @@
                             {
                                 "id": "sels7fTemr3vrgdzu",
                                 "name": "Bulk Resource Creation",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selc2tkQiyTFk9haK",
+                                "name": "Webhook",
                                 "color": "cyanBright"
                             },
                             {

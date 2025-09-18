@@ -104,22 +104,114 @@ export async function POST(request) {
     // 3. Generate New Interface Message.
     const applicantId = applicantRecord.id;
     const applicantName = applicantRecord.fields["Name"] || "Unknown";
-    const taskTitle = taskLogRecord.fields["Task Title"] || "a task";
+    // Fix: Handle taskTitle as array (extract first element if it's an array)
+    const rawTaskTitle = taskLogRecord.fields["Task Title"] || "a task";
+    const taskTitle = Array.isArray(rawTaskTitle) ? rawTaskTitle[0] : rawTaskTitle;
     const interfaceMessage = applicantRecord.fields["Interface Message - Onboarding Status Update"] || "";
     const currentDateTime = new Date().toLocaleString("en-GB");
 
     const newLine = `- ${applicantName} has completed ${taskTitle} with record ID: ${taskId} at ${currentDateTime}`;
     const updatedMessage = interfaceMessage ? `${interfaceMessage}\n${newLine}` : newLine;
 
-    // 4. Send the response immediately.
+    // 4. Create Tasks table record for completed task (NEW FUNCTIONALITY)
+    let tasksRecordId = null;
+    try {
+      // Get the current date for completion tracking
+      const now = new Date();
+      const currentDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0]; // YYYY-MM-DD local
+
+      // Compute due date = 2 working days after today (Mon-Fri)
+      const addWorkingDays = (start, numDays) => {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        let added = 0;
+        while (added < numDays) {
+          d.setDate(d.getDate() + 1);
+          const day = d.getDay(); // 0 Sun, 6 Sat
+          if (day !== 0 && day !== 6) added += 1;
+        }
+        return d;
+      };
+      const due = addWorkingDays(now, 2);
+      const dueDate = new Date(due.getTime() - due.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      
+      // Get System staff record ID for Created By field
+      const systemStaff = await base("Staff")
+        .select({
+          filterByFormula: "{Name}='System'",
+          maxRecords: 1,
+        })
+        .firstPage();
+      
+      const systemStaffId = systemStaff.length > 0 ? systemStaff[0].id : null;
+      
+      // Prepare the Tasks table record using field IDs for reliability
+      const tasksRecord = {
+        fields: {
+          // Field ID mappings for Tasks table (tblCOusVRFrciv4Ck):
+          // fldBSR0tivzKCwIYX = "📌 Task"
+          // fld5zfFg0A2Kzfw8W = "📖 Task Detail" 
+          // fldwLSc95ITdPTA7j = "🚨 Urgency"
+          // fldcOYboUu2vDASCl = "🚀 Status"
+          // fldHx3or8FILZuGE2 = "👩 Created By"
+          // fld15xSpsrFIO0ONh = "👨 Assigned Staff"
+          // fldo7oJ0uwiwhNzmH = "👤 Assigned Applicant"
+          // fldJ6mb4TsamGXMFh = "📆 Due Date"
+          // fldyq3GebxaY3S9oM = "Onboarding Task ID"
+          // flddxTSDbSiHOD0a2 = "Completed Date"
+          // fldcXwC0PBEjUX9ZB = "Flagged Reason"
+          
+          // 📌 Task - Admin-facing, clear, professional
+          // Example: "Verify completion – Shannon Mantle: Online payments via Stripe"
+          "fldBSR0tivzKCwIYX": `Verify completion – ${applicantName}: ${taskTitle || "Task"}`,
+          // 📖 Task Detail - What happened and what the admin should do next
+          "fld5zfFg0A2Kzfw8W": `${applicantName} marked "${taskTitle}" as completed on ${currentDateTime}.\n\nPlease review and confirm the task has been completed to the expected standard. If evidence or documentation is missing, flag the task with a clear reason. If the task is satisfactory, mark this task as Completed.`,
+          "fldwLSc95ITdPTA7j": "Low", // 🚨 Urgency - Completed tasks are low priority
+          "fldcOYboUu2vDASCl": "In-progress", // 🚀 Status
+          "fldHx3or8FILZuGE2": systemStaffId ? [systemStaffId] : [], // 👩 Created By - System staff
+          "fld15xSpsrFIO0ONh": [], // 👨 Assigned Staff - Empty (global task)
+          "fldo7oJ0uwiwhNzmH": [applicantId], // 👤 Assigned Applicant - The hire who completed it
+          "fldJ6mb4TsamGXMFh": dueDate, // 📆 Due Date - 2 working days from today
+          "fldyq3GebxaY3S9oM": taskId, // Onboarding Task ID - Original Onboarding Tasks Logs record ID
+          "flddxTSDbSiHOD0a2": currentDate, // Completed Date - When it was completed
+          "fldcXwC0PBEjUX9ZB": "" // Flagged Reason - Empty for completed tasks
+        }
+      };
+
+      // Create the record in Tasks table
+      const createdTaskRecord = await base("Tasks").create([tasksRecord]);
+      tasksRecordId = createdTaskRecord[0].id;
+      
+      logger.info("Successfully created Tasks record for completed task:", {
+        taskId: taskId,
+        applicantName: applicantName,
+        tasksRecordId: tasksRecordId,
+        completedDate: currentDate
+      });
+
+    } catch (tasksError) {
+      // Log the error and include it in the response
+      logger.error("Failed to create Tasks record for completed task:", {
+        taskId: taskId,
+        applicantName: applicantName,
+        error: tasksError.message,
+        stack: tasksError.stack
+      });
+      
+      // Don't fail the entire operation, but log the error
+      console.error("Tasks creation failed:", tasksError);
+    }
+
+    // 5. Send the response with Tasks creation status
     const responsePayload = {
       message: `Task completed successfully for applicant: ${applicantName}`,
       recordId: applicantId,
       interfaceMessage: updatedMessage,
+      tasksRecordCreated: tasksRecordId ? true : false,
+      tasksRecordId: tasksRecordId
     };
     const response = Response.json(responsePayload);
 
-    // 5. Non-critical operations: update interface message and log audit event.
+    // 6. Non-critical operations: update interface message and log audit event.
     base("Applicants").update([
       {
         id: applicantId,

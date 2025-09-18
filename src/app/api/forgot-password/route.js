@@ -69,7 +69,7 @@ export async function POST(request) {
         const webhookError = await response.json();
         logger.error("Webhook failed", webhookError);
         await logAuditEvent({
-          eventType: "Forgot Password Webhook Error",
+          eventType: "Webhook",
           eventStatus: "Error",
           userIdentifier: normalisedEmail,
           detailedMessage: `Webhook call failed:\n Status: ${response.status}\n Error: ${webhookError}`,

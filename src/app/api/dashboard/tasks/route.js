@@ -68,18 +68,54 @@ export async function GET(req) {
       console.log("No tasks returned for userName:", userName);
     }
 
+    // Build applicantId -> name map for tasks referencing Applicants
+    const applicantIdSet = new Set();
+    for (const t of tasks) {
+      const applicantLinks = t.fields["👤 Assigned Applicant"];
+      if (Array.isArray(applicantLinks) && applicantLinks.length > 0) {
+        for (const a of applicantLinks) applicantIdSet.add(a);
+      }
+    }
+
+    let applicantNameById = {};
+    if (applicantIdSet.size > 0) {
+      const ids = Array.from(applicantIdSet);
+      const formula = ids.map(id => `RECORD_ID() = '${id}'`).join(", ");
+      try {
+        const applicants = await base('Applicants')
+          .select({
+            filterByFormula: `OR(${formula})`,
+            fields: ['Name'],
+          })
+          .all();
+        applicantNameById = Object.fromEntries(
+          applicants.map(a => [a.id, a.fields['Name'] || 'Unknown'])
+        );
+      } catch (e) {
+        console.error('Error fetching applicant names:', e);
+      }
+    }
+
     // Map tasks to match frontend expectations
-    const mappedTasks = tasks.map(task => ({
-      id: task.id,
-      title: task.fields["📌 Task"] || "",
-      description: task.fields["📖 Task Detail"] || "",
-      rawDueDate: task.fields["📆 Due Date"] || "",
-      priority: task.fields["🚨 Urgency"] || "medium",
-      status: (task.fields["🚀 Status"] || "").toLowerCase().trim(),
-      createdBy: Array.isArray(task.fields["👩 Created By"]) ? task.fields["👩 Created By"][0] : (task.fields["👩 Created By"] || ""),
-      for: Array.isArray(task.fields["Assigned Staff Name"]) ? task.fields["Assigned Staff Name"][0] : (task.fields["Assigned Staff Name"] || ""),
-      flaggedReason: task.fields["Flagged Reason"] || "",
-    }));
+    const mappedTasks = tasks.map(task => {
+      const applicantLinks = task.fields["👤 Assigned Applicant"];
+      const applicantId = Array.isArray(applicantLinks) && applicantLinks.length > 0 ? applicantLinks[0] : "";
+      return ({
+        id: task.id,
+        title: task.fields["📌 Task"] || "",
+        description: task.fields["📖 Task Detail"] || "",
+        rawDueDate: task.fields["📆 Due Date"] || "",
+        priority: task.fields["🚨 Urgency"] || "medium",
+        status: task.fields["🚀 Status"] || "", // Keep original case for select options
+        createdBy: Array.isArray(task.fields["👩 Created By"]) ? task.fields["👩 Created By"][0] : (task.fields["👩 Created By"] || ""),
+        for: Array.isArray(task.fields["👨 Assigned Staff"]) ? task.fields["👨 Assigned Staff"][0] : (task.fields["👨 Assigned Staff"] || ""), // Use record ID, not name
+        forName: Array.isArray(task.fields["Assigned Staff Name"]) ? task.fields["Assigned Staff Name"][0] : (task.fields["Assigned Staff Name"] || ""), // Store name separately
+        applicantId,
+        applicantName: applicantId ? (applicantNameById[applicantId] || "Unknown") : "",
+        flaggedReason: task.fields["Flagged Reason"] || "",
+        resolutionNote: task.fields["Resolution Note"] || "",
+      });
+    });
 
     // Group by status (upcoming, overdue, flagged)
     const grouped = { upcoming: [], overdue: [], flagged: [] };

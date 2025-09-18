@@ -160,7 +160,9 @@ export async function completeStaffTask(taskId){
     {
       id: taskId,
       fields: {
-        "🚀 Status": "Completed"
+        "🚀 Status": "Completed",
+        "👨 Assigned Staff": [],
+        "Claimed Date": null,
       }
     }
   ]);
@@ -194,8 +196,29 @@ export async function editStaffTask(taskId, fields) {
   if (fields.flaggedReason !== undefined) airtableFields["Flagged Reason"] = fields.flaggedReason;
   if (fields.priority !== undefined) airtableFields["🚨 Urgency"] = fields.priority;
   if (fields.status !== undefined) airtableFields["🚀 Status"] = fields.status;
-  if (fields.dueDate !== undefined) airtableFields["📆 Due Date"] = fields.dueDate;
+  // Handle due date - only include if it's not null/empty
+  if (fields.dueDate !== undefined && fields.dueDate !== null && fields.dueDate !== "") {
+    airtableFields["📆 Due Date"] = fields.dueDate;
+  } else if (fields.dueDate === null || fields.dueDate === "") {
+    // Clear the due date field
+    airtableFields["📆 Due Date"] = null;
+  }
   if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
+  if (fields.claimedDate !== undefined) airtableFields["Claimed Date"] = fields.claimedDate;
+  // Flagging metadata (using field IDs from ATS schema)
+  if (fields.flaggedById !== undefined) {
+    airtableFields["fldtmqhschTQG0BLw"] = Array.isArray(fields.flaggedById)
+      ? fields.flaggedById
+      : (fields.flaggedById ? [fields.flaggedById] : []);
+  }
+  if (fields.flaggedAt !== undefined) airtableFields["fldqaOZiXihM1circ"] = fields.flaggedAt || null;
+  if (fields.flagResolvedById !== undefined) {
+    airtableFields["fldS28s9A4cJoq3mH"] = Array.isArray(fields.flagResolvedById)
+      ? fields.flagResolvedById
+      : (fields.flagResolvedById ? [fields.flagResolvedById] : []);
+  }
+  if (fields.flagResolvedAt !== undefined) airtableFields["fldeajCdUH8GTf5yM"] = fields.flagResolvedAt || null;
+  if (fields.resolutionNote !== undefined) airtableFields["fldzYQy1iZLI9SZvg"] = fields.resolutionNote;
   // createdBy is not editable
 
   try {
@@ -207,6 +230,7 @@ export async function editStaffTask(taskId, fields) {
     ]);
     return updated[0];
   } catch (e) {
+    logger.error("Error updating task:", e);
     throw e;
   }
 }
@@ -245,6 +269,7 @@ export async function claimStaffTask(taskId, userId) {
         id: taskId,
         fields: {
           "👨 Assigned Staff": [userId],
+          "Claimed Date": new Date().toISOString(),
         },
       },
     ]);

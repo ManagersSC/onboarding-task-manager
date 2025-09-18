@@ -62,6 +62,139 @@ export async function PATCH(req, { params }){
         });
         return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
+    case "flag":
+      try {
+        const reason = (fields && fields.flaggedReason) || '';
+        // get staff id for metadata
+        let userStaffId = null;
+        try {
+          const cookieStore = await cookies();
+          const sealedSession = cookieStore.get("session")?.value;
+          if (sealedSession) {
+            const session = await unsealData(sealedSession, {
+              password: process.env.SESSION_SECRET,
+            });
+            userStaffId = session.userStaffId || null;
+          }
+        } catch {}
+        const updateFields = {
+          status: 'Flagged',
+          flaggedReason: reason,
+          // Only include flaggedById if we have a real record id
+          ...(userStaffId ? { flaggedById: userStaffId } : {}),
+          flaggedAt: new Date().toISOString(),
+          // Do not send empty arrays for link fields
+          flagResolvedAt: null,
+        };
+        const updated = await editStaffTask(id, updateFields);
+        await logAuditEvent({
+          eventType: 'Task Flagged',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' flagged by ${userName}.`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Flagged',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task flag failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
+    case "resolveFlag":
+      try {
+        let userStaffId = null;
+        try {
+          const cookieStore = await cookies();
+          const sealedSession = cookieStore.get("session")?.value;
+          if (sealedSession) {
+            const session = await unsealData(sealedSession, {
+              password: process.env.SESSION_SECRET,
+            });
+            userStaffId = session.userStaffId || null;
+          }
+        } catch {}
+        const updated = await editStaffTask(id, {
+          status: 'In-progress',
+          flaggedReason: '',
+          flagResolvedById: userStaffId,
+          flagResolvedAt: new Date().toISOString(),
+          resolutionNote: (fields && fields.resolutionNote) || '',
+        });
+        await logAuditEvent({
+          eventType: 'Task Flag Resolved',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' flag resolved by ${userName}.`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Flag Resolved',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task flag resolve failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
+    case "resolveAndComplete":
+      try {
+        let userStaffId = null;
+        try {
+          const cookieStore = await cookies();
+          const sealedSession = cookieStore.get("session")?.value;
+          if (sealedSession) {
+            const session = await unsealData(sealedSession, {
+              password: process.env.SESSION_SECRET,
+            });
+            userStaffId = session.userStaffId || null;
+          }
+        } catch {}
+        const updated = await editStaffTask(id, {
+          status: 'Completed',
+          flaggedReason: '',
+          flagResolvedById: userStaffId,
+          flagResolvedAt: new Date().toISOString(),
+          resolutionNote: (fields && fields.resolutionNote) || '',
+          for: [],
+          claimedDate: null,
+        });
+        await logAuditEvent({
+          eventType: 'Task Flag Resolved & Completed',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' flag resolved and completed by ${userName}.`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Flag Resolved & Completed',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task resolve&complete failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
     case "claim":
       try {
         // Get the user's Airtable staff record ID from the session
@@ -100,6 +233,31 @@ export async function PATCH(req, { params }){
           request: req,
         });
         return new Response(JSON.stringify({ error: e.message }), { status: e.message === "Task already claimed" ? 409 : 500 });
+      }
+    case "unclaim":
+      try {
+        const updated = await editStaffTask(id, { for: [], claimedDate: null });
+        await logAuditEvent({
+          eventType: 'Task Unclaimed',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' unclaimed by ${userName} (${userEmail}).`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Unclaimed',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task unclaim failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
       }
     default:
       return new Response(JSON.stringify({ error: "Invalid action" }), {status: 400});
