@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
+import { format, parse, isValid, isBefore, startOfDay } from "date-fns"
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +30,8 @@ import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
 import { Badge } from "@components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -461,6 +464,15 @@ export function NewHireTracker() {
   const handleSetStartDate = async () => {
     if (!selectedHireForStartDate || !startDate) return
 
+    // Validate not in the past
+    try {
+      const selected = parse(startDate, "yyyy-MM-dd", new Date())
+      if (isValid(selected) && isBefore(startOfDay(selected), startOfDay(new Date()))) {
+        toast.error("Start date cannot be in the past")
+        return
+      }
+    } catch {}
+
     setSettingStartDate(true)
     try {
       const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForStartDate.id}/start-onboarding`, {
@@ -872,14 +884,45 @@ export function NewHireTracker() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="start-date">Start Date</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                className="mt-1"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="mt-1 w-full justify-start text-left font-normal"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {startDate && isValid(parse(startDate, "yyyy-MM-dd", new Date()))
+                      ? format(parse(startDate, "yyyy-MM-dd", new Date()), "PPP")
+                      : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+                  <div className="rounded-md border">
+                    <CustomCalendar
+                      selected={startDate ? parse(startDate, "yyyy-MM-dd", new Date()) : undefined}
+                      onSelect={(date) => {
+                        if (!date) return
+                        if (isBefore(startOfDay(date), startOfDay(new Date()))) {
+                          toast.error("Start date cannot be in the past")
+                          return
+                        }
+                        const str = format(date, "yyyy-MM-dd")
+                        setStartDate(str)
+                      }}
+                    />
+                  </div>
+                  {startDate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setStartDate("")}
+                      className="w-full"
+                    >
+                      Clear Date
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
             {selectedHireForStartDate && (
               <div className="text-sm text-muted-foreground">
