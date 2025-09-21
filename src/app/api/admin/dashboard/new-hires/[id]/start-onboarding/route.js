@@ -114,10 +114,10 @@ export async function POST(request, { params }) {
       }
     ])
 
-    // 8. Send webhook to make.com only if start date is today
+    // 8. Send webhook(s)
+    // - Task assignment: only when the start date is today
     if (isToday) {
       try {
-        // Send task assignment webhook
         if (process.env.MAKE_WEBHOOK_URL_TASK_ASSIGNMENT) {
           const taskAssignmentPayload = {
             action: "initiate",
@@ -144,43 +144,55 @@ export async function POST(request, { params }) {
 
           logger.info("Task assignment webhook sent successfully to make.com")
         }
-
-        // Send onboarding notification webhook
-        if (process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION) {
-          const notificationPayload = {
-            name: applicantName,
-            recordID: applicantId
-          }
-
-          logger.debug(`Sending onboarding notification webhook payload: ${JSON.stringify(notificationPayload)}`)
-
-          const notificationResponse = await fetch(process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(notificationPayload)
-          })
-
-          if (!notificationResponse.ok) {
-            const errorText = await notificationResponse.text()
-            logger.error(`Onboarding notification webhook failed: ${notificationResponse.status} - ${errorText}`)
-            throw new Error(`Onboarding notification webhook failed: ${notificationResponse.statusText}`)
-          }
-
-          logger.info("Onboarding notification webhook sent successfully to make.com")
-        }
       } catch (webhookError) {
-        logger.error("Failed to send webhook:", webhookError)
-        // Don't fail the entire request if webhook fails, but log it
+        logger.error("Failed to send task assignment webhook:", webhookError)
         await logAuditEvent({
           eventType: "Webhook",
           eventStatus: "Error",
           userRole: userRole,
           userName: userName,
           userIdentifier: userEmail,
-          detailedMessage: `Webhook failed for applicant ${applicantName}: ${webhookError.message}`,
+          detailedMessage: `Task assignment webhook failed for applicant ${applicantName}: ${webhookError.message}`,
           request
         })
       }
+    }
+
+    // - Onboarding notification: always send regardless of start date
+    try {
+      if (process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION) {
+        const notificationPayload = {
+          name: applicantName,
+          recordID: applicantId
+        }
+
+        logger.debug(`Sending onboarding notification webhook payload: ${JSON.stringify(notificationPayload)}`)
+
+        const notificationResponse = await fetch(process.env.MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(notificationPayload)
+        })
+
+        if (!notificationResponse.ok) {
+          const errorText = await notificationResponse.text()
+          logger.error(`Onboarding notification webhook failed: ${notificationResponse.status} - ${errorText}`)
+          throw new Error(`Onboarding notification webhook failed: ${notificationResponse.statusText}`)
+        }
+
+        logger.info("Onboarding notification webhook sent successfully to make.com")
+      }
+    } catch (webhookError) {
+      logger.error("Failed to send onboarding notification webhook:", webhookError)
+      await logAuditEvent({
+        eventType: "Webhook",
+        eventStatus: "Error",
+        userRole: userRole,
+        userName: userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Onboarding notification webhook failed for applicant ${applicantName}: ${webhookError.message}`,
+        request
+      })
     }
 
     // 9. Log successful onboarding start

@@ -17,8 +17,17 @@ See [README](./README.md) for a folder-by-folder breakdown.
 - Open a pull request for review
 
 ## Running Tests
-- Run `npm test` to execute all tests
-- Use Jest for unit/integration tests
+- Use the pinned Jest config (`jest.config.cjs`).
+- Run all tests:
+  - `npm test`
+- Run a specific test or pattern (example):
+  - `npm test -- start-onboarding`
+- If running Jest directly, always pass the config explicitly:
+  - `npx jest --config jest.config.cjs`
+  
+Notes:
+- Avoid using other config files (we removed `jest.config.js`) to prevent conflicts.
+- Jest is used for unit/integration tests.
 
 ## Debugging & Troubleshooting
 - Check logs in the console and Vercel dashboard

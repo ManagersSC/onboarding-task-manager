@@ -8,8 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint --fix",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "jest -c jest.config.cjs",
+    "test:watch": "jest -c jest.config.cjs --watch"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",
