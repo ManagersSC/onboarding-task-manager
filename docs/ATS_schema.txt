@@ -2554,7 +2554,7 @@
                     "type": "formula",
                     "options": {
                         "isValid": true,
-                        "formula": "\"ID-\" & LEFT(RECORD_ID(), 5) & \"-\" & DATETIME_FORMAT({fldE8hei9MYIz3x2j}, 'YYMMDDHHmm')\r\n",
+                        "formula": "\"ID-\" & RECORD_ID() & \"-\" & DATETIME_FORMAT({fldE8hei9MYIz3x2j}, 'YYMMDDHHmm')\r\n",
                         "referencedFieldIds": [
                             "fldE8hei9MYIz3x2j"
                         ],
@@ -5063,6 +5063,11 @@
                             {
                                 "id": "selc2tkQiyTFk9haK",
                                 "name": "Webhook",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selrY2VKgbDzuDyJr",
+                                "name": "Onboarding Start Date",
                                 "color": "cyanBright"
                             },
                             {
