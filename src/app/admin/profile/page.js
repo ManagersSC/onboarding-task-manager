@@ -15,14 +15,37 @@ import { Switch } from "@components/ui/switch"
 import { Separator } from "@components/ui/separator"
 import { Skeleton } from "@components/ui/skeleton"
 import { Badge } from "@components/ui/badge"
-import { AlertCircle, Bell, Edit, Mail, Moon, Save, Sun, UserCog, Lock, Shield } from "lucide-react"
+import { AlertCircle, Bell, Edit, Mail, Moon, Save, UserCog, Lock, Shield, Sun } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@components/ui/alert-dialog"
+import { toast } from "sonner"
 import React from "react"
 
 export default function ProfilePage() {
   const { profile, loading, error } = useProfile()
   const { theme, setTheme } = useTheme()
   const [isEditing, setIsEditing] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "" })
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -69,6 +92,32 @@ export default function ProfilePage() {
     console.log("Saving profile:", formData)
     setIsEditing(false)
     // Show success message or handle errors
+  }
+
+  const handleInviteChange = (e) => {
+    const { name, value } = e.target
+    setInviteForm((p) => ({ ...p, [name]: value }))
+  }
+
+  const sendInvite = async () => {
+    setInviteLoading(true)
+    try {
+      const res = await fetch("/api/admin/invite-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result?.error || "Failed to send invite")
+      toast.success("Invite sent successfully")
+      setInviteOpen(false)
+      setInviteForm({ name: "", email: "" })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setInviteLoading(false)
+      setConfirmOpen(false)
+    }
   }
 
   // Animation variants
@@ -133,21 +182,28 @@ export default function ProfilePage() {
                         <CardTitle>Personal Information</CardTitle>
                         <CardDescription>Manage your personal details and contact information</CardDescription>
                       </div>
-                      <Button
-                        variant={isEditing ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => (isEditing ? handleSaveProfile() : setIsEditing(true))}
-                      >
-                        {isEditing ? (
-                          <>
-                            <Save className="mr-2 h-4 w-4" /> Save
-                          </>
-                        ) : (
-                          <>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={isEditing ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => (isEditing ? handleSaveProfile() : setIsEditing(true))}
+                        >
+                          {isEditing ? (
+                            <>
+                              <Save className="mr-2 h-4 w-4" /> Save
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </>
+                          )}
+                        </Button>
+                        {profile?.role === "Admin" && (
+                          <Button variant="default" size="sm" onClick={() => setInviteOpen(true)}>
+                            <UserCog className="mr-2 h-4 w-4" /> Create Admin
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col md:flex-row gap-6">
@@ -453,7 +509,7 @@ export default function ProfilePage() {
                       </div>
                     </CardContent>
                     <CardFooter>
-                      <Button variant="outline" className="w-full">
+                      <Button variant="outline" className="w-full bg-transparent">
                         View All Activity
                       </Button>
                     </CardFooter>
@@ -464,6 +520,110 @@ export default function ProfilePage() {
           )}
         </motion.div>
       </div>
+
+      {/* Invite Admin Dialog */}
+      <Dialog
+        open={inviteOpen}
+        onOpenChange={(open) => {
+          console.log("[v0] Main dialog onOpenChange:", open)
+          setInviteOpen(open)
+          if (!open) {
+            setConfirmOpen(false)
+            setInviteForm({ name: "", email: "" })
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">Create Admin Account</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              Send a secure invite email to set a password. Link is valid for 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmOpen ? (
+            <div className="space-y-6 py-4">
+              <p className="text-sm text-muted-foreground">
+                You are about to send an admin invite to
+                {" "}
+                <span className="font-medium text-foreground">{inviteForm.email}</span>.
+                Ensure this is an authorised company admin.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-name" className="text-sm font-medium">
+                  Name
+                </Label>
+                <Input
+                  id="admin-name"
+                  name="name"
+                  value={inviteForm.name}
+                  onChange={handleInviteChange}
+                  placeholder="Jane Doe"
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-email" className="text-sm font-medium">
+                  Email
+                </Label>
+                <Input
+                  id="admin-email"
+                  name="email"
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={handleInviteChange}
+                  placeholder="jane@company.com"
+                  className="h-10"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-4">
+            {confirmOpen ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmOpen(false)}
+                  className="w-full sm:w-auto"
+                  disabled={inviteLoading}
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={sendInvite}
+                  disabled={inviteLoading}
+                  className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {inviteLoading ? "Sending..." : "Send Invite"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setInviteOpen(false)}
+                  className="w-full sm:w-auto"
+                  disabled={inviteLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={!inviteForm.name || !inviteForm.email || inviteLoading}
+                  className="w-full sm:w-auto"
+                >
+                  Continue
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

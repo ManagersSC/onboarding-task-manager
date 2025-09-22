@@ -46,7 +46,7 @@ export async function middleware(request) {
     }
   }
 
-  const isPublic = ["/", "/signup", "forgot-password"].includes(path);
+  const isPublic = ["/", "/signup", "/forgot-password", "/accept-admin-invite"].includes(path);
   const isAdminRoute = path.startsWith("/admin");
 
   // Check session cookie
