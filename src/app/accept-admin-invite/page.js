@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@components/ui/card"
 import { Input } from "@components/ui/input"
@@ -9,7 +9,7 @@ import { Label } from "@components/ui/label"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
-export default function AcceptAdminInvitePage() {
+function AcceptAdminInviteInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [token, setToken] = useState("")
@@ -152,6 +152,14 @@ export default function AcceptAdminInvitePage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function AcceptAdminInvitePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-6 text-sm text-muted-foreground">Loading…</div>}>
+      <AcceptAdminInviteInner />
+    </Suspense>
   )
 }
 
