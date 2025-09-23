@@ -44,6 +44,12 @@ export async function GET() {
         onboardingStartDate: record.get('Onboarding Start Date'),
         onboardingStarted: record.get('Onboarding Started'),
         onboardingStatus: record.get('Onboarding Status'),
+        // Pause/Resume fields
+        onboardingPaused: record.get('Onboarding Paused') || false,
+        onboardingPausedAt: record.get('Onboarding Paused At') || null,
+        onboardingPausedReason: record.get('Onboarding Paused Reason') || null,
+        onboardingResumedAt: record.get('Onboarding Resumed At') || null,
+        onboardingResumedOn: record.get('Onboarding Resumed On') || null,
         progress: calculateProgress(record),
         tasks: getTaskStats(record),
         avatar: record.get('Profile Photo')?.[0]?.url
