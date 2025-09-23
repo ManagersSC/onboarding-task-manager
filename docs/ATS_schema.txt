@@ -1386,6 +1386,106 @@
                     "id": "fldx25OBOTevRMAnX",
                     "name": "Onboarding Month",
                     "description": "Calculates the number of months from Onboarding Start Date to today."
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fld5droK3AnCvfveh",
+                    "name": "Onboarding Paused"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "flddHr5b9et9ELoKD",
+                    "name": "Day 1 Tasks Assigned At"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldgs8rNO2xgBjgtm",
+                    "name": "Welcome Email Sent At"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldrDDzhZ7BR8nCNI"
+                    },
+                    "id": "fldLe21rURMoSWjRE",
+                    "name": "Onboarding Paused By"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldYgJyuZoLiTzLhh",
+                    "name": "Onboarding Paused At"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldPIZfkyEuFx5j0K",
+                    "name": "Onboarding Resumed At"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfXqkA0Cna59UUk",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldX39t74txdmotY2"
+                    },
+                    "id": "fldr1XZllp7bS2hht",
+                    "name": "Onboarding Resumed By"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldjkGaYFo0ZxGpS4",
+                    "name": "Onboarding Paused Reason"
                 }
             ],
             "views": [
@@ -1717,6 +1817,28 @@
                     },
                     "id": "fldVP4YF8fRrxZCvX",
                     "name": "Tasks 4"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl4ldFExsS5hWR3L",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldLe21rURMoSWjRE"
+                    },
+                    "id": "fldrDDzhZ7BR8nCNI",
+                    "name": "Applicants"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl4ldFExsS5hWR3L",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldr1XZllp7bS2hht"
+                    },
+                    "id": "fldX39t74txdmotY2",
+                    "name": "Applicants 2"
                 }
             ],
             "views": [

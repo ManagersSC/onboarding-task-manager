@@ -9,6 +9,9 @@ import {
   Calendar,
   Briefcase,
   Mail,
+  PauseCircle,
+  PlayCircle,
+  Info,
   Play,
   Clock,
   X,
@@ -94,6 +97,18 @@ export function NewHireTracker() {
   const [deleteTemplateConfirm, setDeleteTemplateConfirm] = useState(null)
   const [activeField, setActiveField] = useState("subject") // Track which field is focused for variable insertion
   const [currentUserName, setCurrentUserName] = useState("HR Team") // Current user's name from session
+
+  // Pause/Resume state
+  const [pauseConfirmOpen, setPauseConfirmOpen] = useState(false)
+  const [pauseModalOpen, setPauseModalOpen] = useState(false)
+  const [selectedHireForPause, setSelectedHireForPause] = useState(null)
+  const [pausing, setPausing] = useState(false)
+  const [resuming, setResuming] = useState(false)
+  const [pauseForm, setPauseForm] = useState({ resumeOnDate: "", reason: "" })
+  const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
+  const [resumeDateOverride, setResumeDateOverride] = useState("")
+  const [selectedHireForResume, setSelectedHireForResume] = useState(null)
+  const [showResumeDatePicker, setShowResumeDatePicker] = useState(false)
 
   const emailTemplates = [
     {
@@ -337,6 +352,8 @@ export function NewHireTracker() {
           setEmailModalOpen(false)
         } else if (startDateModalOpen) {
           setStartDateModalOpen(false)
+        } else if (pauseModalOpen) {
+          setPauseModalOpen(false)
         }
       }
     },
@@ -348,6 +365,7 @@ export function NewHireTracker() {
       creatingTemplate,
       editingTemplate,
       startDateModalOpen,
+      pauseModalOpen,
       emailData,
     ],
   )
@@ -525,6 +543,128 @@ export function NewHireTracker() {
     setSelectedHireForStartDate(hire)
     setStartDate("")
     setStartDateModalOpen(true)
+  }
+
+  // Open pause confirm -> then modal
+  const openPauseConfirm = (hire) => {
+    setSelectedHireForPause(hire)
+    setPauseForm({ resumeOnDate: "", reason: "" })
+    setPauseConfirmOpen(true)
+  }
+
+  const proceedPause = () => {
+    setPauseConfirmOpen(false)
+    setPauseModalOpen(true)
+  }
+
+  // Submit pause
+  const submitPause = async () => {
+    if (!selectedHireForPause) return
+    // Validate resume date not in past
+    if (pauseForm.resumeOnDate) {
+      try {
+        const d = parse(pauseForm.resumeOnDate, "yyyy-MM-dd", new Date())
+        if (isValid(d) && isBefore(startOfDay(d), startOfDay(new Date()))) {
+          toast.error("Resume date cannot be in the past")
+          return
+        }
+      } catch {}
+    }
+
+    setPausing(true)
+    try {
+      const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForPause.id}/pause-onboarding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "pause",
+          reason: pauseForm.reason?.trim() || undefined,
+          resumeOnDate: pauseForm.resumeOnDate || undefined,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to pause onboarding")
+
+      setNewHires((prev) =>
+        prev.map((hire) =>
+          hire.id === selectedHireForPause.id
+            ? {
+                ...hire,
+                onboardingPaused: true,
+                onboardingPausedAt: result.record.pausedAt,
+                onboardingPausedReason: result.record.pausedReason,
+                onboardingResumedOn: result.record.resumedOnDate || null,
+                lastPausedByName: result.record.pausedByName || currentUserName,
+              }
+            : hire,
+        ),
+      )
+
+      toast.success("Onboarding paused")
+      setPauseModalOpen(false)
+      setSelectedHireForPause(null)
+      setPauseForm({ resumeOnDate: "", reason: "" })
+    } catch (error) {
+      console.error("Error pausing onboarding:", error)
+      toast.error(error.message || "Failed to pause onboarding")
+    } finally {
+      setPausing(false)
+    }
+  }
+
+  // Resume
+  const handleResume = async (hire) => {
+    setSelectedHireForResume(hire)
+    setResumeDateOverride("")
+    setResumeConfirmOpen(true)
+    setShowResumeDatePicker(false)
+  }
+
+  const submitResume = async () => {
+    if (!selectedHireForResume) return
+    setResuming(true)
+    try {
+      const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForResume.id}/pause-onboarding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resume", resumeAtDate: resumeDateOverride || undefined }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to resume onboarding")
+
+      setNewHires((prev) =>
+        prev.map((h) =>
+          h.id === selectedHireForResume.id
+            ? {
+                ...h,
+                onboardingPaused: false,
+                onboardingResumedAt: result.record.resumedAt,
+                lastResumedByName: result.record.resumedByName || currentUserName,
+              }
+            : h,
+        ),
+      )
+      const isFutureResume = (() => {
+        if (!resumeDateOverride) return false
+        try {
+          const d = parse(resumeDateOverride, "yyyy-MM-dd", new Date())
+          return isValid(d) && isBefore(startOfDay(new Date()), startOfDay(d))
+        } catch { return false }
+      })()
+      toast.success(
+        isFutureResume
+          ? `Onboarding Resume Date set for ${format(parse(resumeDateOverride, "yyyy-MM-dd", new Date()), "PPP")}`
+          : "Onboarding resumed",
+      )
+      setResumeConfirmOpen(false)
+      setSelectedHireForResume(null)
+      setShowResumeDatePicker(false)
+    } catch (error) {
+      console.error("Error resuming onboarding:", error)
+      toast.error(error.message || "Failed to resume onboarding")
+    } finally {
+      setResuming(false)
+    }
   }
 
   // Remove email from list
@@ -713,7 +853,7 @@ export function NewHireTracker() {
                       whileHover={{ scale: 1.02 }}
                       onClick={() => setSelectedHire(hire)}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 justify-between">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={hire.avatar || "/placeholder.svg"} alt={hire.name} />
                           <AvatarFallback>
@@ -723,9 +863,39 @@ export function NewHireTracker() {
                               .join("")}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-sm">{hire.name}</h4>
                           <p className="text-xs text-muted-foreground">{hire.role}</p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {hire.onboardingPaused ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-green-500 hover:text-green-600"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleResume(hire)
+                              }}
+                              title="Resume onboarding"
+                              disabled={resuming}
+                            >
+                              <PlayCircle className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-amber-500 hover:text-amber-600"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openPauseConfirm(hire)
+                              }}
+                              title="Pause onboarding"
+                            >
+                              <PauseCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -761,6 +931,55 @@ export function NewHireTracker() {
                           </Button>
                         )}
                       </div>
+
+                      {/* Paused meta */}
+                      {hire.onboardingPaused && (
+                        <div className="mt-2 text-[11px] text-amber-500">
+                          Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
+                          {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` : ""}
+                          {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}
+                        </div>
+                      )}
+                      {!hire.onboardingPaused && (hire.lastPausedByName || hire.onboardingResumedAt) && (
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="text-[11px] text-muted-foreground truncate pr-2">
+                            Last paused by {hire.lastPausedByName || "—"}
+                            {" • "}
+                            Resumed by {hire.lastResumedByName || "Admin"}
+                            {hire.onboardingResumedAt ? ` at ${new Date(hire.onboardingResumedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : ""}
+                          </div>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground">
+                                <Info className="h-3 w-3" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-64 text-xs">
+                              <div className="space-y-1">
+                                <div>
+                                  <span className="font-medium">Paused by:</span> {hire.lastPausedByName || "Unknown"}
+                                </div>
+                                {hire.onboardingPausedAt && (
+                                  <div>
+                                    <span className="font-medium">Paused at:</span> {new Date(hire.onboardingPausedAt).toLocaleString()}
+                                  </div>
+                                )}
+                                {hire.onboardingPausedReason && (
+                                  <div>
+                                    <span className="font-medium">Reason:</span> {hire.onboardingPausedReason}
+                                  </div>
+                                )}
+                                {(hire.lastResumedByName || hire.onboardingResumedAt) && (
+                                  <div>
+                                    <span className="font-medium">Resumed by:</span> {hire.lastResumedByName || "Admin"}
+                                    {hire.onboardingResumedAt ? ` at ${new Date(hire.onboardingResumedAt).toLocaleString()}` : ""}
+                                  </div>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
                     </motion.div>
                   </DialogTrigger>
 
@@ -782,7 +1001,29 @@ export function NewHireTracker() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg leading-tight">{hire.name}</h3>
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-lg leading-tight">{hire.name}</h3>
+                            {hire.onboardingPaused ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 bg-transparent text-green-600 border-green-600"
+                                onClick={() => handleResume(hire)}
+                                disabled={resuming}
+                              >
+                                <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 bg-transparent text-amber-600 border-amber-600"
+                                onClick={() => openPauseConfirm(hire)}
+                              >
+                                <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                              </Button>
+                            )}
+                          </div>
                           <p className="text-muted-foreground text-sm mb-2">{hire.role}</p>
                           <div className="flex flex-wrap gap-3 text-xs">
                             <div className="flex items-center gap-1">
@@ -827,7 +1068,8 @@ export function NewHireTracker() {
                         </div>
                       </div>
 
-                      {/* Status Badge */}
+                      {/* Status Badge */
+                      }
                       <div className="flex justify-center">
                         {hire.onboardingStarted ? (
                           <Badge variant="default" className="px-4 py-2">
@@ -841,6 +1083,47 @@ export function NewHireTracker() {
                           </Badge>
                         )}
                       </div>
+
+                      {/* Paused/Active meta text */}
+                      {hire.onboardingPaused ? (
+                        <div className="text-xs text-amber-600 text-center mt-2">
+                          Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
+                          {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : ""}
+                          {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}
+                        </div>
+                      ) : (
+                        (hire.lastPausedByName || hire.lastResumedByName || hire.onboardingResumedAt) && (
+                          <div className="text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1">
+                            <span className="truncate">
+                              {hire.lastPausedByName ? `Last paused by ${hire.lastPausedByName}` : "Previously active"}
+                              {hire.lastResumedByName || hire.onboardingResumedAt ? ` • Resumed by ${hire.lastResumedByName || "Admin"} at ${hire.onboardingResumedAt ? new Date(hire.onboardingResumedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "--:--"}` : ""}
+                            </span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground">
+                                  <Info className="h-3 w-3" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent align="center" className="w-72 text-xs">
+                                <div className="space-y-1 text-left">
+                                  {hire.lastPausedByName && (
+                                    <div><span className="font-medium">Paused by:</span> {hire.lastPausedByName}</div>
+                                  )}
+                                  {hire.onboardingPausedAt && (
+                                    <div><span className="font-medium">Paused at:</span> {new Date(hire.onboardingPausedAt).toLocaleString()}</div>
+                                  )}
+                                  {hire.onboardingPausedReason && (
+                                    <div><span className="font-medium">Reason:</span> {hire.onboardingPausedReason}</div>
+                                  )}
+                                  {(hire.lastResumedByName || hire.onboardingResumedAt) && (
+                                    <div><span className="font-medium">Resumed by:</span> {hire.lastResumedByName || "Admin"}{hire.onboardingResumedAt ? ` at ${new Date(hire.onboardingResumedAt).toLocaleString()}` : ""}</div>
+                                  )}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )
+                      )}
                     </div>
 
                     {/* Action Buttons - Fixed at bottom */}
@@ -1310,6 +1593,153 @@ export function NewHireTracker() {
                   </div>
                 </motion.div>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pause confirmation */}
+      <AlertDialog open={pauseConfirmOpen} onOpenChange={setPauseConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedHireForPause ? `Pause onboarding for ${selectedHireForPause.name}?` : "Pause Onboarding"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to pause onboarding for {selectedHireForPause?.name}? This will stop automated tasks until it is resumed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedPause}>Yes, continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Pause form modal */}
+      <Dialog open={pauseModalOpen} onOpenChange={setPauseModalOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Pause Onboarding</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Resume Date (optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="mt-1 w-full justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {pauseForm.resumeOnDate && isValid(parse(pauseForm.resumeOnDate, "yyyy-MM-dd", new Date()))
+                      ? format(parse(pauseForm.resumeOnDate, "yyyy-MM-dd", new Date()), "PPP")
+                      : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+                  <div className="rounded-md border">
+                    <CustomCalendar
+                      selected={pauseForm.resumeOnDate ? parse(pauseForm.resumeOnDate, "yyyy-MM-dd", new Date()) : undefined}
+                      onSelect={(date) => {
+                        if (!date) return
+                        if (isBefore(startOfDay(date), startOfDay(new Date()))) {
+                          toast.error("Resume date cannot be in the past")
+                          return
+                        }
+                        const str = format(date, "yyyy-MM-dd")
+                        setPauseForm((p) => ({ ...p, resumeOnDate: str }))
+                      }}
+                    />
+                  </div>
+                  {pauseForm.resumeOnDate && (
+                    <Button variant="outline" size="sm" onClick={() => setPauseForm((p) => ({ ...p, resumeOnDate: "" }))} className="w-full">
+                      Clear Date
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                value={pauseForm.reason}
+                onChange={(e) => setPauseForm((p) => ({ ...p, reason: e.target.value }))}
+                placeholder="e.g., Schedule change"
+                className="min-h-[100px] resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPauseModalOpen(false)} disabled={pausing}>
+                Cancel
+              </Button>
+              <Button onClick={submitPause} disabled={pausing}>
+                {pausing ? "Pausing..." : "Confirm Pause"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resume confirmation with date override */}
+      <Dialog open={resumeConfirmOpen} onOpenChange={setResumeConfirmOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedHireForResume ? `Resume onboarding for ${selectedHireForResume.name}?` : "Resume Onboarding"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Are you sure you want to resume onboarding?
+            </div>
+            {!showResumeDatePicker ? (
+              <div className="text-xs italic text-muted-foreground">
+                or if you want to automatically resume it, {""}
+                <button
+                  type="button"
+                  className="font-semibold underline text-white"
+                  onClick={() => setShowResumeDatePicker(true)}
+                >
+                  select a resume date
+                </button>
+                .
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-start">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {resumeDateOverride && isValid(parse(resumeDateOverride, "yyyy-MM-dd", new Date()))
+                        ? format(parse(resumeDateOverride, "yyyy-MM-dd", new Date()), "PPP")
+                        : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+                    <div className="rounded-md border">
+                      <CustomCalendar
+                        selected={resumeDateOverride ? parse(resumeDateOverride, "yyyy-MM-dd", new Date()) : undefined}
+                        onSelect={(date) => {
+                          if (!date) return
+                          const str = format(date, "yyyy-MM-dd")
+                          setResumeDateOverride(str)
+                        }}
+                      />
+                    </div>
+                    {resumeDateOverride && (
+                      <Button variant="outline" size="sm" onClick={() => setResumeDateOverride("")}>Clear Date</Button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+            <div className="flex justify-end items-center gap-2">
+              <Button variant="outline" onClick={() => setResumeConfirmOpen(false)} disabled={resuming}>No</Button>
+              <Button onClick={submitResume} disabled={resuming}>
+                {resuming
+                  ? (resumeDateOverride && isValid(parse(resumeDateOverride, "yyyy-MM-dd", new Date())) && isBefore(startOfDay(new Date()), startOfDay(parse(resumeDateOverride, "yyyy-MM-dd", new Date())))
+                      ? "Setting Resume Date..."
+                      : "Resuming...")
+                  : "Yes"}
+              </Button>
             </div>
           </div>
         </DialogContent>
