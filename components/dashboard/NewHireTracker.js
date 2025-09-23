@@ -105,10 +105,27 @@ export function NewHireTracker() {
   const [pausing, setPausing] = useState(false)
   const [resuming, setResuming] = useState(false)
   const [pauseForm, setPauseForm] = useState({ resumeOnDate: "", reason: "" })
+  const cancelPauseConfirm = (e) => {
+    try { e?.stopPropagation?.() } catch {}
+    setPauseConfirmOpen(false)
+  }
+
+  const cancelPauseForm = (e) => {
+    try { e?.stopPropagation?.() } catch {}
+    setPauseModalOpen(false)
+    setSelectedHireForPause(null)
+    setPauseForm({ resumeOnDate: "", reason: "" })
+  }
   const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
   const [resumeDateOverride, setResumeDateOverride] = useState("")
   const [selectedHireForResume, setSelectedHireForResume] = useState(null)
   const [showResumeDatePicker, setShowResumeDatePicker] = useState(false)
+  const cancelResumeFlow = () => {
+    setResumeConfirmOpen(false)
+    setSelectedHireForResume(null)
+    setShowResumeDatePicker(false)
+    setResumeDateOverride("")
+  }
 
   const emailTemplates = [
     {
@@ -1598,23 +1615,23 @@ export function NewHireTracker() {
         </DialogContent>
       </Dialog>
 
-      {/* Pause confirmation */}
-      <AlertDialog open={pauseConfirmOpen} onOpenChange={setPauseConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+      {/* Pause confirmation (non-modal to avoid nested lock) */}
+      <Dialog open={pauseConfirmOpen} onOpenChange={setPauseConfirmOpen} modal={false}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>
               {selectedHireForPause ? `Pause onboarding for ${selectedHireForPause.name}?` : "Pause Onboarding"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to pause onboarding for {selectedHireForPause?.name}? This will stop automated tasks until it is resumed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={proceedPause}>Yes, continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            Are you sure you want to pause onboarding for {selectedHireForPause?.name}? This will stop automated tasks until it is resumed.
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={cancelPauseConfirm}>Cancel</Button>
+            <Button onClick={proceedPause}>Yes, continue</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pause form modal */}
       <Dialog open={pauseModalOpen} onOpenChange={setPauseModalOpen}>
@@ -1667,7 +1684,7 @@ export function NewHireTracker() {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setPauseModalOpen(false)} disabled={pausing}>
+              <Button variant="outline" onClick={cancelPauseForm} disabled={pausing}>
                 Cancel
               </Button>
               <Button onClick={submitPause} disabled={pausing}>
@@ -1732,7 +1749,7 @@ export function NewHireTracker() {
               </div>
             )}
             <div className="flex justify-end items-center gap-2">
-              <Button variant="outline" onClick={() => setResumeConfirmOpen(false)} disabled={resuming}>No</Button>
+              <Button variant="outline" onClick={cancelResumeFlow} disabled={resuming}>No</Button>
               <Button onClick={submitResume} disabled={resuming}>
                 {resuming
                   ? (resumeDateOverride && isValid(parse(resumeDateOverride, "yyyy-MM-dd", new Date())) && isBefore(startOfDay(new Date()), startOfDay(parse(resumeDateOverride, "yyyy-MM-dd", new Date())))
