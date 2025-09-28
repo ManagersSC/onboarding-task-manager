@@ -34,10 +34,11 @@ const urgencyConfig = {
   },
 }
 
-function TaskModal({ folderName, tasks, onClose, onComplete }) {
+function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
   const handleCompleteTask = async (taskId) => {
+    if (disableActions) return
     setCompletingTaskId(taskId)
     try {
       await onComplete(taskId)
@@ -151,9 +152,15 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
                             <Button
                               variant={task.overdue ? "default" : "outline"}
                               size="sm"
-                              className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
-                              disabled={completingTaskId === task.id}
-                              onClick={() => handleCompleteTask(task.id)}
+                              className={cn(
+                                task.overdue && "bg-red-600 hover:bg-red-700 text-white",
+                                disableActions && "opacity-50 cursor-not-allowed pointer-events-none"
+                              )}
+                              disabled={completingTaskId === task.id || disableActions}
+                              onClick={() => {
+                                if (disableActions) return;
+                                handleCompleteTask(task.id)
+                              }}
                             >
                               {completingTaskId === task.id ? (
                                 <>
@@ -188,7 +195,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete }) {
   )
 }
 
-export default function FolderCard({ folderName, tasks, onComplete, status }) {
+export default function FolderCard({ folderName, tasks, onComplete, status, disableActions }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -336,7 +343,7 @@ export default function FolderCard({ folderName, tasks, onComplete, status }) {
       </Card>
 
       {isOpen && (
-        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} />
+        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} disableActions={disableActions} />
       )}
     </>
   )

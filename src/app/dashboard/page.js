@@ -27,6 +27,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Label } from "@components/ui/label"
+import { toast } from "sonner"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -36,11 +37,11 @@ function getFolderStatus(subtasks) {
   return "completed"
 }
 
-const TaskList = ({ tasks, onComplete }) => {
+const TaskList = ({ tasks, onComplete, disableActions }) => {
   return (
     <div className="divide-y divide-border">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onComplete={onComplete} />
+        <TaskCard key={task.id} task={task} onComplete={onComplete} disableActions={disableActions} />
       ))}
     </div>
   )
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeView, setActiveView] = useState("kanban")
+  const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -76,6 +78,7 @@ export default function DashboardPage() {
         ]);
   
         const tasksFromBackend = tasksResponse.ok ? await tasksResponse.json() : [];
+        console.log("get-tasks payload:", tasksFromBackend);
         const quizzesData = quizzesResponse.ok ? await quizzesResponse.json() : [];
   
         console.log("Raw tasks from backend:", tasksFromBackend);
@@ -118,6 +121,7 @@ export default function DashboardPage() {
             description: task.description || "",
             completed: task.completed,
             overdue: task.overdue,
+            // No per-task completion toggle. We rely on globalPaused only.
             resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
             lastStatusChange: task.lastStatusChange,
             week: task.week,
@@ -129,8 +133,26 @@ export default function DashboardPage() {
   
         // Combine all tasks
         const allTasks = [...regularTasks, ...apiQuizTasks];
-  
+
+        // Determine global paused state from API
+        const isPaused = Array.isArray(tasksFromBackend) && tasksFromBackend.some(t => t.paused)
+        const pausedUntil = Array.isArray(tasksFromBackend)
+          ? (tasksFromBackend.find(t => t.paused && t.pausedUntil)?.pausedUntil || null)
+          : null
+        console.log("derived isPaused:", isPaused, "pausedUntil:", pausedUntil)
+
         setTasks(allTasks);
+        setGlobalPaused({ isPaused, pausedUntil });
+
+        // Show paused message once if applicant is paused
+        if (isPaused) {
+          const dateText = pausedUntil ? new Date(pausedUntil).toLocaleString() : null
+          toast.info(
+            dateText
+              ? `Your onboarding is paused until ${dateText}. You can still view tasks, but completion is disabled.`
+              : `Your onboarding is paused. You can still view tasks, but completion is disabled.`
+          )
+        }
   
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -144,6 +166,16 @@ export default function DashboardPage() {
   }, []);
 
   const handleComplete = async (taskId) => {
+    // Global hard stop: if onboarding is paused, never attempt completion
+    if (globalPaused.isPaused) {
+      const dateText = globalPaused.pausedUntil ? new Date(globalPaused.pausedUntil).toLocaleString() : null
+      toast.info(
+        dateText
+          ? `Your onboarding is paused until ${dateText}. Task completion is disabled.`
+          : `Your onboarding is paused. Task completion is disabled.`
+      )
+      return;
+    }
     const taskToComplete = tasks.find(t => t.id === taskId);
     if (taskToComplete && taskToComplete.isQuiz) {
       console.warn("Attempted to complete a quiz task via handleComplete. This is not allowed.");
@@ -609,7 +641,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-4">
                     {assignedQuizTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} />
+                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
                     ))}
                     {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                       <FolderCard
@@ -618,10 +650,11 @@ export default function DashboardPage() {
                         tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
+                        disableActions={globalPaused.isPaused}
                       />
                     ))}
                     {assignedTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} />
+                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
                     ))}
                     {assignedTasks.length === 0 &&
                       foldersByStatus.assigned.length === 0 &&
@@ -655,10 +688,11 @@ export default function DashboardPage() {
                         tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
+                        disableActions={globalPaused.isPaused}
                       />
                     ))}
                     {overdueTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} />
+                      <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
                     ))}
                     {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
                       <div className="rounded-lg border border-dashed p-8 text-center">
@@ -684,7 +718,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-4">
                     {completedQuizTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} />
+                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
                     ))}
                     {foldersByStatus.completed.map(({ folderName, tasks: tasksInFolder, status }) => (
                       <FolderCard
@@ -693,10 +727,11 @@ export default function DashboardPage() {
                         tasks={tasksInFolder}
                         onComplete={handleComplete}
                         status={status}
+                        disableActions={globalPaused.isPaused}
                       />
                     ))}
                     {completedTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} />
+                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
                     ))}
                     {completedTasks.length === 0 &&
                       foldersByStatus.completed.length === 0 &&
@@ -709,7 +744,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <TaskList tasks={[...filteredQuizTasks, ...filteredNormalTasks]} onComplete={handleComplete} />
+              <TaskList tasks={[...filteredQuizTasks, ...filteredNormalTasks]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
             )}
           </>
         )}

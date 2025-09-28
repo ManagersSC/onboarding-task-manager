@@ -32,7 +32,7 @@ const urgencyConfig = {
   },
 }
 
-export function TaskCard({ task, onComplete }) {
+export function TaskCard({ task, onComplete, disableActions }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
   // Status configuration
@@ -67,7 +67,7 @@ export function TaskCard({ task, onComplete }) {
   const urgencyInfo = task.urgency ? urgencyConfig[task.urgency] : null
 
   const handleComplete = async () => {
-    if (task.completed) return
+    if (disableActions || task.completed) return
     setIsCompleting(true)
     try {
       await onComplete(task.id)
@@ -170,13 +170,17 @@ export function TaskCard({ task, onComplete }) {
               <Button
                 variant={task.overdue ? "default" : "outline"}
                 size="sm"
-                className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
-                disabled={isCompleting}
-                onClick={handleComplete}
+                className={cn(
+                  task.overdue && "bg-red-600 hover:bg-red-700 text-white",
+                  // Hard-disable visuals when globally disabled
+                  disableActions && "opacity-50 cursor-not-allowed pointer-events-none",
+                )}
+                disabled={isCompleting || disableActions}
+                onClick={!disableActions ? handleComplete : undefined}
               >
                 {isCompleting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className={cn("h-4 w-4 mr-1.5", (isCompleting && !disableActions) ? "animate-spin" : "")} />
                     Completing...
                   </>
                 ) : (

@@ -69,17 +69,7 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    // 1. Kick off update of the Status field in the Onboarding Tasks Logs table.
-    const updatePromise = base("Onboarding Tasks Logs").update([
-      {
-        id: taskId,
-        fields: {
-          Status: "Completed",
-        },
-      },
-    ]);
-
-    // 2. In parallel, fetch applicant record and task log record.
+    // First, fetch applicant record and task log record.
     const applicantQuery = base("Applicants")
       .select({
         filterByFormula: `{Email}='${userEmail}'`,
@@ -88,9 +78,7 @@ export async function POST(request) {
       .firstPage();
     const taskLogPromise = base("Onboarding Tasks Logs").find(taskId);
 
-    // Wait for all promises concurrently.
-    const [updateResult, applicantRecords, taskLogRecord] = await Promise.all([
-      updatePromise,
+    const [applicantRecords, taskLogRecord] = await Promise.all([
       applicantQuery,
       taskLogPromise,
     ]);
@@ -100,6 +88,32 @@ export async function POST(request) {
     }
 
     const applicantRecord = applicantRecords[0];
+    const isPaused = applicantRecord.fields["Onboarding Paused"] === true
+    if (isPaused) {
+      await logAuditEvent({
+        eventType: "Task Completion Blocked",
+        eventStatus: "Failure",
+        userIdentifier: userEmail,
+        userName,
+        userRole,
+        detailedMessage: `Blocked task completion for ${taskId} because onboarding is paused`,
+        request,
+      }).catch(() => {})
+      return Response.json({
+        error: "Onboarding is paused; task completion is disabled.",
+        userError: "Your onboarding is paused. Please contact your manager.",
+        paused: true,
+        taskLogId: taskId,
+      }, { status: 403 })
+    }
+
+    // 1. Update the Status field in the Onboarding Tasks Logs table now that guard passed.
+    await base("Onboarding Tasks Logs").update([
+      {
+        id: taskId,
+        fields: { Status: "Completed" },
+      },
+    ])
 
     // 3. Generate New Interface Message.
     const applicantId = applicantRecord.id;

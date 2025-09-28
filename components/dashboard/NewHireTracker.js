@@ -590,6 +590,7 @@ export function NewHireTracker() {
 
     setPausing(true)
     try {
+      // Use unified pause/resume endpoint which returns a rich record payload
       const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForPause.id}/pause-onboarding`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -608,10 +609,10 @@ export function NewHireTracker() {
             ? {
                 ...hire,
                 onboardingPaused: true,
-                onboardingPausedAt: result.record.pausedAt,
-                onboardingPausedReason: result.record.pausedReason,
-                onboardingResumedOn: result.record.resumedOnDate || null,
-                lastPausedByName: result.record.pausedByName || currentUserName,
+                onboardingPausedAt: (result?.record?.pausedAt) || new Date().toISOString(),
+                onboardingPausedReason: (result?.record?.pausedReason) ?? (pauseForm.reason?.trim() || undefined),
+                onboardingResumedOn: (result?.record?.resumedOnDate) || (pauseForm.resumeOnDate || null),
+                lastPausedByName: (result?.record?.pausedByName) || currentUserName,
               }
             : hire,
         ),
@@ -641,26 +642,7 @@ export function NewHireTracker() {
     if (!selectedHireForResume) return
     setResuming(true)
     try {
-      const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForResume.id}/pause-onboarding`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "resume", resumeAtDate: resumeDateOverride || undefined }),
-      })
-      const result = await response.json()
-      if (!response.ok || !result.success) throw new Error(result.error || "Failed to resume onboarding")
-
-      setNewHires((prev) =>
-        prev.map((h) =>
-          h.id === selectedHireForResume.id
-            ? {
-                ...h,
-                onboardingPaused: false,
-                onboardingResumedAt: result.record.resumedAt,
-                lastResumedByName: result.record.resumedByName || currentUserName,
-              }
-            : h,
-        ),
-      )
+      // Determine if this is a scheduled resume (future date) or immediate resume
       const isFutureResume = (() => {
         if (!resumeDateOverride) return false
         try {
@@ -668,6 +650,56 @@ export function NewHireTracker() {
           return isValid(d) && isBefore(startOfDay(new Date()), startOfDay(d))
         } catch { return false }
       })()
+
+      let result
+      if (isFutureResume) {
+        // Keep paused, but set a resume-on date for automation
+        const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForResume.id}/pause-onboarding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "pause",
+            resumeOnDate: resumeDateOverride,
+          }),
+        })
+        result = await response.json()
+        if (!response.ok || !result.success) throw new Error(result.error || "Failed to set resume date")
+
+        setNewHires((prev) =>
+          prev.map((h) =>
+            h.id === selectedHireForResume.id
+              ? {
+                  ...h,
+                  onboardingPaused: true,
+                  onboardingResumedOn: (result?.record?.resumedOnDate) || resumeDateOverride,
+                }
+              : h,
+          ),
+        )
+      } else {
+        // Immediate resume now
+        const response = await fetch(`/api/admin/dashboard/new-hires/${selectedHireForResume.id}/pause-onboarding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "resume" }),
+        })
+        result = await response.json()
+        if (!response.ok || !result.success) throw new Error(result.error || "Failed to resume onboarding")
+
+        setNewHires((prev) =>
+          prev.map((h) =>
+            h.id === selectedHireForResume.id
+              ? {
+                  ...h,
+                  onboardingPaused: false,
+                  onboardingResumedAt: (result?.record?.resumedAt) || new Date().toISOString(),
+                  lastResumedByName: (result?.record?.resumedByName) || currentUserName,
+                }
+              : h,
+          ),
+        )
+      }
+
       toast.success(
         isFutureResume
           ? `Onboarding Resume Date set for ${format(parse(resumeDateOverride, "yyyy-MM-dd", new Date()), "PPP")}`

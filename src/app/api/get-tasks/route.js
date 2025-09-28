@@ -55,7 +55,14 @@ export async function GET(request) {
     const applicantRecords = await base("Applicants")
     .select({
       filterByFormula: `{fldjmvdigpKYyZS63} = '${userEmail}'`,
-      fields: ["fldjmvdigpKYyZS63", "fldAQU0XOrRuerhPm", "fldnPHh5Ig2913oXe"],
+      // Include paused fields so the UI can disable actions when onboarding is paused
+      fields: [
+        "Email",                 // fldjmvdigpKYyZS63
+        "Name",                  // fldAQU0XOrRuerhPm
+        "Task Log",              // fldnPHh5Ig2913oXe
+        "Onboarding Paused",     // fld5droK3AnCvfveh
+        "Onboarding Resumed At", // fldPIZfkyEuFx5j0K
+      ],
     })
     .firstPage()
 
@@ -67,7 +74,9 @@ export async function GET(request) {
     }
 
     const applicant = applicantRecords[0]
-    const applicantEmail = applicant._rawJson.fields.Email;
+    const applicantPaused = applicant.get("Onboarding Paused") === true
+    const applicantPausedUntil = applicant.get("Onboarding Resumed At") || null
+    const applicantEmail = applicant.get("Email");
     const applicantId = applicant._rawJson.id;
     
     const taskIds = applicant.get("Task Log") || [] 
@@ -127,6 +136,9 @@ export async function GET(request) {
         description: record.get("Display Desc") || "",
         status: status,
         completed: taskType === 'Quiz' ? false : status === "Completed",
+        canComplete: !applicantPaused && (taskType === 'Quiz' ? true : status !== "Completed"),
+        paused: applicantPaused,
+        pausedUntil: applicantPaused ? applicantPausedUntil : null,
         overdue: taskType === 'Quiz' ? false : status === "Overdue",
         resourceUrl: record.get("Display Resource Link") || null,
         isCustom,
@@ -137,14 +149,7 @@ export async function GET(request) {
       };
     });
 
-    const responsePayload = {
-      email: applicantEmail,
-      applicantId: applicantId,
-      tasks,
-    };
-
-    logger.info(responsePayload);
-
+    // Return tasks array, preserving current consumer contract
     return Response.json(tasks)
   } catch (error) {
     logger.error('Full Error:', {
