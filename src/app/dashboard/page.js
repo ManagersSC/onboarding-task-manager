@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Label } from "@components/ui/label"
 import { toast } from "sonner"
+import { AnimatePresence, motion } from "framer-motion"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -40,9 +41,19 @@ function getFolderStatus(subtasks) {
 const TaskList = ({ tasks, onComplete, disableActions }) => {
   return (
     <div className="divide-y divide-border">
-      {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onComplete={onComplete} disableActions={disableActions} />
-      ))}
+      <AnimatePresence initial={false}>
+        {tasks.map((task) => (
+          <motion.div
+            key={task.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TaskCard task={task} onComplete={onComplete} disableActions={disableActions} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   )
 }
@@ -351,6 +362,15 @@ export default function DashboardPage() {
     [tasks.length, assignedTasksCount, overdueTasksCount, completedTasksCount],
   )
 
+  const switchSection = (nextSection) => {
+    setSection(nextSection)
+    setFilters((prev) => ({
+      ...prev,
+      status:
+        nextSection === "completed" ? "completed" : prev.status === "completed" ? "all" : prev.status,
+    }))
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
@@ -420,38 +440,34 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
-              <Tabs
-                value={filters.status}
-                onValueChange={(value) => setFilters({ ...filters, status: value })}
-                className="w-full md:w-auto"
-              >
-                <TabsList className="grid grid-cols-4 w-full md:w-auto">
-                  <TabsTrigger value="all" className="text-xs md:text-sm">
-                    All{" "}
-                    <Badge variant="secondary" className="ml-1 bg-muted">
-                      {statusCounts.all}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="assigned" className="text-xs md:text-sm">
-                    Assigned{" "}
-                    <Badge variant="secondary" className="ml-1 bg-muted">
-                      {statusCounts.assigned}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="overdue" className="text-xs md:text-sm">
-                    Overdue{" "}
-                    <Badge variant="secondary" className="ml-1 bg-muted">
-                      {statusCounts.overdue}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="text-xs md:text-sm">
-                    Completed{" "}
-                    <Badge variant="secondary" className="ml-1 bg-muted">
-                      {statusCounts.completed}
-                    </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {section === "active" && (
+                <Tabs
+                  value={filters.status === "completed" ? "all" : filters.status}
+                  onValueChange={(value) => setFilters({ ...filters, status: value })}
+                  className="w-full md:w-auto"
+                >
+                  <TabsList className="grid grid-cols-3 w-full md:w-auto">
+                    <TabsTrigger value="all" className="text-xs md:text-sm">
+                      All{" "}
+                      <Badge variant="secondary" className="ml-1 bg-muted">
+                        {statusCounts.all}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="assigned" className="text-xs md:text-sm">
+                      Assigned{" "}
+                      <Badge variant="secondary" className="ml-1 bg-muted">
+                        {statusCounts.assigned}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="overdue" className="text-xs md:text-sm">
+                      Overdue{" "}
+                      <Badge variant="secondary" className="ml-1 bg-muted">
+                        {statusCounts.overdue}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9 bg-card text-card-foreground">
@@ -546,7 +562,7 @@ export default function DashboardPage() {
                 <Button
                   variant={section === "active" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSection("active")}
+                  onClick={() => switchSection("active")}
                   className="h-9"
                 >
                   Active
@@ -554,7 +570,7 @@ export default function DashboardPage() {
                 <Button
                   variant={section === "completed" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSection("completed")}
+                  onClick={() => switchSection("completed")}
                   className="h-9"
                 >
                   Completed
@@ -667,92 +683,160 @@ export default function DashboardPage() {
             </div>
           )
         ) : (
-          <>
+          <AnimatePresence mode="wait">
+            <motion.div key={`${section}-${activeView}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
             {section === "active" && activeView === "kanban" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Assigned Column */}
+              (filters.status === "assigned" || filters.status === "overdue") ? (
+                // Single status selected → show only that column; items displayed in a 3xN grid
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                      className={filters.status === "assigned" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"}
                     >
-                      <Clock className="h-4 w-4 mr-1.5" />
-                      Assigned
+                      {filters.status === "assigned" ? <Clock className="h-4 w-4 mr-1.5" /> : <AlertCircle className="h-4 w-4 mr-1.5" />}
+                      {filters.status === "assigned" ? "Assigned" : "Overdue"}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {assignedQuizTasks.length + foldersByStatus.assigned.length + assignedTasks.length} items
+                      {filters.status === "assigned"
+                        ? (assignedQuizTasks.length + foldersByStatus.assigned.length + assignedTasks.length)
+                        : (foldersByStatus.overdue.length + overdueTasks.length)} items
                     </span>
                   </div>
-                  <div className="space-y-4">
-                    {assignedQuizTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
-                    ))}
-                    {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
-                      <FolderCard
-                        key={folderName}
-                        folderName={folderName}
-                        tasks={tasksInFolder}
-                        onComplete={handleComplete}
-                        status={status}
-                        disableActions={globalPaused.isPaused}
-                      />
-                    ))}
-                    {assignedTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
-                    ))}
-                    {assignedTasks.length === 0 &&
-                      foldersByStatus.assigned.length === 0 &&
-                      assignedQuizTasks.length === 0 && (
-                        <div className="rounded-lg border border-dashed p-8 text-center">
-                          <p className="text-sm text-muted-foreground">No assigned items</p>
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* Overdue Column */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
-                    >
-                      <AlertCircle className="h-4 w-4 mr-1.5" />
-                      Overdue
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {foldersByStatus.overdue.length + overdueTasks.length} items
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {foldersByStatus.overdue.map(({ folderName, tasks: tasksInFolder, status }) => (
-                      <FolderCard
-                        key={folderName}
-                        folderName={folderName}
-                        tasks={tasksInFolder}
-                        onComplete={handleComplete}
-                        status={status}
-                        disableActions={globalPaused.isPaused}
-                      />
-                    ))}
-                    {overdueTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
-                    ))}
-                    {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
-                      <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-sm text-muted-foreground">No overdue items</p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {filters.status === "assigned" ? (
+                      <>
+                        {assignedQuizTasks.map((task) => (
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        ))}
+                        {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
+                          <FolderCard
+                            key={folderName}
+                            folderName={folderName}
+                            tasks={tasksInFolder}
+                            onComplete={handleComplete}
+                            status={status}
+                            disableActions={globalPaused.isPaused}
+                          />
+                        ))}
+                        {assignedTasks.map((task) => (
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        ))}
+                        {(assignedTasks.length === 0 && foldersByStatus.assigned.length === 0 && assignedQuizTasks.length === 0) && (
+                          <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
+                            <p className="text-sm text-muted-foreground">No assigned items</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {foldersByStatus.overdue.map(({ folderName, tasks: tasksInFolder, status }) => (
+                          <FolderCard
+                            key={folderName}
+                            folderName={folderName}
+                            tasks={tasksInFolder}
+                            onComplete={handleComplete}
+                            status={status}
+                            disableActions={globalPaused.isPaused}
+                          />
+                        ))}
+                        {overdueTasks.map((task) => (
+                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        ))}
+                        {(overdueTasks.length === 0 && foldersByStatus.overdue.length === 0) && (
+                          <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
+                            <p className="text-sm text-muted-foreground">No overdue items</p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
+              ) : (
+                // All → show both columns side-by-side
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Assigned Column */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                      >
+                        <Clock className="h-4 w-4 mr-1.5" />
+                        Assigned
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {assignedQuizTasks.length + foldersByStatus.assigned.length + assignedTasks.length} items
+                      </span>
+                    </div>
+                    <div className="space-y-4">
+                      {assignedQuizTasks.map((task) => (
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                      ))}
+                      {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
+                        <FolderCard
+                          key={folderName}
+                          folderName={folderName}
+                          tasks={tasksInFolder}
+                          onComplete={handleComplete}
+                          status={status}
+                          disableActions={globalPaused.isPaused}
+                        />
+                      ))}
+                      {assignedTasks.map((task) => (
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                      ))}
+                      {assignedTasks.length === 0 &&
+                        foldersByStatus.assigned.length === 0 &&
+                        assignedQuizTasks.length === 0 && (
+                          <div className="rounded-lg border border-dashed p-8 text-center">
+                            <p className="text-sm text-muted-foreground">No assigned items</p>
+                          </div>
+                        )}
+                    </div>
+                  </div>
 
-                {/* Completed Column removed from Active section */}
-              </div>
+                  {/* Overdue Column */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+                      >
+                        <AlertCircle className="h-4 w-4 mr-1.5" />
+                        Overdue
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {foldersByStatus.overdue.length + overdueTasks.length} items
+                      </span>
+                    </div>
+                    <div className="space-y-4">
+                      {foldersByStatus.overdue.map(({ folderName, tasks: tasksInFolder, status }) => (
+                        <FolderCard
+                          key={folderName}
+                          folderName={folderName}
+                          tasks={tasksInFolder}
+                          onComplete={handleComplete}
+                          status={status}
+                          disableActions={globalPaused.isPaused}
+                        />
+                      ))}
+                      {overdueTasks.map((task) => (
+                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                      ))}
+                      {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
+                        <div className="rounded-lg border border-dashed p-8 text-center">
+                          <p className="text-sm text-muted-foreground">No overdue items</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
             ) : section === "active" && activeView === "list" ? (
               <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
             ) : (
-              // Completed Section - list view sorted by completedTime
+              // Completed Section - 3xN grid sorted by completedTime
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <Badge
@@ -764,14 +848,35 @@ export default function DashboardPage() {
                   </Badge>
                   <span className="text-sm text-muted-foreground">{completedViewTasks.length} items</span>
                 </div>
-                <TaskList
-                  tasks={completedViewTasks.map((t) => ({ ...t, status: "completed" }))}
-                  onComplete={handleComplete}
-                  disableActions={globalPaused.isPaused}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <AnimatePresence initial={false}>
+                    {completedViewTasks.length > 0 ? (
+                      completedViewTasks.map((t) => (
+                        <motion.div
+                          key={t.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <TaskCard
+                            task={{ ...t, status: "completed" }}
+                            onComplete={handleComplete}
+                            disableActions={globalPaused.isPaused}
+                          />
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
+                        <p className="text-sm text-muted-foreground">No completed items</p>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </>
             )}
-          </>
+            </motion.div>
+          </AnimatePresence>
         )}
       </main>
     </div>
