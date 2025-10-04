@@ -74,6 +74,38 @@ export default function DashboardPage() {
     urgency: "all",
   })
 
+  // --- PERSISTENCE: hydrate from localStorage on first mount ---
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}")
+      if (saved.section === "active" || saved.section === "completed") {
+        setSection(saved.section)
+      }
+      if (saved.activeView === "kanban" || saved.activeView === "list") {
+        setActiveView(saved.activeView)
+      }
+      if (saved.searchQuery && typeof saved.searchQuery === "string") {
+        setSearchQuery(saved.searchQuery)
+      }
+      if (saved.filters && typeof saved.filters === "object") {
+        setFilters((prev) => ({ ...prev, ...saved.filters }))
+      }
+    } catch {}
+  }, [])
+
+  // Save preferences whenever they change
+  useEffect(() => {
+    const prefs = {
+      section,
+      activeView,
+      searchQuery,
+      filters,
+    }
+    try {
+      localStorage.setItem("dashboard_prefs", JSON.stringify(prefs))
+    } catch {}
+  }, [section, activeView, searchQuery, filters])
+
   const getActiveFiltersCount = () => {
     return Object.values(filters).filter((value) => value !== "all").length
   }
@@ -222,6 +254,13 @@ export default function DashboardPage() {
       urgency: "all",
     })
     setSearchQuery("")
+    try {
+      const saved = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}")
+      localStorage.setItem(
+        "dashboard_prefs",
+        JSON.stringify({ ...saved, filters: { status: "all", week: "all", type: "all", urgency: "all" }, searchQuery: "" })
+      )
+    } catch {}
   }
 
   const filteredTasks = useMemo(
