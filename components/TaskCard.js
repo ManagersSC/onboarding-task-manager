@@ -192,7 +192,10 @@ export function TaskCard({ task, onComplete, disableActions }) {
               </Button>
             ) : (
               <div className="text-xs text-muted-foreground">
-                Completed {task.lastStatusChange ? new Date(task.lastStatusChange).toLocaleDateString() : ""}
+                {(() => {
+                  const completedAt = task.completedTime || task.lastStatusChange || task.completedDate
+                  return completedAt ? `Completed ${new Date(completedAt).toLocaleString()}` : "Completed"
+                })()}
               </div>
             )}
           </>

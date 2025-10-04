@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeView, setActiveView] = useState("kanban")
+  const [section, setSection] = useState("active") // active | completed
   const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
 
   const [filters, setFilters] = useState({
@@ -96,6 +97,7 @@ export default function DashboardPage() {
             overdue: quiz.overdue || false,
             resourceUrl: quiz.resourceUrl,
             lastStatusChange: quiz.lastStatusChange,
+            completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
             week: quiz.week,
             folder: null, // Quizzes don't need folders in the UI
             isQuiz: true,
@@ -124,6 +126,7 @@ export default function DashboardPage() {
             // No per-task completion toggle. We rely on globalPaused only.
             resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
             lastStatusChange: task.lastStatusChange,
+            completedTime: task.completedTime || task.completed_time || task.completedDate || task.completed_date || task.lastStatusChange || null,
             week: task.week,
             folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
             isQuiz: false
@@ -270,6 +273,32 @@ export default function DashboardPage() {
 
   const assignedQuizTasks = useMemo(() => filteredQuizTasks.filter((task) => !task.completed), [filteredQuizTasks])
   const completedQuizTasks = useMemo(() => filteredQuizTasks.filter((task) => task.completed), [filteredQuizTasks])
+
+  // Completed view list (independent of status filter): search/type/week/urgency are respected
+  const completedViewTasks = useMemo(() => {
+    const matchesOtherFilters = (task) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+
+      const matchesWeek = filters.week === "all" || String(task.week) === filters.week
+      const matchesType =
+        filters.type === "all" ||
+        (filters.type === "custom" && task.isCustom) ||
+        (filters.type === "standard" && !task.isCustom)
+      const matchesUrgency =
+        filters.urgency === "all" ||
+        (filters.urgency === "no urgency" ? !task.urgency : task.urgency && task.urgency.toLowerCase() === filters.urgency.toLowerCase())
+      return matchesSearch && matchesWeek && matchesType && matchesUrgency
+    }
+    const onlyCompleted = tasks.filter((t) => t.completed && matchesOtherFilters(t))
+    return [...onlyCompleted].sort((a, b) => {
+      const aTime = new Date(a.completedTime || a.lastStatusChange || 0).getTime()
+      const bTime = new Date(b.completedTime || b.lastStatusChange || 0).getTime()
+      return bTime - aTime
+    })
+  }, [tasks, filters.type, filters.week, filters.urgency, searchQuery])
 
   const foldersByStatus = useMemo(() => {
     const acc = {
@@ -515,6 +544,22 @@ export default function DashboardPage() {
               </Popover>
               <div className="flex items-center gap-2 ml-auto">
                 <Button
+                  variant={section === "active" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSection("active")}
+                  className="h-9"
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={section === "completed" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSection("completed")}
+                  className="h-9"
+                >
+                  Completed
+                </Button>
+                <Button
                   variant={activeView === "kanban" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveView("kanban")}
@@ -623,8 +668,8 @@ export default function DashboardPage() {
           )
         ) : (
           <>
-            {activeView === "kanban" ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {section === "active" && activeView === "kanban" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Assigned Column */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -702,49 +747,29 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Completed Column */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1.5" />
-                      Completed
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {completedQuizTasks.length + foldersByStatus.completed.length + completedTasks.length} items
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {completedQuizTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
-                    ))}
-                    {foldersByStatus.completed.map(({ folderName, tasks: tasksInFolder, status }) => (
-                      <FolderCard
-                        key={folderName}
-                        folderName={folderName}
-                        tasks={tasksInFolder}
-                        onComplete={handleComplete}
-                        status={status}
-                        disableActions={globalPaused.isPaused}
-                      />
-                    ))}
-                    {completedTasks.map((task) => (
-                      <TaskCard key={task.id} task={{ ...task, status: "completed" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
-                    ))}
-                    {completedTasks.length === 0 &&
-                      foldersByStatus.completed.length === 0 &&
-                      completedQuizTasks.length === 0 && (
-                        <div className="rounded-lg border border-dashed p-8 text-center">
-                          <p className="text-sm text-muted-foreground">No completed items</p>
-                        </div>
-                      )}
-                  </div>
-                </div>
+                {/* Completed Column removed from Active section */}
               </div>
+            ) : section === "active" && activeView === "list" ? (
+              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
             ) : (
-              <TaskList tasks={[...filteredQuizTasks, ...filteredNormalTasks]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+              // Completed Section - list view sorted by completedTime
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
+                    Completed
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">{completedViewTasks.length} items</span>
+                </div>
+                <TaskList
+                  tasks={completedViewTasks.map((t) => ({ ...t, status: "completed" }))}
+                  onComplete={handleComplete}
+                  disableActions={globalPaused.isPaused}
+                />
+              </>
             )}
           </>
         )}
