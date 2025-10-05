@@ -184,6 +184,9 @@ export function TaskManagement() {
   const [showGroupsModal, setShowGroupsModal] = useState(false)
   const [selectedApplicantId, setSelectedApplicantId] = useState(null)
   const [groupSearch, setGroupSearch] = useState("")
+  const [hireBannerSnoozeUntil, setHireBannerSnoozeUntil] = useState(0)
+  const [isBannerHovered, setIsBannerHovered] = useState(false)
+  const firstSeenMapRef = useRef({})
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
@@ -200,6 +203,11 @@ export function TaskManagement() {
   // Helper: global task when no assigned staff
   function isGlobalTask(task) {
     return !task?.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
+  }
+
+  // Helper: hire completion task (auto-generated verification tied to an applicant)
+  function isHireCompletionTask(task) {
+    return Boolean(task?.applicantId)
   }
 
   // Build groups of tasks by applicant (both unclaimed and claimed)
@@ -362,6 +370,22 @@ export function TaskManagement() {
       })
       .then((data) => {
         const incoming = data.tasks || { upcoming: [], overdue: [], flagged: [] }
+        // Track first-seen timestamps for hire completion tasks (fallback if created time isn't available)
+        try {
+          const all = [...(incoming.upcoming || []), ...(incoming.overdue || []), ...(incoming.flagged || [])]
+          const now = Date.now()
+          let changed = false
+          for (const t of all) {
+            if (t && t.applicantId && String(t.status || "").toLowerCase() !== "completed") {
+              const id = t.id || t.recordId
+              if (id && !firstSeenMapRef.current[id]) {
+                firstSeenMapRef.current[id] = now
+                changed = true
+              }
+            }
+          }
+          if (changed) sessionStorage.setItem("hireTaskFirstSeenAt", JSON.stringify(firstSeenMapRef.current))
+        } catch {}
         const prev = lastTasksRef.current
         const stringify = (obj) => JSON.stringify(obj)
         // Avoid resetting state if structurally equal to prevent re-animations
@@ -556,6 +580,28 @@ export function TaskManagement() {
     return () => {
       if (timeout) clearTimeout(timeout)
     }
+  }, [])
+
+  // Initialize banner snooze state from sessionStorage
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("hireBannerSnoozeUntil")
+      if (raw) {
+        const num = Number(raw)
+        if (!Number.isNaN(num)) setHireBannerSnoozeUntil(num)
+      }
+    } catch {}
+  }, [])
+
+  // Load first-seen map for hire completion tasks
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("hireTaskFirstSeenAt")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === "object") firstSeenMapRef.current = parsed
+      }
+    } catch {}
   }, [])
 
   const handleNewTaskCreated = async (taskData) => {
@@ -1078,24 +1124,76 @@ export function TaskManagement() {
     setEditDialogOpen(true)
   }
 
+  // Admin-only task lists (exclude hire completion tasks from main layout)
+  const adminUpcoming = (tasks.upcoming || []).filter((t) => !isHireCompletionTask(t))
+  const adminOverdue = (tasks.overdue || []).filter((t) => !isHireCompletionTask(t))
+  const adminFlagged = (tasks.flagged || []).filter((t) => !isHireCompletionTask(t))
+
   const tabCounts = {
-    upcoming: tasks.upcoming.length,
-    overdue: tasks.overdue.length,
-    flagged: tasks.flagged.length,
+    upcoming: adminUpcoming.length,
+    overdue: adminOverdue.length,
+    flagged: adminFlagged.length,
   }
 
   // Accurate count for Unclaimed (across all groups, excluding completed which is not returned)
   const unclaimedCount = [
-    ...(tasks.upcoming || []),
-    ...(tasks.overdue || []),
-    ...(tasks.flagged || []),
+    ...adminUpcoming,
+    ...adminOverdue,
+    ...adminFlagged,
   ].filter((t) => isGlobalTask(t)).length
 
   // My Queue: tasks assigned to me (non-global) across all groups
   const myQueue = (() => {
-    const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
+    const all = [...adminUpcoming, ...adminOverdue, ...adminFlagged]
     return all.filter((t) => !isGlobalTask(t))
   })()
+
+  // Utility: best-effort extraction of a task's created timestamp
+  const getCreatedTimestamp = (task) => {
+    if (!task) return 0
+    const candidates = [
+      task.createdTime,
+      task.createdAt,
+      task.created,
+      task["Created Time"],
+      task.created_time,
+      task.created_date,
+      task.createdTimestamp,
+    ]
+    for (const c of candidates) {
+      if (!c) continue
+      if (typeof c === "number") return c
+      const ms = Date.parse(c)
+      if (!Number.isNaN(ms)) return ms
+    }
+    // Fallback: first seen timestamp from session
+    const id = task.id || task.recordId
+    if (id && firstSeenMapRef.current[id]) return firstSeenMapRef.current[id]
+    return 0
+  }
+
+  // Derive hire completion counts (only those not completed)
+  const allTasks = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
+  const hireOpen = allTasks.filter((t) => t.applicantId && (String(t.status || "").toLowerCase() !== "completed"))
+  const hireOpenCount = hireOpen.length
+  const nowMs = Date.now()
+  const twentyFourHoursMs = 24 * 60 * 60 * 1000
+  const hireRecentCount = hireOpen.reduce((acc, t) => {
+    const created = getCreatedTimestamp(t)
+    if (created && nowMs - created <= twentyFourHoursMs) return acc + 1
+    return acc
+  }, 0)
+
+  const nowTs = Date.now()
+  const isHireBannerActive = hireOpenCount > 0 && nowTs > (hireBannerSnoozeUntil || 0)
+
+  const snoozeHireBanner = (hours = 4) => {
+    const until = Date.now() + hours * 60 * 60 * 1000
+    setHireBannerSnoozeUntil(until)
+    try {
+      sessionStorage.setItem("hireBannerSnoozeUntil", String(until))
+    } catch {}
+  }
 
   return (
     <TooltipProvider>
@@ -1132,7 +1230,7 @@ export function TaskManagement() {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowGroupsModal(true)}
-                  className="shadow-sm hover:shadow-md transition-shadow bg-transparent"
+                  className={`shadow-sm hover:shadow-md transition-shadow bg-transparent ${isHireBannerActive ? "border-primary/50" : ""}`}
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Hire Completions
@@ -1156,6 +1254,49 @@ export function TaskManagement() {
                 </Button>
               </div>
             </div>
+            {isHireBannerActive && (
+              <motion.div
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowGroupsModal(true)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowGroupsModal(true) }}
+                onMouseEnter={() => setIsBannerHovered(true)}
+                onMouseLeave={() => setIsBannerHovered(false)}
+                className="relative mt-2 flex items-center justify-between gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+              >
+                {hireRecentCount > 0 && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-primary/20 pointer-events-none"
+                    initial={{ opacity: 0.18 }}
+                    animate={!isBannerHovered ? { opacity: [0.18, 0.38, 0.18] } : { opacity: 0.18 }}
+                    transition={!isBannerHovered ? { duration: 3.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" } : { duration: 0.2 }}
+                  />
+                )}
+                <div className="text-foreground/90 truncate relative z-10">
+                  {hireRecentCount > 0 ? (
+                    <>
+                      There {hireRecentCount === 1 ? "is" : "are"} <span className="font-medium">{hireRecentCount}</span> NEW onboarding completion{hireRecentCount === 1 ? "" : "s"} ready to be reviewed
+                    </>
+                  ) : (
+                    <>
+                      There {hireOpenCount === 1 ? "is" : "are"} <span className="font-medium">{hireOpenCount}</span> onboarding completion{hireOpenCount === 1 ? "" : "s"} ready to be reviewed
+                    </>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); snoozeHireBanner(4) }}
+                  className="h-6 w-6 text-muted-foreground hover:text-muted-foreground/80 hover:bg-transparent opacity-70 relative z-10"
+                  aria-label="Dismiss"
+                  title="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            )}
           </CardHeader>
 
           <CardContent className="pt-0">
@@ -1204,15 +1345,15 @@ export function TaskManagement() {
               </TabsList>
 
               <TabsContent value="upcoming" className="mt-0">
-                {renderTaskList(tasks.upcoming, "upcoming")}
+                {renderTaskList(adminUpcoming, "upcoming")}
               </TabsContent>
 
               <TabsContent value="overdue" className="mt-0">
-                {renderTaskList(tasks.overdue, "overdue")}
+                {renderTaskList(adminOverdue, "overdue")}
               </TabsContent>
 
               <TabsContent value="flagged" className="mt-0">
-                {renderTaskList(tasks.flagged, "flagged")}
+                {renderTaskList(adminFlagged, "flagged")}
               </TabsContent>
 
               <TabsContent value="queue" className="mt-0">
