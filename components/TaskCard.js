@@ -33,7 +33,7 @@ const urgencyConfig = {
   },
 }
 
-export function TaskCard({ task, onComplete, disableActions }) {
+export function TaskCard({ task, onComplete, disableActions, compact = false }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
   // Status configuration
@@ -119,8 +119,8 @@ export function TaskCard({ task, onComplete, disableActions }) {
   const secondaryMeta = renderSecondaryMeta()
 
   return (
-    <Card className={cn("overflow-hidden", statusInfo.accentClass, task.isQuiz && "border-2 border-blue-500 shadow-lg")}>
-      <CardContent className="p-4">
+    <Card className={cn("overflow-hidden h-full flex flex-col", statusInfo.accentClass, task.isQuiz && "border-2 border-blue-500 shadow-lg")}>
+      <CardContent className="p-4 flex-1">
         <div className="flex justify-between items-start gap-2 mb-2">
           <h3 className="font-medium text-foreground">
             {task.title}
@@ -163,9 +163,13 @@ export function TaskCard({ task, onComplete, disableActions }) {
           </div>
         </div>
 
-        {task.description && <p className="text-sm text-muted-foreground mb-2">{task.description}</p>}
+        <div
+          className={cn("text-sm text-muted-foreground mb-2 overflow-hidden", !compact && "md:min-h-[40px]")}
+          style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+        >
+          {task.description || ""}
+        </div>
 
-        {task.week && <div className="text-xs text-muted-foreground mb-2">Week {task.week}</div>}
       </CardContent>
 
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
@@ -193,64 +197,66 @@ export function TaskCard({ task, onComplete, disableActions }) {
             )}
           </div>
         ) : (
-          <>
-            {task.resourceUrl ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-              >
-                <ExternalLink className="h-4 w-4 mr-1.5" />
-                Resource
-              </Button>
-            ) : (
-              <span /> // Empty span to maintain alignment
-            )}
-
-            {!task.completed ? (
-              <Button
-                variant={task.overdue ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  task.overdue && "bg-red-600 hover:bg-red-700 text-white",
-                  // Hard-disable visuals when globally disabled
-                  disableActions && "opacity-50 cursor-not-allowed pointer-events-none",
-                )}
-                disabled={isCompleting || disableActions}
-                onClick={!disableActions ? handleComplete : undefined}
-              >
-                {isCompleting ? (
-                  <>
-                    <Loader2 className={cn("h-4 w-4 mr-1.5", (isCompleting && !disableActions) ? "animate-spin" : "")} />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Complete
-                  </>
-                )}
-              </Button>
-            ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="text-xs text-muted-foreground">
-                      {secondaryMeta ? secondaryMeta.label : "Completed"}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {secondaryMeta ? secondaryMeta.tooltip : ""}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
-            {!task.completed && secondaryMeta && (
-              <div className="text-xs text-muted-foreground ml-3">{secondaryMeta.label}</div>
-            )}
-          </>
+          <div className="w-full flex items-center justify-between">
+            <div>
+              {task.resourceUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1.5" />
+                  Resource
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {!task.completed && secondaryMeta && (
+                <div className="text-xs text-muted-foreground">{secondaryMeta.label}</div>
+              )}
+              {!task.completed ? (
+                <Button
+                  variant={task.overdue ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    task.overdue && "bg-red-600 hover:bg-red-700 text-white",
+                    disableActions && "opacity-50 cursor-not-allowed pointer-events-none",
+                  )}
+                  disabled={isCompleting || disableActions}
+                  onClick={!disableActions ? handleComplete : undefined}
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className={cn("h-4 w-4 mr-1.5", (isCompleting && !disableActions) ? "animate-spin" : "")} />
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Complete
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-xs text-muted-foreground">
+                        {secondaryMeta ? secondaryMeta.label : "Completed"}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {secondaryMeta ? secondaryMeta.tooltip : ""}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {typeof task.week !== "undefined" && task.week !== null && (
+                <div className="text-xs text-muted-foreground">Week {task.week}</div>
+              )}
+            </div>
+          </div>
         )}
       </CardFooter>
     </Card>

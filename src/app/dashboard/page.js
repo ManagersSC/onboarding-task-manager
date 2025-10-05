@@ -994,7 +994,7 @@ export default function DashboardPage() {
             ) : section === "active" && activeView === "list" ? (
               <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
             ) : (
-              // Completed Section - 3xN grid sorted by completedTime
+              // Completed Section - masonry layout sorted by completedTime
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <Badge
@@ -1006,26 +1006,28 @@ export default function DashboardPage() {
                   </Badge>
                   <span className="text-sm text-muted-foreground">{completedViewTasks.length} items</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="[column-fill:_balance] columns-1 md:columns-2 lg:columns-3 gap-4">
                   <AnimatePresence initial={false}>
                     {completedViewTasks.length > 0 ? (
-                      completedViewTasks.map((t) => (
+                      completedViewTasks.map((t, i) => (
                         <motion.div
                           key={t.id}
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.2 }}
+                          transition={{ duration: 0.2, delay: i * 0.03 }}
+                          className="break-inside-avoid mb-4"
                         >
                           <TaskCard
                             task={{ ...t, status: "completed" }}
                             onComplete={handleComplete}
                             disableActions={globalPaused.isPaused}
+                            compact={!t.description}
                           />
                         </motion.div>
                       ))
                     ) : (
-                      <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
+                      <div className="rounded-lg border border-dashed p-8 text-center">
                         <p className="text-sm text-muted-foreground">No completed items</p>
                       </div>
                     )}
