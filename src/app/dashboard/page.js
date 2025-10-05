@@ -23,12 +23,15 @@ import {
   X,
   Star,
   Flag,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Label } from "@components/ui/label"
 import { toast } from "sonner"
 import { AnimatePresence, motion } from "framer-motion"
+import { staggerContainer, fadeInUp } from "@components/lib/utils"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -41,14 +44,15 @@ function getFolderStatus(subtasks) {
 const TaskList = ({ tasks, onComplete, disableActions }) => {
   return (
     <div className="divide-y divide-border">
-      <AnimatePresence initial={false}>
-        {tasks.map((task) => (
+      <AnimatePresence>
+        {tasks.map((task, i) => (
           <motion.div
             key={task.id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.2, delay: i * 0.04 }}
+            layout
           >
             <TaskCard task={task} onComplete={onComplete} disableActions={disableActions} />
           </motion.div>
@@ -65,6 +69,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeView, setActiveView] = useState("kanban")
   const [section, setSection] = useState("active") // active | completed
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
 
   const [filters, setFilters] = useState({
@@ -219,6 +224,87 @@ export default function DashboardPage() {
   
     fetchData();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      // Re-fetch tasks and quizzes in parallel
+      const [tasksResponse, quizzesResponse] = await Promise.all([
+        fetch("/api/get-tasks"),
+        fetch("/api/user/quizzes"),
+      ])
+
+      const tasksFromBackend = tasksResponse.ok ? await tasksResponse.json() : []
+      const quizzesData = quizzesResponse.ok ? await quizzesResponse.json() : []
+
+      const quizLogIds = new Set(quizzesData.map((q) => q.logId))
+
+      const apiQuizTasks = quizzesData.map((quiz) => ({
+        id: `quiz-${quiz.quizId || quiz.logId}`,
+        title: quiz.title,
+        description: quiz.description,
+        completed: quiz.completed,
+        overdue: quiz.overdue || false,
+        resourceUrl: quiz.resourceUrl,
+        lastStatusChange: quiz.lastStatusChange,
+        completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
+        week: quiz.week,
+        folder: null,
+        isQuiz: true,
+        quizId: quiz.quizId,
+        score: quiz.score,
+        passed: quiz.passed,
+        originalLogId: quiz.logId,
+        status: quiz.status,
+        type: "Quiz",
+      }))
+
+      const regularTasks = tasksFromBackend
+        .filter((task) => !quizLogIds.has(task.id))
+        .map((task) => ({
+          id: task.id,
+          title: Array.isArray(task.title) ? task.title[0] : task.title,
+          description: task.description || "",
+          completed: task.completed,
+          overdue: task.overdue,
+          resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
+          lastStatusChange: task.lastStatusChange,
+          completedTime:
+            task.completedTime ||
+            task.completed_time ||
+            task.completedDate ||
+            task.completed_date ||
+            task.lastStatusChange ||
+            null,
+          dueDate:
+            task.dueDate ||
+            task.due_date ||
+            task.overdueDate ||
+            task.overdue_date ||
+            task.overdueUntil ||
+            task.overdue_until ||
+            null,
+          week: task.week,
+          folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
+          isQuiz: false,
+        }))
+
+      const allTasks = [...regularTasks, ...apiQuizTasks]
+
+      const isPaused = Array.isArray(tasksFromBackend) && tasksFromBackend.some((t) => t.paused)
+      const pausedUntil = Array.isArray(tasksFromBackend)
+        ? tasksFromBackend.find((t) => t.paused && t.pausedUntil)?.pausedUntil || null
+        : null
+
+      setTasks(allTasks)
+      setGlobalPaused({ isPaused, pausedUntil })
+    } catch (e) {
+      console.error("Error refreshing data:", e)
+      setError("Failed to refresh tasks. Please try again.")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const handleComplete = async (taskId) => {
     // Global hard stop: if onboarding is paused, never attempt completion
@@ -614,6 +700,20 @@ export default function DashboardPage() {
               </Popover>
               <div className="flex items-center gap-2 ml-auto">
                 <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing || loading}
+                  aria-label="Refresh"
+                  title="Refresh"
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
                   variant={section === "active" ? "default" : "outline"}
                   size="sm"
                   onClick={() => switchSection("active")}
@@ -702,6 +802,10 @@ export default function DashboardPage() {
                 <Skeleton className="h-[120px] w-full rounded-lg" />
               </div>
             ))}
+          </div>
+        ) : isRefreshing ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
           <Card className="p-6 border-destructive/50 bg-destructive/10">
