@@ -170,6 +170,15 @@ export default function DashboardPage() {
             resourceUrl: Array.isArray(task.resourceUrl) ? task.resourceUrl[0] : task.resourceUrl,
             lastStatusChange: task.lastStatusChange,
             completedTime: task.completedTime || task.completed_time || task.completedDate || task.completed_date || task.lastStatusChange || null,
+            // Try multiple possible API field names for due/overdue date
+            dueDate:
+              task.dueDate ||
+              task.due_date ||
+              task.overdueDate ||
+              task.overdue_date ||
+              task.overdueUntil ||
+              task.overdue_until ||
+              null,
             week: task.week,
             folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
             isQuiz: false

@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
 import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@components/lib/utils"
 import Link from "next/link"
 
@@ -75,6 +76,47 @@ export function TaskCard({ task, onComplete, disableActions }) {
       setIsCompleting(false)
     }
   }
+
+  const renderSecondaryMeta = () => {
+    if (status === "completed") {
+      const completedAtRaw = task.completedTime || task.lastStatusChange || task.completedDate
+      if (!completedAtRaw) return null
+      const completedAt = new Date(completedAtRaw)
+      const now = new Date()
+      const diffMs = now.getTime() - completedAt.getTime()
+      const minutes = Math.floor(diffMs / 60000)
+      const hours = Math.floor(minutes / 60)
+      const days = Math.floor(hours / 24)
+      let rel = "just now"
+      if (days > 0) rel = `${days} day${days === 1 ? "" : "s"} ago`
+      else if (hours > 0) rel = `${hours} hour${hours === 1 ? "" : "s"} ago`
+      else if (minutes > 0) rel = `${minutes} min${minutes === 1 ? "" : "s"} ago`
+      return { label: `Completed ${rel}`, tooltip: completedAt.toLocaleString() }
+    }
+
+    // Assigned/Overdue: compute due delta if dueDate present
+    const rawDue = task.dueDate || task.overdueDate || task.overdue_until || task.overdueUntil
+    if (rawDue) {
+      const due = new Date(rawDue)
+      const now = new Date()
+      const diffMs = due.getTime() - now.getTime()
+      const minutes = Math.ceil(Math.abs(diffMs) / 60000)
+      const hours = Math.ceil(minutes / 60)
+      const days = Math.ceil(hours / 24)
+      if (diffMs >= 0) {
+        // in future
+        const rel = days > 1 ? `${days} days` : hours > 1 ? `${hours} hours` : `${minutes} mins`
+        return { label: `Due in ${rel}`, tooltip: due.toLocaleString() }
+      } else {
+        // overdue
+        const rel = days > 1 ? `${days} days` : hours > 1 ? `${hours} hours` : `${minutes} mins`
+        return { label: `Overdue by ${rel}`, tooltip: due.toLocaleString() }
+      }
+    }
+    return null
+  }
+
+  const secondaryMeta = renderSecondaryMeta()
 
   return (
     <Card className={cn("overflow-hidden", statusInfo.accentClass, task.isQuiz && "border-2 border-blue-500 shadow-lg")}>
@@ -191,12 +233,22 @@ export function TaskCard({ task, onComplete, disableActions }) {
                 )}
               </Button>
             ) : (
-              <div className="text-xs text-muted-foreground">
-                {(() => {
-                  const completedAt = task.completedTime || task.lastStatusChange || task.completedDate
-                  return completedAt ? `Completed ${new Date(completedAt).toLocaleString()}` : "Completed"
-                })()}
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-xs text-muted-foreground">
+                      {secondaryMeta ? secondaryMeta.label : "Completed"}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {secondaryMeta ? secondaryMeta.tooltip : ""}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {!task.completed && secondaryMeta && (
+              <div className="text-xs text-muted-foreground ml-3">{secondaryMeta.label}</div>
             )}
           </>
         )}
