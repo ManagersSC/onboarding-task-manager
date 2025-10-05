@@ -370,7 +370,13 @@ export default function DashboardPage() {
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0
 
   const availableWeeks = useMemo(
-    () => [...new Set(tasks.map((task) => task.week).filter(Boolean))].sort((a, b) => Number(a) - Number(b)),
+    () => {
+      const weekStrings = tasks
+        .map((task) => (task.week !== undefined && task.week !== null ? String(task.week) : null))
+        .filter(Boolean)
+      const uniqueWeeks = [...new Set(weekStrings)]
+      return uniqueWeeks.sort((a, b) => Number(a) - Number(b))
+    },
     [tasks],
   )
 
