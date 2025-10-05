@@ -1486,6 +1486,42 @@
                     "type": "multilineText",
                     "id": "fldjkGaYFo0ZxGpS4",
                     "name": "Onboarding Paused Reason"
+                },
+                {
+                    "type": "date",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        }
+                    },
+                    "id": "fld8YzQlzYYV5fmE8",
+                    "name": "Onboarding Resumed On"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldwwnjcCosyOIkI0",
+                    "name": "Receptionist - What attracts you to our dental practice?"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld7NMZtEuE5jceLr",
+                    "name": "Receptionist - Appeal to receptionist in a dental practice"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldxd9hAd48GcyZDE",
+                    "name": "Receptionist - What skills are important as a dental receptionist"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldZLKXzKGX5NA1uf",
+                    "name": "Receptionist - Exceptional Customer Service"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fld81SKyEsj02RjdS",
+                    "name": "Receptionist - How do you stay enaged in challenging days"
                 }
             ],
             "views": [
@@ -4027,7 +4063,7 @@
                         "timeZone": "client"
                     },
                     "id": "fld6dfyDnEBKl7Xx2",
-                    "name": "Time"
+                    "name": "Completed Time"
                 },
                 {
                     "type": "formula",
@@ -5123,6 +5159,11 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "selwGTlAsqXys3LQL",
+                                "name": "Task Completion Blocked",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "selEdTuqo8IC5yKUu",
                                 "name": "Task Created",
                                 "color": "cyanBright"
@@ -5190,6 +5231,16 @@
                             {
                                 "id": "selrY2VKgbDzuDyJr",
                                 "name": "Onboarding Start Date",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selj69pNQ7Wemz8i2",
+                                "name": "Onboarding Paused",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selbl2oN8bkLoj9vj",
+                                "name": "Onboarding Resumed",
                                 "color": "cyanBright"
                             },
                             {
