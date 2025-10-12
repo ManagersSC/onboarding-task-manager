@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut } from "lucide-react"
+import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut, FileSearch } from "lucide-react"
 import { handleLogout } from "@/lib/utils/logout"
 import {
   AlertDialog,
@@ -48,6 +48,11 @@ const navItems = [
     title: "Users",
     icon: Users,
     href: "/admin/users",
+  },
+  {
+    title: "Audit Logs",
+    icon: FileSearch,
+    href: "/admin/audit-logs",
   },
 ]
 
