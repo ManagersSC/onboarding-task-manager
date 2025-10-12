@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
@@ -8,6 +8,8 @@ import { Input } from "@components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Skeleton } from "@components/ui/skeleton"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@components/ui/sheet"
+import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -16,17 +18,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
-import { Download, Filter } from "lucide-react"
+import { Download, Filter, Calendar as CalendarIcon } from "lucide-react"
 
 function useQueryState() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const setParam = (key, value) => {
-    const sp = new URLSearchParams(Array.from(searchParams.entries()))
-    if (value == null || value === "") sp.delete(key)
-    else sp.set(key, String(value))
-    router.replace(`/admin/audit-logs?${sp.toString()}`)
-  }
   const setParams = (entries) => {
     const sp = new URLSearchParams(Array.from(searchParams.entries()))
     Object.entries(entries || {}).forEach(([k, v]) => {
@@ -35,6 +31,7 @@ function useQueryState() {
     })
     router.replace(`/admin/audit-logs?${sp.toString()}`)
   }
+  const setParam = (k, v) => setParams({ [k]: v })
   return { searchParams, setParam, setParams }
 }
 
@@ -66,6 +63,126 @@ function formatTimestamp(ts) {
   }
 }
 
+function toLocalDatetimeInput(iso) {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ""
+    const pad = (n) => String(n).padStart(2, "0")
+    const yyyy = d.getFullYear()
+    const mm = pad(d.getMonth() + 1)
+    const dd = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const mi = pad(d.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+  } catch {
+    return ""
+  }
+}
+
+function fromLocalDatetimeInput(val) {
+  const d = new Date(val)
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString()
+}
+
+function composeIso(dateObj, hours, minutes) {
+  if (!dateObj) return ""
+  const d = new Date(
+    dateObj.getFullYear(),
+    dateObj.getMonth(),
+    dateObj.getDate(),
+    Number(hours) || 0,
+    Number(minutes) || 0,
+    0,
+    0,
+  )
+  return d.toISOString()
+}
+
+function extractLocalParts(iso) {
+  if (!iso) {
+    const now = new Date()
+    return { date: now, hours: String(now.getHours()).padStart(2, "0"), minutes: String(now.getMinutes()).padStart(2, "0") }
+  }
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) {
+    const now = new Date()
+    return { date: now, hours: String(now.getHours()).padStart(2, "0"), minutes: String(now.getMinutes()).padStart(2, "0") }
+  }
+  return {
+    date: d,
+    hours: String(d.getHours()).padStart(2, "0"),
+    minutes: String(d.getMinutes()).padStart(2, "0"),
+  }
+}
+
+function DateTimePicker({ label, value, onChange }) {
+  const { date, hours: initH, minutes: initM } = extractLocalParts(value)
+  const [open, setOpen] = useState(false)
+  const [pickedDate, setPickedDate] = useState(date)
+  const [hh, setHh] = useState(initH)
+  const [mm, setMm] = useState(initM)
+
+  useEffect(() => {
+    const { date: d, hours, minutes } = extractLocalParts(value)
+    setPickedDate(d)
+    setHh(hours)
+    setMm(minutes)
+  }, [value])
+
+  const display = value ? pickedDate.toLocaleDateString() + " " + `${hh}:${mm}` : label
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"))
+  const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-[220px] justify-start text-left font-normal bg-background border-border focus:border-primary focus:ring-1 focus:ring-primary/20 h-9"
+          onClick={() => setOpen(true)}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {display}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="flex w-auto flex-col space-y-2 p-2 pointer-events-auto z-50">
+        <div className="rounded-md border">
+          <CustomCalendar selected={pickedDate} onSelect={(d) => d && setPickedDate(d)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={hh} onValueChange={(v) => setHh(v)}>
+            <SelectTrigger className="w-[90px]"><SelectValue placeholder="HH" /></SelectTrigger>
+            <SelectContent>
+              {hourOptions.map((h) => (
+                <SelectItem key={h} value={h}>{h}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm">:</span>
+          <Select value={mm} onValueChange={(v) => setMm(v)}>
+            <SelectTrigger className="w-[90px]"><SelectValue placeholder="MM" /></SelectTrigger>
+            <SelectContent>
+              {minuteOptions.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => {
+              const iso = composeIso(pickedDate, hh, mm)
+              onChange(iso)
+              setOpen(false)
+            }}
+            className="h-9"
+          >
+            Apply
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function AuditLogsPage() {
   const { searchParams, setParam, setParams } = useQueryState()
   const [loading, setLoading] = useState(true)
@@ -89,6 +206,7 @@ export default function AuditLogsPage() {
   const [range, setRange] = useState(searchParams.get("_range") || "7d")
   const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") || "")
   const [dateTo, setDateTo] = useState(searchParams.get("dateTo") || "")
+  const fromRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -127,6 +245,7 @@ export default function AuditLogsPage() {
   useEffect(() => {
     setSearchQuery(q)
   }, [q])
+
 
   // Debounced search: apply after user stops typing, but keep Enter-to-search for immediacy
   useEffect(() => {
@@ -296,7 +415,10 @@ export default function AuditLogsPage() {
                     setDateTo(toIso)
                     setParams({ dateFrom: fromIso, dateTo: toIso, _range: v, page: 1 })
                   } else if (v === "custom") {
-                    setParam("_range", v)
+                    setParams({ _range: v })
+                    setDateFrom("")
+                    setDateTo("")
+                    setTimeout(() => fromRef.current?.focus(), 0)
                   }
                 }}
               >
@@ -321,26 +443,16 @@ export default function AuditLogsPage() {
             {range === "custom" && (
               <div className="flex items-center gap-3 pl-1">
                 <span className="text-sm text-muted-foreground">From:</span>
-                <Input
-                  type="datetime-local"
-                  value={dateFrom ? new Date(dateFrom).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => {
-                    const iso = new Date(e.target.value).toISOString()
-                    setDateFrom(iso)
-                    setParams({ dateFrom: iso, page: 1 })
-                  }}
-                  className="w-[200px]"
+                <DateTimePicker
+                  label="Select from"
+                  value={dateFrom}
+                  onChange={(iso) => { setDateFrom(iso); setParams({ dateFrom: iso, page: 1 }) }}
                 />
                 <span className="text-sm text-muted-foreground">To:</span>
-                <Input
-                  type="datetime-local"
-                  value={dateTo ? new Date(dateTo).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => {
-                    const iso = new Date(e.target.value).toISOString()
-                    setDateTo(iso)
-                    setParams({ dateTo: iso, page: 1 })
-                  }}
-                  className="w-[200px]"
+                <DateTimePicker
+                  label="Select to"
+                  value={dateTo}
+                  onChange={(iso) => { setDateTo(iso); setParams({ dateTo: iso, page: 1 }) }}
                 />
               </div>
             )}

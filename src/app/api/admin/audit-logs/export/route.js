@@ -122,7 +122,7 @@ export async function GET(request) {
     })
 
     const data = rows.map((r) => ({
-      timestamp: r.fields["Timestamp"],
+      timestampIso: r.fields["Timestamp"],
       eventType: r.fields["Event Type"],
       status: r.fields["Event Status"],
       role: r.fields["Role"],
@@ -133,8 +133,41 @@ export async function GET(request) {
       ua: r.fields["User Agent"] || "",
     }))
 
+    // Helpers to format friendly timestamp and UA summary
+    const formatTimestamp = (iso) => {
+      try {
+        const d = new Date(iso)
+        if (Number.isNaN(d.getTime())) return iso || ""
+        return d.toLocaleString("en-GB", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      } catch {
+        return iso || ""
+      }
+    }
+    const uaSummary = (ua) => {
+      if (!ua) return ""
+      const isChrome = ua.includes("Chrome") && !ua.includes("Edg")
+      const isEdge = ua.includes("Edg")
+      const isFirefox = ua.includes("Firefox")
+      const isSafari = ua.includes("Safari") && !ua.includes("Chrome")
+      const os = ua.includes("Windows") ? "Windows" : ua.includes("Mac OS") ? "Windows".replace("Windows", "macOS") : ua.includes("Linux") ? "Linux" : ""
+      const browser = isChrome ? "Chrome" : isEdge ? "Edge" : isFirefox ? "Firefox" : isSafari ? "Safari" : "Other"
+      return [browser, os].filter(Boolean).join(" on ")
+    }
+
+    const enriched = data.map((d) => ({
+      ...d,
+      timestamp: formatTimestamp(d.timestampIso),
+      uaSummary: uaSummary(d.ua),
+    }))
+
     if (format === "json") {
-      const body = JSON.stringify({ data, count: data.length })
+      const body = JSON.stringify({ data: enriched, count: enriched.length })
       return new Response(body, {
         headers: {
           "Content-Type": "application/json",
@@ -146,6 +179,7 @@ export async function GET(request) {
     // CSV
     const headers = [
       "timestamp",
+      "timestampIso",
       "eventType",
       "status",
       "role",
@@ -153,6 +187,7 @@ export async function GET(request) {
       "userIdentifier",
       "message",
       "ip",
+      "uaSummary",
       "ua",
     ]
     const escape = (s) => {
@@ -164,7 +199,7 @@ export async function GET(request) {
       return str
     }
     const csv = [headers.join(",")]
-    for (const row of data) {
+    for (const row of enriched) {
       csv.push(headers.map((h) => escape(row[h])).join(","))
     }
     const body = csv.join("\n")
