@@ -10,6 +10,7 @@ import { Skeleton } from "@components/ui/skeleton"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@components/ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -193,6 +194,9 @@ export default function AuditLogsPage() {
   const [aggregates, setAggregates] = useState({ byType: {}, failures: 0 })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState("json")
+  const [exportLimit, setExportLimit] = useState("250")
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
   const q = searchParams.get("q") || ""
@@ -297,13 +301,13 @@ export default function AuditLogsPage() {
           <div className="flex items-center justify-between">
             <CardTitle>Audit Logs</CardTitle>
             <div className="flex gap-2">
-              <Button onClick={() => doExport("csv")} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button onClick={() => doExport("json")} variant="outline" size="sm">
+              <Button onClick={() => { setExportFormat("json"); setExportDialogOpen(true) }} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Export JSON
+              </Button>
+              <Button onClick={() => { setExportFormat("csv"); setExportDialogOpen(true) }} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
               </Button>
             </div>
           </div>
@@ -596,6 +600,29 @@ export default function AuditLogsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export {exportFormat.toUpperCase()}</DialogTitle>
+            <DialogDescription>Select how many recent records to include.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3">
+            <Select value={exportLimit} onValueChange={(v) => setExportLimit(v)}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Limit" /></SelectTrigger>
+              <SelectContent>
+                {[50, 100, 250, 500, 1000].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setExportDialogOpen(false); doExport(exportFormat, Number(exportLimit)) }}>Export</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="w-[600px] max-w-full overflow-y-auto">
