@@ -27,7 +27,15 @@ function useQueryState() {
     else sp.set(key, String(value))
     router.replace(`/admin/audit-logs?${sp.toString()}`)
   }
-  return { searchParams, setParam }
+  const setParams = (entries) => {
+    const sp = new URLSearchParams(Array.from(searchParams.entries()))
+    Object.entries(entries || {}).forEach(([k, v]) => {
+      if (v == null || v === "") sp.delete(k)
+      else sp.set(k, String(v))
+    })
+    router.replace(`/admin/audit-logs?${sp.toString()}`)
+  }
+  return { searchParams, setParam, setParams }
 }
 
 function maskIp(ip) {
@@ -59,7 +67,7 @@ function formatTimestamp(ts) {
 }
 
 export default function AuditLogsPage() {
-  const { searchParams, setParam } = useQueryState()
+  const { searchParams, setParam, setParams } = useQueryState()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState([])
   const [total, setTotal] = useState(0)
@@ -115,6 +123,22 @@ export default function AuditLogsPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize])
 
+  // Keep input in sync if URL q changes (e.g., via back/forward or clear filters)
+  useEffect(() => {
+    setSearchQuery(q)
+  }, [q])
+
+  // Debounced search: apply after user stops typing, but keep Enter-to-search for immediacy
+  useEffect(() => {
+    const currentQ = searchParams.get("q") || ""
+    if (searchQuery === currentQ) return
+    const handle = setTimeout(() => {
+      setParams({ q: searchQuery, page: 1 })
+    }, 500)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery])
+
   const doExport = async (format) => {
     const url = new URL("/api/admin/audit-logs/export", window.location.origin)
     if (q) url.searchParams.set("q", q)
@@ -142,13 +166,7 @@ export default function AuditLogsPage() {
     setRange("7d")
     setDateFrom("")
     setDateTo("")
-    setParam("q", "")
-    setParam("eventType", "")
-    setParam("status", "")
-    setParam("_range", "7d")
-    setParam("dateFrom", "")
-    setParam("dateTo", "")
-    setParam("page", 1)
+    setParams({ q: "", eventType: "", status: "", _range: "7d", dateFrom: "", dateTo: "", page: 1 })
   }
 
   const hasActiveFilters = q || eventTypes.length > 0 || statuses.length > 0 || dateFrom || dateTo
@@ -181,8 +199,7 @@ export default function AuditLogsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      setParam("q", searchQuery)
-                      setParam("page", 1)
+                      setParams({ q: searchQuery, page: 1 })
                     }
                   }}
                   className="w-full"
@@ -223,8 +240,7 @@ export default function AuditLogsPage() {
                           ? Array.from(new Set([...eventTypes, t]))
                           : eventTypes.filter((x) => x !== t)
                         setEventTypes(next)
-                        setParam("eventType", next.join(","))
-                        setParam("page", 1)
+                        setParams({ eventType: next.join(","), page: 1 })
                       }}
                     >
                       {t}
@@ -255,8 +271,7 @@ export default function AuditLogsPage() {
                       onCheckedChange={(checked) => {
                         const next = checked ? Array.from(new Set([...statuses, s])) : statuses.filter((x) => x !== s)
                         setStatuses(next)
-                        setParam("status", next.join(","))
-                        setParam("page", 1)
+                        setParams({ status: next.join(","), page: 1 })
                       }}
                     >
                       {s}
@@ -279,10 +294,7 @@ export default function AuditLogsPage() {
                     const toIso = now.toISOString()
                     setDateFrom(fromIso)
                     setDateTo(toIso)
-                    setParam("dateFrom", fromIso)
-                    setParam("dateTo", toIso)
-                    setParam("_range", v)
-                    setParam("page", 1)
+                    setParams({ dateFrom: fromIso, dateTo: toIso, _range: v, page: 1 })
                   } else if (v === "custom") {
                     setParam("_range", v)
                   }
@@ -315,8 +327,7 @@ export default function AuditLogsPage() {
                   onChange={(e) => {
                     const iso = new Date(e.target.value).toISOString()
                     setDateFrom(iso)
-                    setParam("dateFrom", iso)
-                    setParam("page", 1)
+                    setParams({ dateFrom: iso, page: 1 })
                   }}
                   className="w-[200px]"
                 />
@@ -327,8 +338,7 @@ export default function AuditLogsPage() {
                   onChange={(e) => {
                     const iso = new Date(e.target.value).toISOString()
                     setDateTo(iso)
-                    setParam("dateTo", iso)
-                    setParam("page", 1)
+                    setParams({ dateTo: iso, page: 1 })
                   }}
                   className="w-[200px]"
                 />
@@ -349,8 +359,7 @@ export default function AuditLogsPage() {
                 value={String(pageSize)}
                 onValueChange={(v) => {
                   setPageSize(Number(v))
-                  setParam("pageSize", v)
-                  setParam("page", 1)
+                  setParams({ pageSize: v, page: 1 })
                 }}
               >
                 <SelectTrigger className="w-[100px]">

@@ -91,7 +91,14 @@ export async function GET(request) {
     if (ua) parts.push(`FIND(LOWER('${ua.toLowerCase()}'), LOWER({User Agent}))>0`)
     if (q) {
       const s = q.replace(/'/g, "\\'")
-      parts.push(`OR(FIND(LOWER('${s.toLowerCase()}'), LOWER({Name}))>0, FIND(LOWER('${s.toLowerCase()}'), LOWER({Detailed Message}))>0, FIND(LOWER('${s.toLowerCase()}'), LOWER({User Agent}))>0)`)    
+      parts.push(
+        `OR(
+          FIND(LOWER('${s.toLowerCase()}'), LOWER({Name}))>0,
+          FIND(LOWER('${s.toLowerCase()}'), LOWER({User Identifier}))>0,
+          FIND(LOWER('${s.toLowerCase()}'), LOWER({Detailed Message}))>0,
+          FIND(LOWER('${s.toLowerCase()}'), LOWER({User Agent}))>0
+        )`
+      )
     }
     if (isIsoDate(dateFrom) && isIsoDate(dateTo)) {
       parts.push(`AND(IS_AFTER({Timestamp}, '${dateFrom}'), IS_BEFORE({Timestamp}, '${dateTo}'))`)
@@ -100,7 +107,9 @@ export async function GET(request) {
     } else if (isIsoDate(dateTo)) {
       parts.push(`IS_BEFORE({Timestamp}, '${dateTo}')`)
     }
-    const filterByFormula = parts.length ? parts.join(",") : "TRUE()"
+    let filterByFormula = "TRUE()"
+    if (parts.length === 1) filterByFormula = parts[0]
+    else if (parts.length > 1) filterByFormula = `AND(${parts.join(",")})`
 
     // Sort mapping
     const sortFieldMap = {
