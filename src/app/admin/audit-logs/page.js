@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
@@ -184,7 +184,7 @@ function DateTimePicker({ label, value, onChange }) {
   )
 }
 
-export default function AuditLogsPage() {
+function AuditLogsClient() {
   const { searchParams, setParam, setParams } = useQueryState()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState([])
@@ -713,5 +713,30 @@ export default function AuditLogsPage() {
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+export default function AuditLogsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-4 md:p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Audit Logs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <AuditLogsClient />
+    </Suspense>
   )
 }
