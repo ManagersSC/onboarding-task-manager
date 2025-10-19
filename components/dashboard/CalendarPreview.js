@@ -838,24 +838,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
                 </Button>
               </div>
 
-              <div className="flex rounded-md bg-background border border-gray-800">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`px-3 h-8 rounded-l-md ${activeView === "month" ? "bg-gray-800" : ""}`}
-                  onClick={() => setActiveView("month")}
-                >
-                  Month
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`px-3 h-8 rounded-r-md ${activeView === "day" ? "bg-gray-800" : ""}`}
-                  onClick={() => setActiveView("day")}
-                >
-                  Day
-                </Button>
-              </div>
+            <div />
             </div>
           </div>
         </CardHeader>
@@ -966,39 +949,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
               </motion.div>
             )}
 
-            {activeView === "day" && (
-              <DayView
-                currentDate={currentDate}
-                events={(() => {
-                  const base =
-                    calendarData.days.find(
-                      (day) =>
-                        day.day === currentDate.getDate() &&
-                        month === currentDate.getMonth() &&
-                        year === currentDate.getFullYear(),
-                    )?.events || []
-                  return draftEventForDay ? [...base, draftEventForDay] : base
-                })()}
-                onEventClick={(event) => {
-                  const currentDay = calendarData.days.find(
-                    (day) =>
-                      day.day === currentDate.getDate() &&
-                      month === currentDate.getMonth() &&
-                      year === currentDate.getFullYear(),
-                  )
-                  if (currentDay) {
-                    setSelectedDay(currentDay)
-                    setSelectedDate(
-                      `${year}-${String(month + 1).padStart(2, "0")}-${String(currentDay.day).padStart(2, "0")}`,
-                    )
-                    setIsModalOpen(true)
-                    if (!isReadOnly) {
-                      handleEditEvent(event)
-                    }
-                  }
-                }}
-              />
-            )}
+            {/* Day view removed in compact/read-only context */}
           </AnimatePresence>
         </CardContent>
       </Card>
