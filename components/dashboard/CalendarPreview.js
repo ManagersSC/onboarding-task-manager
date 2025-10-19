@@ -374,7 +374,7 @@ function AttendeeItem({ email, onRemove }) {
   )
 }
 
-export function CalendarPreview({ readOnly = false, draftEvent = null, initialDate }) {
+export function CalendarPreview({ readOnly = false, draftEvent = null, initialDate, compact = false, showDayView = true }) {
   const [currentDate, setCurrentDate] = useState(() => (initialDate ? new Date(initialDate) : new Date()))
   const [calendarData, setCalendarData] = useState({ days: [] })
   const [selectedDay, setSelectedDay] = useState(null)
@@ -504,6 +504,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
   }
 
   const handleDayClick = (cell) => {
+    if (isReadOnly) return
     if (!cell.isEmpty) {
       setSelectedDay(cell)
       setSelectedDate(`${year}-${String(month + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`)
@@ -807,8 +808,8 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Card className="border-none shadow-lg bg-black text-white overflow-hidden">
-        <CardHeader className="pb-3">
+      <Card className={`border-none shadow-lg bg-black text-white overflow-hidden ${compact ? "h-[320px]" : ""}`}>
+        <CardHeader className={`${compact ? "hidden" : "pb-3"}`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg font-bold">Calendar</CardTitle>
@@ -860,7 +861,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
         </CardHeader>
 
         {/* Then in the return statement, replace the CardContent section with: */}
-        <CardContent className="p-0">
+        <CardContent className={`p-0 ${compact ? "h-[320px] overflow-y-auto" : ""}`}>
           <AnimatePresence mode="wait">
             {activeView === "month" && (
               <motion.div
@@ -1056,16 +1057,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
                                     <div className="flex-1">
                                       <h4 className="font-medium text-white">{event.title}</h4>
                                     </div>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 rounded-full hover:bg-black/20"
-                                        onClick={() => handleEditEvent(event)}
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </div>
+                                    <div className="flex gap-1" />
                                   </div>
 
                                   <div className="space-y-1 text-sm text-gray-300">
@@ -1178,19 +1170,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
                                 <Label className="text-gray-400">Time</Label>
-                                <div className="flex gap-1">
-                                  {timePresets.map((preset) => (
-                                    <Button
-                                      key={preset.label}
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-6 text-xs bg-background border-gray-800 hover:bg-gray-800"
-                                      onClick={() => applyTimePreset(preset)}
-                                    >
-                                      {preset.label}
-                                    </Button>
-                                  ))}
-                                </div>
+                                <div className="flex gap-1" />
                               </div>
 
                               <div className="grid grid-cols-2 gap-4">
@@ -1400,14 +1380,7 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
                 {/* Modal Footer */}
                 <div className="p-4 border-t border-gray-800">
                   {!editingEvent ? (
-                    <Button
-                      onClick={handleCreateEvent}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      disabled={saving}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Event
-                    </Button>
+                    <div />
                   ) : (
                     <div className="flex gap-2">
                       <Button

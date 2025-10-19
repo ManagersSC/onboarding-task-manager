@@ -101,13 +101,13 @@ export function AppraisalBookingModal({ open, onOpenChange, initialDate, onConfi
               </Button>
             </div>
           </div>
-          {/* Right pane: read-only calendar */}
+          {/* Right pane: read-only calendar with dropdown date picker */}
           <div className="p-4">
             <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
               <CalendarIcon className="h-4 w-4" />
               <span>Calendar preview</span>
             </div>
-            <CalendarPreview readOnly initialDate={date} draftEvent={isoRange ? { start: isoRange.start, end: isoRange.end, title: defaultTitle } : null} />
+            <CalendarPreview readOnly initialDate={date} draftEvent={isoRange ? { start: isoRange.start, end: isoRange.end, title: defaultTitle } : null} compact />
           </div>
         </div>
       </DialogContent>
