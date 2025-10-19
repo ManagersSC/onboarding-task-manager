@@ -41,6 +41,18 @@ function getFolderStatus(subtasks) {
   return "completed"
 }
 
+// Coerce any value into a safe, searchable string
+function toSearchableString(value) {
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) return value.filter(Boolean).join(" ")
+  if (value === null || value === undefined) return ""
+  try {
+    return String(value)
+  } catch {
+    return ""
+  }
+}
+
 const TaskList = ({ tasks, onComplete, disableActions }) => {
   return (
     <div className="divide-y divide-border">
@@ -139,8 +151,8 @@ export default function DashboardPage() {
         const apiQuizTasks = quizzesData.map((quiz) => {
           return {
             id: `quiz-${quiz.quizId || quiz.logId}`,
-            title: quiz.title,
-            description: quiz.description,
+            title: toSearchableString(quiz.title),
+            description: toSearchableString(quiz.description),
             completed: quiz.completed,
             overdue: quiz.overdue || false,
             resourceUrl: quiz.resourceUrl,
@@ -167,8 +179,8 @@ export default function DashboardPage() {
           .filter(task => !quizLogIds.has(task.id))
           .map(task => ({
             id: task.id,
-            title: Array.isArray(task.title) ? task.title[0] : task.title,
-            description: task.description || "",
+            title: toSearchableString(Array.isArray(task.title) ? task.title : task.title),
+            description: toSearchableString(task.description),
             completed: task.completed,
             overdue: task.overdue,
             // No per-task completion toggle. We rely on globalPaused only.
@@ -361,10 +373,13 @@ export default function DashboardPage() {
   const filteredTasks = useMemo(
     () =>
       tasks.filter((task) => {
+        const query = searchQuery.toLowerCase()
+        const titleText = toSearchableString(task.title).toLowerCase()
+        const descText = toSearchableString(task.description).toLowerCase()
         const matchesSearch =
           searchQuery === "" ||
-          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          titleText.includes(query) ||
+          descText.includes(query)
 
         let matchesStatus = true
         if (filters.status !== "all") {
@@ -422,10 +437,13 @@ export default function DashboardPage() {
   // Completed view list (independent of status filter): search/type/week/urgency are respected
   const completedViewTasks = useMemo(() => {
     const matchesOtherFilters = (task) => {
+      const query = searchQuery.toLowerCase()
+      const titleText = toSearchableString(task.title).toLowerCase()
+      const descText = toSearchableString(task.description).toLowerCase()
       const matchesSearch =
         searchQuery === "" ||
-        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        titleText.includes(query) ||
+        descText.includes(query)
 
       const matchesWeek = filters.week === "all" || String(task.week) === filters.week
       const matchesType =
