@@ -52,14 +52,16 @@ export default function ProfilePage() {
     jobTitle: "Onboarding Manager",
   })
 
-  // Notification preferences
-  const [notifications, setNotifications] = useState({
-    email: true,
-    slack: true,
-    newHires: true,
-    taskAssignments: true,
-    taskCompletions: true,
-  })
+  // Notification preferences (channels + dynamic types)
+
+  // Dynamic notification preferences fetched from API
+  const [allTypes, setAllTypes] = useState([])
+  const [enabledTypes, setEnabledTypes] = useState([])
+  const [channelBools, setChannelBools] = useState({ email: true, slack: true })
+  const [notifLoading, setNotifLoading] = useState(true)
+  const [notifSaving, setNotifSaving] = useState(false)
+  const [notifError, setNotifError] = useState(null)
+  const [initialSnapshot, setInitialSnapshot] = useState({ enabledTypes: [], channels: [] })
 
   // Update form data when profile loads
   useEffect(() => {
@@ -81,10 +83,7 @@ export default function ProfilePage() {
   }
 
   const handleNotificationChange = (key) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
+    setChannelBools((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
   const handleSaveProfile = () => {
@@ -97,6 +96,78 @@ export default function ProfilePage() {
   const handleInviteChange = (e) => {
     const { name, value } = e.target
     setInviteForm((p) => ({ ...p, [name]: value }))
+  }
+
+  // Fetch notification preferences for current admin
+  useEffect(() => {
+    async function fetchNotificationPrefs() {
+      try {
+        setNotifLoading(true)
+        const res = await fetch("/api/admin/profile/notification-preferences")
+        if (!res.ok) throw new Error(`Failed to load preferences (${res.status})`)
+        const data = await res.json()
+        const channels = Array.isArray(data.channels) ? data.channels : []
+        const channelSet = new Set(channels)
+        setAllTypes(Array.isArray(data.allTypes) ? data.allTypes : [])
+        setEnabledTypes(Array.isArray(data.enabledTypes) ? data.enabledTypes : [])
+        const nextChannelBools = {
+          email: channelSet.has("Email"),
+          slack: channelSet.has("Slack"),
+        }
+        setChannelBools(nextChannelBools)
+        setInitialSnapshot({
+          enabledTypes: Array.isArray(data.enabledTypes) ? data.enabledTypes.slice() : [],
+          channels: channels.slice(),
+        })
+        setNotifError(null)
+      } catch (err) {
+        console.error(err)
+        setNotifError(err.message)
+      } finally {
+        setNotifLoading(false)
+      }
+    }
+    fetchNotificationPrefs()
+  }, [])
+
+  const isDirty = (() => {
+    const channels = []
+    if (channelBools.email) channels.push("Email")
+    if (channelBools.slack) channels.push("Slack")
+    const sameTypes = JSON.stringify([...enabledTypes].sort()) === JSON.stringify([...(initialSnapshot.enabledTypes || [])].sort())
+    const sameChannels = JSON.stringify(channels.sort()) === JSON.stringify([...(initialSnapshot.channels || [])].sort())
+    return !(sameTypes && sameChannels)
+  })()
+
+  const toggleType = (type) => {
+    setEnabledTypes((prev) => {
+      const set = new Set(prev)
+      if (set.has(type)) set.delete(type)
+      else set.add(type)
+      return Array.from(set)
+    })
+  }
+
+  const saveNotificationPrefs = async () => {
+    const channels = []
+    if (channelBools.email) channels.push("Email")
+    if (channelBools.slack) channels.push("Slack")
+    setNotifSaving(true)
+    try {
+      const res = await fetch("/api/admin/profile/notification-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channels, enabledTypes }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result?.error || "Failed to save preferences")
+      setInitialSnapshot({ enabledTypes: enabledTypes.slice(), channels: channels.slice() })
+      toast.success("Preferences saved")
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setNotifSaving(false)
+    }
   }
 
   const sendInvite = async () => {
@@ -301,6 +372,20 @@ export default function ProfilePage() {
                       <CardDescription>Configure how you want to receive notifications</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {notifLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      ) : notifError ? (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Error</AlertTitle>
+                          <AlertDescription>{notifError}</AlertDescription>
+                        </Alert>
+                      ) : (
+                        <>
                       <div className="space-y-3">
                         <h3 className="text-sm font-medium">Notification Channels</h3>
                         <div className="grid gap-2">
@@ -313,7 +398,7 @@ export default function ProfilePage() {
                             </div>
                             <Switch
                               id="email-notifications"
-                              checked={notifications.email}
+                              checked={channelBools.email}
                               onCheckedChange={() => handleNotificationChange("email")}
                             />
                           </div>
@@ -327,7 +412,7 @@ export default function ProfilePage() {
                             </div>
                             <Switch
                               id="slack-notifications"
-                              checked={notifications.slack}
+                              checked={channelBools.slack}
                               onCheckedChange={() => handleNotificationChange("slack")}
                             />
                           </div>
@@ -339,40 +424,37 @@ export default function ProfilePage() {
                       <div className="space-y-3">
                         <h3 className="text-sm font-medium">Notification Types</h3>
                         <div className="grid gap-2">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="new-hires" className="text-sm">
-                              New Hires
-                            </Label>
-                            <Switch
-                              id="new-hires"
-                              checked={notifications.newHires}
-                              onCheckedChange={() => handleNotificationChange("newHires")}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="task-assignments" className="text-sm">
-                              Task Assignments
-                            </Label>
-                            <Switch
-                              id="task-assignments"
-                              checked={notifications.taskAssignments}
-                              onCheckedChange={() => handleNotificationChange("taskAssignments")}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor="task-completions" className="text-sm">
-                              Task Completions
-                            </Label>
-                            <Switch
-                              id="task-completions"
-                              checked={notifications.taskCompletions}
-                              onCheckedChange={() => handleNotificationChange("taskCompletions")}
-                            />
-                          </div>
+                          {allTypes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No notification types configured.</p>
+                          ) : (
+                            allTypes.map((type) => {
+                              const checked = enabledTypes.includes(type)
+                              const htmlId = `notif-type-${type.replace(/[^a-z0-9]/gi, "-").toLowerCase()}`
+                              return (
+                                <div key={type} className="flex items-center justify-between">
+                                  <Label htmlFor={htmlId} className="text-sm">
+                                    {type}
+                                  </Label>
+                                  <Switch
+                                    id={htmlId}
+                                    checked={checked}
+                                    onCheckedChange={() => toggleType(type)}
+                                  />
+                                </div>
+                              )
+                            })
+                          )}
                         </div>
                       </div>
+                      {isDirty && (
+                        <div className="pt-4">
+                          <Button onClick={saveNotificationPrefs} disabled={notifSaving}>
+                            {notifSaving ? "Saving..." : "Save changes"}
+                          </Button>
+                        </div>
+                      )}
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
