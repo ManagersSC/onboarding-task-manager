@@ -34,6 +34,7 @@ import { Badge } from "@components/ui/badge"
 import { Save } from "lucide-react"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
+import { AppraisalBookingModal } from "@components/dashboard/subComponents/appraisal-booking-modal"
 // Appraisal booking integrates inline per task; modal added in a later step
 import { toast } from "sonner"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
@@ -189,6 +190,9 @@ export function TaskManagement() {
   const [isBannerHovered, setIsBannerHovered] = useState(false)
   const firstSeenMapRef = useRef({})
   const [appraisalModalOpen, setAppraisalModalOpen] = useState(false)
+  const [inlineBookingOpen, setInlineBookingOpen] = useState(false)
+  const [selectedAppraisalId, setSelectedAppraisalId] = useState(null)
+  const [selectedAppraisalDateById, setSelectedAppraisalDateById] = useState({})
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
@@ -1161,10 +1165,21 @@ export function TaskManagement() {
     setEditDialogOpen(true)
   }
 
-  // Admin-only task lists (exclude hire completion tasks from main layout)
-  const adminUpcoming = (tasks.upcoming || []).filter((t) => !isHireCompletionTask(t))
-  const adminOverdue = (tasks.overdue || []).filter((t) => !isHireCompletionTask(t))
-  const adminFlagged = (tasks.flagged || []).filter((t) => !isHireCompletionTask(t))
+  // Admin-only task lists
+  // Base lists exclude hire completion tasks and, by default, appraisal tasks (handled specially)
+  const adminUpcomingBase = (tasks.upcoming || []).filter((t) => !isHireCompletionTask(t) && !t.isAppraisal)
+  const adminOverdueBase = (tasks.overdue || []).filter((t) => !isHireCompletionTask(t) && !t.isAppraisal)
+  const adminFlaggedBase = (tasks.flagged || []).filter((t) => !isHireCompletionTask(t) && !t.isAppraisal)
+
+  const statusIs = (t, s) => String(t?.status || "").toLowerCase().trim() === s
+  const appraisalAll = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])].filter((t) => t.isAppraisal)
+  const appraisalOverdueOnly = appraisalAll.filter((t) => statusIs(t, "overdue") || statusIs(t, " overdu"))
+  const appraisalFlaggedOnly = appraisalAll.filter((t) => statusIs(t, "flagged"))
+
+  // Final lists: keep appraisal tasks only in their special tabs (overdue/flagged), not in upcoming/my queue
+  const adminUpcoming = adminUpcomingBase
+  const adminOverdue = [...adminOverdueBase, ...appraisalOverdueOnly]
+  const adminFlagged = [...adminFlaggedBase, ...appraisalFlaggedOnly]
 
   const tabCounts = {
     upcoming: adminUpcoming.length,
@@ -1184,6 +1199,9 @@ export function TaskManagement() {
     const all = [...adminUpcoming, ...adminOverdue, ...adminFlagged]
     return all.filter((t) => !isGlobalTask(t))
   })()
+
+  // Derive appraisal tasks (across all source groups)
+  const appraisalTasks = appraisalAll
 
   // Utility: best-effort extraction of a task's created timestamp
   const getCreatedTimestamp = (task) => {
@@ -1382,6 +1400,25 @@ export function TaskManagement() {
               </TabsList>
 
               <TabsContent value="upcoming" className="mt-0">
+                {/* Aggregated Appraisal Card in Unclaimed tab only */}
+                {appraisalAll.length > 0 && (
+                  <div className="mb-4 border rounded-lg p-3 bg-card/60">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-2 py-0.5 font-medium border-0 bg-violet-500/10 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                        >
+                          Appraisal
+                        </Badge>
+                        <span className="font-medium text-sm">{appraisalAll.length} Appraisals to be booked</span>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setAppraisalModalOpen(true)}>
+                        View more
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {renderTaskList(adminUpcoming, "upcoming")}
               </TabsContent>
 
@@ -1399,6 +1436,134 @@ export function TaskManagement() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Appraisals List Modal (repurpose the same modal shell as hire groups for now) */}
+        <AnimatePresence>
+          {appraisalModalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-3xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-foreground">Appraisals</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setAppraisalModalOpen(false)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {appraisalTasks.length === 0 && (
+                    <div className="py-8 text-center text-sm text-muted-foreground">No appraisal tasks.</div>
+                  )}
+                  {appraisalTasks.map((t) => {
+                    const selected = selectedAppraisalDateById[t.id]
+                    return (
+                      <div key={t.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-2 py-0.5 font-medium border-0 bg-violet-500/10 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                          >
+                            Appraisal
+                          </Badge>
+                          <div className="text-sm font-medium truncate">{t.title}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Selected date label (muted) */}
+                          <div className="text-xs text-muted-foreground min-w-[140px] text-right">
+                            {selected ? format(new Date(selected.start), "MMM d, yyyy p") : ""}
+                          </div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    setSelectedTask(t)
+                                    setSelectedAppraisalId(t.id)
+                                    setAppraisalModalOpen(false)
+                                    setTimeout(() => setShowTaskDetails(false), 0)
+                                    setTimeout(() => setInlineBookingOpen(true), 0)
+                                  }}
+                                  className="h-8 w-8"
+                                >
+                                  <CalendarIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Choose date</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  disabled={!selected}
+                                  onClick={() => completeTask(t.id)}
+                                  className="h-8 w-8"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Complete</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => openFlagDialog(t)}
+                                  className="h-8 w-8"
+                                >
+                                  <Flag className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Flag</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Inline Appraisal Booking Modal */}
+        <AppraisalBookingModal
+          open={inlineBookingOpen}
+          onOpenChange={(o) => setInlineBookingOpen(o)}
+          initialDate={undefined}
+          defaultTitle={selectedTask?.title}
+          onConfirm={(range) => {
+            if (selectedTask?.id) {
+              setSelectedAppraisalDateById((prev) => ({ ...prev, [selectedTask.id]: range }))
+            }
+          }}
+        />
 
         {/* Hire Completions Modal */}
         <AnimatePresence>
