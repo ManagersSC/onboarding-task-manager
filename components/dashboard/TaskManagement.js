@@ -34,6 +34,7 @@ import { Badge } from "@components/ui/badge"
 import { Save } from "lucide-react"
 import { TaskManagementSkeleton } from "./skeletons/task-management-skeleton"
 import { NewTaskModal } from "./subComponents/new-staff-task-modal"
+// Appraisal booking integrates inline per task; modal added in a later step
 import { toast } from "sonner"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
@@ -187,6 +188,7 @@ export function TaskManagement() {
   const [hireBannerSnoozeUntil, setHireBannerSnoozeUntil] = useState(0)
   const [isBannerHovered, setIsBannerHovered] = useState(false)
   const firstSeenMapRef = useRef({})
+  const [appraisalModalOpen, setAppraisalModalOpen] = useState(false)
 
   const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
@@ -207,6 +209,8 @@ export function TaskManagement() {
 
   // Helper: hire completion task (auto-generated verification tied to an applicant)
   function isHireCompletionTask(task) {
+    // Exclude appraisal tasks from the "hire completion" grouping
+    if (task?.isAppraisal) return false
     return Boolean(task?.applicantId)
   }
 
@@ -215,7 +219,8 @@ export function TaskManagement() {
     const groups = {}
     const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
     for (const t of all) {
-      if (!t.applicantId) continue
+      // Skip appraisal tasks; this modal is strictly for hire completion items
+      if (!t.applicantId || t.isAppraisal) continue
       const key = t.applicantId
       if (!groups[key]) {
         groups[key] = {
@@ -698,6 +703,14 @@ export function TaskManagement() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
+              {task.isAppraisal && (
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-2 py-0.5 font-medium border-0 bg-violet-500/10 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"
+                >
+                  Appraisal
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-2 min-w-0">
@@ -839,6 +852,30 @@ export function TaskManagement() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+
+                {task.isAppraisal && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs hover:bg-primary/10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedTask(task)
+                            setAppraisalModalOpen(true)
+                          }}
+                        >
+                          Book
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Book appraisal</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

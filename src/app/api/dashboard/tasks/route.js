@@ -114,6 +114,7 @@ export async function GET(req) {
         applicantName: applicantId ? (applicantNameById[applicantId] || "Unknown") : "",
         flaggedReason: task.fields["Flagged Reason"] || "",
         resolutionNote: task.fields["Resolution Note"] || "",
+        isAppraisal: Boolean(task.fields["isAppraisal"]) || false,
       });
     });
 

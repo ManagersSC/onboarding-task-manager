@@ -374,8 +374,8 @@ function AttendeeItem({ email, onRemove }) {
   )
 }
 
-export function CalendarPreview() {
-  const [currentDate, setCurrentDate] = useState(new Date())
+export function CalendarPreview({ readOnly = false, draftEvent = null, initialDate }) {
+  const [currentDate, setCurrentDate] = useState(() => (initialDate ? new Date(initialDate) : new Date()))
   const [calendarData, setCalendarData] = useState({ days: [] })
   const [selectedDay, setSelectedDay] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -392,6 +392,7 @@ export function CalendarPreview() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const [meetToggle, setMeetToggle] = useState(false)
+  const isReadOnly = !!readOnly
   const [currentUserEmail, setCurrentUserEmail] = useState("")
 
   const year = currentDate.getFullYear()
@@ -413,6 +414,15 @@ export function CalendarPreview() {
       }
     }
   }, [editingEvent && editingEvent.type])
+
+  // Sync external initialDate prop
+  useEffect(() => {
+    if (initialDate) {
+      try {
+        setCurrentDate(new Date(initialDate))
+      } catch {}
+    }
+  }, [initialDate])
 
   // Fetch current user email on mount
   useEffect(() => {
@@ -504,6 +514,7 @@ export function CalendarPreview() {
   }
 
   const handleEditEvent = (event) => {
+    if (isReadOnly) return
     setEditingEvent({ ...event })
     setIsCreatingEvent(false)
     setIsAllDay(!event.timeValue)
@@ -516,6 +527,7 @@ export function CalendarPreview() {
   }
 
   const handleCreateEvent = () => {
+    if (isReadOnly) return
     let defaultAttendees = [];
     if (currentUserEmail && isValidEmail(currentUserEmail)) {
       defaultAttendees = [currentUserEmail];
@@ -535,6 +547,7 @@ export function CalendarPreview() {
   }
 
   const handleSaveEvent = async () => {
+    if (isReadOnly) return
     if (!editingEvent || !selectedDate) return
 
     // Validate form
@@ -603,6 +616,7 @@ export function CalendarPreview() {
   }
 
   const handleDeleteEvent = async (eventId) => {
+    if (isReadOnly) return
     try {
       setSaving(true)
       const response = await fetch(`/api/admin/dashboard/calendar?eventId=${eventId}`, {
@@ -755,6 +769,41 @@ export function CalendarPreview() {
   if (loading) {
     return <CalendarPreviewSkeleton />
   }
+
+  // Build draft event in component format for the current day when provided
+  const draftEventForDay = (() => {
+    if (!draftEvent || !draftEvent.start || !draftEvent.end) return null
+    try {
+      const start = new Date(draftEvent.start)
+      const end = new Date(draftEvent.end)
+      // Only show when current day matches draft's date in day view
+      const sameDay =
+        start.getDate() === currentDate.getDate() &&
+        start.getMonth() === currentDate.getMonth() &&
+        start.getFullYear() === currentDate.getFullYear()
+      if (!sameDay) return null
+
+      const twoDigit = (n) => n.toString().padStart(2, "0")
+      const timeValue = `${twoDigit(start.getHours())}:${twoDigit(start.getMinutes())}`
+      const endTimeValue = `${twoDigit(end.getHours())}:${twoDigit(end.getMinutes())}`
+      const time = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+      return {
+        id: "draft-appraisal",
+        title: draftEvent.title || "Appraisal (Draft)",
+        type: "appointment",
+        time,
+        timeValue,
+        endTimeValue,
+        location: draftEvent.location || "",
+        description: draftEvent.description || "",
+        attendees: draftEvent.attendees || [],
+        startDateTime: draftEvent.start,
+        endDateTime: draftEvent.end,
+      }
+    } catch {
+      return null
+    }
+  })()
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -919,17 +968,17 @@ export function CalendarPreview() {
             {activeView === "day" && (
               <DayView
                 currentDate={currentDate}
-                events={
-                  calendarData.days.find(
-                    (day) =>
-                      day.day === currentDate.getDate() &&
-                      month === currentDate.getMonth() &&
-                      year === currentDate.getFullYear(),
-                  )?.events || []
-                }
+                events={(() => {
+                  const base =
+                    calendarData.days.find(
+                      (day) =>
+                        day.day === currentDate.getDate() &&
+                        month === currentDate.getMonth() &&
+                        year === currentDate.getFullYear(),
+                    )?.events || []
+                  return draftEventForDay ? [...base, draftEventForDay] : base
+                })()}
                 onEventClick={(event) => {
-                  // When an event is clicked in day view, we need to:
-                  // 1. Set the selected day to the current day
                   const currentDay = calendarData.days.find(
                     (day) =>
                       day.day === currentDate.getDate() &&
@@ -942,7 +991,9 @@ export function CalendarPreview() {
                       `${year}-${String(month + 1).padStart(2, "0")}-${String(currentDay.day).padStart(2, "0")}`,
                     )
                     setIsModalOpen(true)
-                    handleEditEvent(event)
+                    if (!isReadOnly) {
+                      handleEditEvent(event)
+                    }
                   }
                 }}
               />
