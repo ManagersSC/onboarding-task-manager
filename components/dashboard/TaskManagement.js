@@ -22,6 +22,7 @@ import {
   Search,
   TrendingUp,
   Users,
+  ExternalLink,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
@@ -715,6 +716,7 @@ export function TaskManagement() {
                   Appraisal
                 </Badge>
               )}
+              {/* Feedback link icon moved to actions area for consistent alignment */}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-2 min-w-0">
@@ -780,6 +782,29 @@ export function TaskManagement() {
 
           {/* Actions - Always visible */}
           <div className="flex items-center gap-1 flex-shrink-0">
+            {task.feedback360 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+                      onClick={(e) => e.stopPropagation()}
+                      title="Open 360 Feedback"
+                    >
+                      <a href={task.feedback360} target="_blank" rel="noopener noreferrer" aria-label="Open 360 Feedback">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Open 360 Feedback</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {isGlobalTask(task) ? (
               <>
               <TooltipProvider>

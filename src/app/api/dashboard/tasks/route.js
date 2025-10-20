@@ -115,6 +115,7 @@ export async function GET(req) {
         flaggedReason: task.fields["Flagged Reason"] || "",
         resolutionNote: task.fields["Resolution Note"] || "",
         isAppraisal: Boolean(task.fields["isAppraisal"]) || false,
+        feedback360: task.fields["360 Feedback"] || "",
       });
     });
 

@@ -376,6 +376,7 @@ function AttendeeItem({ email, onRemove }) {
 
 export function CalendarPreview({ readOnly = false, draftEvent = null, initialDate, compact = false, showDayView = true }) {
   const [currentDate, setCurrentDate] = useState(() => (initialDate ? new Date(initialDate) : new Date()))
+  const [mounted, setMounted] = useState(false)
   const [calendarData, setCalendarData] = useState({ days: [] })
   const [selectedDay, setSelectedDay] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -423,6 +424,11 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
       } catch {}
     }
   }, [initialDate])
+
+  // Avoid SSR/client mismatches due to locale/timezone by rendering after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Fetch current user email on mount
   useEffect(() => {
@@ -765,6 +771,12 @@ export function CalendarPreview({ readOnly = false, draftEvent = null, initialDa
       scale: 0.95,
       transition: { duration: 0.1 },
     },
+  }
+
+  if (!mounted) {
+    return (
+      <div className={`${compact ? "h-[320px]" : "h-[420px]"} w-full`} suppressHydrationWarning />
+    )
   }
 
   if (loading) {
