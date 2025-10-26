@@ -1522,6 +1522,35 @@
                     "type": "multilineText",
                     "id": "fld81SKyEsj02RjdS",
                     "name": "Receptionist - How do you stay enaged in challenging days"
+                },
+                {
+                    "type": "date",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        }
+                    },
+                    "id": "fldub0zVNjd0Skkly",
+                    "name": "Appraisal Date"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldH857beZ8v5ek4C",
+                    "name": "Appraisal Created"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fld7BCqmdQkfUp0kA",
+                    "name": "Onboarding Manual Import"
                 }
             ],
             "views": [
@@ -1641,6 +1670,11 @@
                                 "color": "blueLight2"
                             },
                             {
+                                "id": "selEUcbsorNIjSaVM",
+                                "name": "Task Creation",
+                                "color": "purpleLight2"
+                            },
+                            {
                                 "id": "selStAtfY4YkAFgeL",
                                 "name": "Task Completion",
                                 "color": "cyanLight2"
@@ -1656,6 +1690,31 @@
                                 "color": "greenLight2"
                             },
                             {
+                                "id": "sely1XhZSmNbQOifE",
+                                "name": "Task Unclaimed",
+                                "color": "grayLight2"
+                            },
+                            {
+                                "id": "selYVrfpsMqX2TKSA",
+                                "name": "Task Flagged",
+                                "color": "blueLight1"
+                            },
+                            {
+                                "id": "selLiw4dEswPGjy7j",
+                                "name": "Task Flag Resolved",
+                                "color": "cyanLight1"
+                            },
+                            {
+                                "id": "selsXtuRAnjqttqSe",
+                                "name": "Task Flag Resolved & Completed",
+                                "color": "tealLight1"
+                            },
+                            {
+                                "id": "selWpS7La36iuLk4Q",
+                                "name": "Task Claim-All Executed",
+                                "color": "greenLight1"
+                            },
+                            {
                                 "id": "sele2xL9AgNFdbmc7",
                                 "name": "Document Upload",
                                 "color": "yellowLight2"
@@ -1664,6 +1723,41 @@
                                 "id": "selIc16bvZNZdWvuw",
                                 "name": "Quiz Completion",
                                 "color": "pinkLight2"
+                            },
+                            {
+                                "id": "selMe1TnCcqbJpTkL",
+                                "name": "Applicant Stage Updated",
+                                "color": "yellowLight1"
+                            },
+                            {
+                                "id": "selqOJCqIpwpzN51s",
+                                "name": "Onboarding Paused",
+                                "color": "orangeLight1"
+                            },
+                            {
+                                "id": "seluL8AT3P9FJUOU6",
+                                "name": "Onboarding Resumed",
+                                "color": "redLight1"
+                            },
+                            {
+                                "id": "selpsQhFzUKVs212G",
+                                "name": "Onboarding started",
+                                "color": "pinkLight1"
+                            },
+                            {
+                                "id": "selhpjgyJKzhrMhwM",
+                                "name": "New Hire Added",
+                                "color": "purpleLight1"
+                            },
+                            {
+                                "id": "selVIG0u1yw0Tv9UH",
+                                "name": "Admin Invited",
+                                "color": "grayLight1"
+                            },
+                            {
+                                "id": "sel6XPwrsu8lnkS70",
+                                "name": "Admin Invite Accepted",
+                                "color": "blueBright"
                             },
                             {
                                 "id": "sel6QpDZn0Agxr51d",
@@ -1693,6 +1787,11 @@
                                 "id": "sel4ouDDcMcZscVH9",
                                 "name": "Slack",
                                 "color": "tealLight2"
+                            },
+                            {
+                                "id": "selyj8TFZUisUBjum",
+                                "name": "In-app",
+                                "color": "blueLight2"
                             }
                         ]
                     },
@@ -2785,14 +2884,14 @@
                                 "color": "redLight1"
                             },
                             {
-                                "id": "sel6BVr1ErfS84Iqc",
-                                "name": " Overdue",
-                                "color": "orangeBright"
-                            },
-                            {
                                 "id": "sel616c3e6quO33uU",
                                 "name": "In-progress",
                                 "color": "yellowLight1"
+                            },
+                            {
+                                "id": "sel6BVr1ErfS84Iqc",
+                                "name": " Overdue",
+                                "color": "orangeBright"
                             },
                             {
                                 "id": "selxrn1yVvQK6EvXl",
@@ -2872,6 +2971,25 @@
                     },
                     "id": "fldq6vvFbgIrEDbcs",
                     "name": "isUpcoming"
+                },
+                {
+                    "type": "checkbox",
+                    "options": {
+                        "icon": "check",
+                        "color": "greenBright"
+                    },
+                    "id": "fldUjsqbH38xBSvNG",
+                    "name": "isAppraisal"
+                },
+                {
+                    "type": "url",
+                    "id": "fld83VbEFXqYMvmXk",
+                    "name": "Pre Appraisal Form"
+                },
+                {
+                    "type": "url",
+                    "id": "fldqc06fDGDDSlQWm",
+                    "name": "360 Feedback"
                 },
                 {
                     "type": "multilineText",
@@ -5244,6 +5362,11 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "selb1WFzJ9XMzuXES",
+                                "name": "Notification Preferences Update",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "sel2w5lXJtiaJheTY",
                                 "name": "Server",
                                 "color": "orangeBright"
@@ -5385,6 +5508,26 @@
                                 "color": "greenLight2"
                             },
                             {
+                                "id": "selD8yRPCJvKI4Uqa",
+                                "name": "Task Flagged",
+                                "color": "grayLight2"
+                            },
+                            {
+                                "id": "selYU5mc7kOkGFA7O",
+                                "name": "Task Flag Resolved",
+                                "color": "blueLight1"
+                            },
+                            {
+                                "id": "selZ4a4HZwpYWDyGo",
+                                "name": "Task Flag Resolved & Completed",
+                                "color": "cyanLight1"
+                            },
+                            {
+                                "id": "selJ3fPc1yACBuo1w",
+                                "name": "Task Claim-All Executed",
+                                "color": "tealLight1"
+                            },
+                            {
                                 "id": "selbKooXj6DNHfEyX",
                                 "name": "Document Upload",
                                 "color": "yellowLight2"
@@ -5393,6 +5536,41 @@
                                 "id": "selmM8cqxQltHcRXX",
                                 "name": "Quiz Completion",
                                 "color": "pinkLight2"
+                            },
+                            {
+                                "id": "seldaOZYflyFHYcGf",
+                                "name": "Applicant Stage Updated",
+                                "color": "greenLight1"
+                            },
+                            {
+                                "id": "seldRkd1PSEqG3mEO",
+                                "name": "Onboarding Paused",
+                                "color": "yellowLight1"
+                            },
+                            {
+                                "id": "selZzQOHAk1hTZTY6",
+                                "name": "Onboarding Resumed",
+                                "color": "orangeLight1"
+                            },
+                            {
+                                "id": "selQhBMPT0LuF7mBh",
+                                "name": "Onboarding Started",
+                                "color": "redLight1"
+                            },
+                            {
+                                "id": "selzwgGA6luaq4Lhz",
+                                "name": "New Hire Added",
+                                "color": "pinkLight1"
+                            },
+                            {
+                                "id": "selrXyqAIEzjHrWYv",
+                                "name": "Admin Invited",
+                                "color": "purpleLight1"
+                            },
+                            {
+                                "id": "selJYnaoOYCcApghm",
+                                "name": "Admin Invite Accepted",
+                                "color": "grayLight1"
                             },
                             {
                                 "id": "selwBCSGbXmHxfVxV",

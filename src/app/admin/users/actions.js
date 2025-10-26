@@ -2,6 +2,12 @@
 
 import { updateApplicantInStore, addApplicantsFromEmails, addFeedbackFiles, getApplicantById } from "@/lib/mock-db"
 import { inviteStageNeedsLocation, normalizeLocationLabel } from "@/lib/stage"
+import Airtable from "airtable"
+import logger from "@/lib/utils/logger"
+import { cookies } from "next/headers"
+import { unsealData } from "iron-session"
+import { logAuditEvent } from "@/lib/auditLogger"
+import { createNotification } from "@/lib/notifications"
 
 function allowedNextTransition(current, requested) {
   return (
@@ -178,4 +184,125 @@ export async function attachFeedback({ id, files = [] }) {
     return await updateApplicantInStore(id, { stage: nextStage })
   }
   return withFeedback
+}
+
+// Create or convert a candidate directly into Hired stage.
+// Required: name, email. Optional: jobName.
+export async function createHiredApplicant({ name = "", email = "", jobId = "", jobName = "", phone = "" } = {}) {
+  if (!name || !email) {
+    throw new Error("Name and email are required")
+  }
+  if (!jobId && !jobName) {
+    throw new Error("Job is required")
+  }
+
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Server configuration error. Missing Airtable credentials.")
+  }
+
+  const normalisedEmail = String(email).trim().toLowerCase()
+
+  try {
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+
+    // Resolve jobId from jobName when only name is provided
+    let resolvedJobId = jobId
+    if (!resolvedJobId && jobName) {
+      const jobs = await base("Jobs")
+        .select({ filterByFormula: `{Title}='${jobName.replace(/'/g, "\\'")}'`, maxRecords: 1 })
+        .firstPage()
+      if (jobs && jobs.length > 0) {
+        resolvedJobId = jobs[0].id
+      } else {
+        throw new Error("Selected Job not found")
+      }
+    }
+
+    // Check for existing applicant by email
+    const existing = await base("Applicants")
+      .select({ filterByFormula: `{Email}='${normalisedEmail}'`, maxRecords: 1 })
+      .firstPage()
+
+    const commonFields = {
+      Name: name,
+      Email: normalisedEmail,
+      Stage: "Hired",
+      "Onboarding Manual Import": true,
+      "Job Board": "Manual",
+    }
+
+    // Link to Jobs via Applying For (linked record field)
+    if (resolvedJobId) {
+      commonFields["Applying For"] = [resolvedJobId]
+    }
+    if (phone) {
+      commonFields["Phone"] = phone
+    }
+
+    if (existing && existing.length > 0) {
+      const recordId = existing[0].id
+      const updated = await base("Applicants").update([
+        { id: recordId, fields: commonFields }
+      ])
+      return { id: updated[0].id, fields: updated[0].fields, mode: "updated" }
+    }
+
+    const created = await base("Applicants").create([
+      { fields: commonFields }
+    ])
+
+    const result = { id: created[0].id, fields: created[0].fields, mode: "created" }
+
+    // Audit log and notification
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+
+      // Minimal request substitute for headers
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+
+      await logAuditEvent({
+        eventType: "New Hire Added",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Hired candidate ${name} <${normalisedEmail}> created (jobId: ${resolvedJobId || "n/a"}).`,
+        request: fakeRequest,
+      })
+
+      // Notify the acting admin if a Staff record is found
+      try {
+        const staffRecs = await base("Staff").select({ filterByFormula: `{Email}='${String(userEmail).toLowerCase()}'`, maxRecords: 1 }).firstPage()
+        const staff = staffRecs?.[0]
+        if (staff) {
+          await createNotification({
+            title: "New hire created",
+            body: `${name} <${normalisedEmail}> has been added as Hired`,
+            type: "New Hire Added",
+            severity: "Success",
+            recipientId: staff.id,
+            actionUrl: "/admin/users",
+            source: "Admin Panel",
+          })
+        }
+      } catch (err) {
+        logger?.error?.("createNotification failed for new hire", err)
+      }
+    } catch (err) {
+      logger?.error?.("audit log failed for new hire", err)
+    }
+
+    return result
+  } catch (error) {
+    logger?.error?.("createHiredApplicant error", error)
+    throw new Error(error?.message || "Failed to create hired candidate")
+  }
 }
