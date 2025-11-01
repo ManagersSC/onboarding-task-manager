@@ -20,7 +20,8 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
     { key: 'reference1', name: 'Reference 1', field: 'Reference 1', category: 'Application' },
     { key: 'reference2', name: 'Reference 2', field: 'Reference 2', category: 'Application' },
     { key: 'dbs_check', name: 'DBS Check', field: 'DBS Check', category: 'Legal' },
-    { key: 'disc_pdf', name: 'DISC PDF', field: 'DISC PDF', category: 'Personal' }
+    { key: 'disc_pdf', name: 'DISC PDF', field: 'DISC PDF', category: 'Personal' },
+    { key: 'appraisal_doc', name: 'Appraisal Doc', field: 'Appraisal Doc', category: 'Application' }
   ]
   
   logger.info(`Checking ${initialDocFields.length} initial document fields`)
@@ -176,7 +177,78 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
     }
   })
   
-  logger.info(`Consolidated ${allDocuments.length} documents from ${initialDocFields.length} initial fields and ${documentRecords.length} document records`)
+  // 3. Dynamic discovery: include ANY other attachment fields on Applicants not explicitly mapped
+  try {
+    const processedInitialFields = new Set(initialDocFields.map((d) => d.field))
+    const applicantFields = Object.keys(applicantRecord?.fields || {})
+    applicantFields.forEach((fieldName) => {
+      try {
+        if (processedInitialFields.has(fieldName)) return
+        const value = applicantRecord.get(fieldName)
+        if (Array.isArray(value) && value.length > 0 && value.some((a) => a && typeof a === 'object' && (a.url || a.filename))) {
+          value.forEach((attachment, index) => {
+            if (attachment && typeof attachment === 'object') {
+              allDocuments.push({
+                id: `${fieldName}-${index}`,
+                name: fieldName,
+                category: 'Application',
+                source: 'Initial Application',
+                uploadedAt: attachment.createdTime || applicantRecord.get('Created Time') || 'Unknown',
+                fileUrl: attachment.url || attachment.filename || '',
+                status: 'Uploaded',
+                type: attachment.type || 'Unknown',
+                field: fieldName,
+                originalName: attachment.filename || fieldName,
+                size: attachment.size || 0,
+              })
+            }
+          })
+        }
+      } catch (dynErr) {
+        logger.error(`Dynamic initial attachment parse failed for field ${fieldName}`, dynErr)
+      }
+    })
+  } catch (dynOuterErr) {
+    logger.error('Dynamic discovery for Applicants failed', dynOuterErr)
+  }
+
+  // 4. Dynamic discovery for Documents table attachment fields
+  try {
+    documentRecords.forEach((docRecord) => {
+      const fields = Object.keys(docRecord?.fields || {})
+      fields.forEach((fieldName) => {
+        try {
+          const value = docRecord.get(fieldName)
+          if (Array.isArray(value) && value.length > 0 && value.some((a) => a && typeof a === 'object' && (a.url || a.filename))) {
+            value.forEach((attachment, index) => {
+              if (attachment && typeof attachment === 'object') {
+                allDocuments.push({
+                  id: `${fieldName}-${docRecord.id}-${index}`,
+                  name: fieldName,
+                  category: 'Post-Hiring',
+                  source: 'Post-Hiring',
+                  uploadedAt: docRecord.get('Created TIme') || docRecord.get('Created Time') || 'Unknown',
+                  fileUrl: attachment.url || attachment.filename || '',
+                  status: docRecord.get('Status') || 'Pending',
+                  type: attachment.type || 'Unknown',
+                  field: fieldName,
+                  originalName: attachment.filename || fieldName,
+                  size: attachment.size || 0,
+                  documentRecordId: docRecord.id,
+                })
+              }
+            })
+          }
+        } catch (dynDocErr) {
+          logger.error(`Dynamic document attachment parse failed for field ${fieldName}`, dynDocErr)
+        }
+      })
+    })
+  } catch (dynDocOuterErr) {
+    logger.error('Dynamic discovery for Documents records failed', dynDocOuterErr)
+  }
+
+  logger.info(`Consolidated ${allDocuments.length} documents after dynamic discovery from Applicants and Documents`)
   
   return allDocuments
 }

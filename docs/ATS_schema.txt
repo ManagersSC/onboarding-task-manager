@@ -407,6 +407,11 @@
                                 "color": "grayLight2"
                             },
                             {
+                                "id": "selMFZVkVgcF4mtn0",
+                                "name": "Manual",
+                                "color": "blueLight1"
+                            },
+                            {
                                 "id": "sel1apXPTDVLzj983",
                                 "name": "Other",
                                 "color": "orangeLight2"
@@ -1551,6 +1556,14 @@
                     },
                     "id": "fld7BCqmdQkfUp0kA",
                     "name": "Onboarding Manual Import"
+                },
+                {
+                    "type": "multipleAttachments",
+                    "options": {
+                        "isReversed": false
+                    },
+                    "id": "fldNeCHBHD5wOUXnp",
+                    "name": "Appraisal Doc"
                 }
             ],
             "views": [
@@ -5364,6 +5377,11 @@
                             {
                                 "id": "selb1WFzJ9XMzuXES",
                                 "name": "Notification Preferences Update",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selkp7UrOpkQMj4Wm",
+                                "name": "New Hire Added",
                                 "color": "cyanBright"
                             },
                             {

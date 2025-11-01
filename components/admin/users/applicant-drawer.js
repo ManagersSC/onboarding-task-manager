@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef, useEffect } from "react"
 import { Sheet, SheetContent } from "@components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Badge } from "@components/ui/badge"
@@ -16,6 +16,7 @@ import { ScrollArea } from "@components/ui/scroll-area"
 import { useApplicant } from "@/hooks/useApplicant"
 import { useFeedbackDocuments } from "@/hooks/useFeedbackDocuments"
 import { ApplicantFileViewerModal } from "./applicant-file-viewer-modal"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 
 function Initials({ name = "" }) {
   const [first, last] = String(name).split(" ")
@@ -52,6 +53,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [tab, setTab] = useState("overview")
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileViewerOpen, setFileViewerOpen] = useState(false)
+  const [selectedDocType, setSelectedDocType] = useState("")
+  const [showAddDropzone, setShowAddDropzone] = useState(false)
+  const addDocRef = useRef(null)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -111,6 +115,29 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     setSelectedFile(null)
   }
 
+  // Ensure the add dropzone is scrolled into view when opened
+  useEffect(() => {
+    if (showAddDropzone && addDocRef.current) {
+      try {
+        addDocRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      } catch {}
+    }
+  }, [showAddDropzone])
+
+  const handleSubmitAppraisal = async (files) => {
+    if (!applicant || !files?.length) return
+    const formData = new FormData()
+    files.forEach((f) => formData.append("files", f))
+    const res = await fetch(`/api/admin/users/${applicant.id}/appraisal`, { method: "POST", body: formData })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || "Upload failed")
+    }
+    await mutate?.()
+    setShowAddDropzone(false)
+    setSelectedDocType("")
+  }
+
 
 
   if (error) {
@@ -131,7 +158,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full max-w-3xl p-0">
+        <SheetContent side="right" className="w-full max-w-3xl pl-2 pr-4 md:pl-2 md:pr-6">
           <div className="flex h-full flex-col">
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
@@ -280,6 +307,80 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             <p>No documents found for this applicant</p>
                           </div>
                         )}
+
+                        {/* Add Document Controls (moved below the list) */}
+                        <div className="pt-2 mt-2 border-t">
+                          {(() => {
+                            // Compute missing initial application docs based on consolidated documents
+                            const PRESENT_FIELDS = new Set(
+                              (applicant?.allDocuments || [])
+                                .filter((d) => d?.source === 'Initial Application' && d?.field)
+                                .map((d) => d.field)
+                            )
+                            const ALL_FIELDS = [
+                              'CV',
+                              'Portfolio of Cases',
+                              'Testimonials',
+                              'Reference 1',
+                              'Reference 2',
+                              'DBS Check',
+                              'DISC PDF',
+                              'Appraisal Doc',
+                            ]
+                            const missing = ALL_FIELDS.filter((f) => !PRESENT_FIELDS.has(f))
+
+                            return (
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                                    <SelectTrigger className="w-56">
+                                      <SelectValue placeholder={missing.length ? "Select missing document" : "No missing documents"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {missing.length === 0 ? (
+                                        <div className="px-3 py-2 text-xs text-muted-foreground">All initial documents present</div>
+                                      ) : (
+                                        missing.map((name) => (
+                                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                                        ))
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    variant="default"
+                                    disabled={!selectedDocType}
+                                    onClick={() => setShowAddDropzone((v) => !v)}
+                                    className="cursor-pointer"
+                                  >
+                                    Add Document
+                                  </Button>
+                                </div>
+                                {showAddDropzone && (
+                                  <div ref={addDocRef} className="space-y-3">
+                                    <div className="text-sm text-muted-foreground">Upload files for {selectedDocType}</div>
+                                    <UploadDropzone
+                                      onSubmit={async (files) => {
+                                        // Use generic attachments route with fieldName
+                                        if (!applicant || !files?.length || !selectedDocType) return
+                                        const fd = new FormData()
+                                        files.forEach((f) => fd.append('files', f))
+                                        fd.append('fieldName', selectedDocType)
+                                        const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
+                                        if (!res.ok) {
+                                          const err = await res.json().catch(() => ({}))
+                                          throw new Error(err?.error || 'Upload failed')
+                                        }
+                                        await mutate?.()
+                                        setShowAddDropzone(false)
+                                        setSelectedDocType("")
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
                       </>
                     )}
                   </TabsContent>
