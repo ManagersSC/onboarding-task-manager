@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft } from "lucide-react"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
 import NextStep from "./next-step"
@@ -59,6 +59,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [optimisticDocs, setOptimisticDocs] = useState([])
   const dropzoneSubmitRef = useRef(null)
   const [hasPendingFiles, setHasPendingFiles] = useState(false)
+  const [wideView, setWideView] = useState(false)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -161,11 +162,24 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full max-w-3xl pl-2 pr-4 md:pl-2 md:pr-6">
+        <SheetContent
+          side="right"
+          className={`w-[420px] sm:w-[720px] pl-2 pr-4 md:pl-2 md:pr-6 transition-all duration-300`}
+          style={wideView ? { width: "95vw", maxWidth: "1280px" } : undefined}
+        >
           {/* Accessibility: provide required DialogTitle for SheetContent */}
           <SheetHeader className="sr-only">
             <SheetTitle>Applicant Details</SheetTitle>
           </SheetHeader>
+          <button
+            type="button"
+            aria-label={wideView ? "Collapse details" : "Expand details"}
+            onClick={() => setWideView((v) => !v)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-50 h-7 w-7 rounded-full border bg-background shadow-sm flex items-center justify-center hover:bg-muted"
+            title={wideView ? "Collapse" : "Expand"}
+          >
+            <ChevronLeft className={`h-4 w-4 ${wideView ? "rotate-180" : ""}`} />
+          </button>
           <div className="flex h-full flex-col">
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
@@ -192,26 +206,164 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
             {/* Scrollable content */}
             <ScrollArea className="flex-1">
               <div className="px-5 pr-6 py-4 md:px-6 md:pr-8">
-                {/* Progress + Next Step now scrolls with content (only top identity remains sticky) */}
-                <div className="space-y-4 border-b pb-4 pt-1">
-                  <ProgressStepper currentStage={applicant?.stage || ""} />
-                  <NextStep applicant={applicant} onUpdated={(row) => {
-                    onApplicantUpdated?.(row)
-                    mutate?.() // Refresh the applicant data
-                  }} />
-                </div>
-                <Tabs value={tab} onValueChange={setTab}>
-                  <TabsList className="flex w-full flex-wrap gap-2 rounded-lg bg-muted/30 p-1 justify-start">
-                    <TabsTrigger value="overview" className="cursor-pointer rounded-md px-3 py-1.5">
-                      Overview
-                    </TabsTrigger>
-                    <TabsTrigger value="documents" className="cursor-pointer rounded-md px-3 py-1.5">
-                      Documents
-                    </TabsTrigger>
-                    <TabsTrigger value="feedback" className="cursor-pointer rounded-md px-3 py-1.5">
-                      Feedback
-                    </TabsTrigger>
-                  </TabsList>
+                {wideView ? (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    {/* Z - Left vertical summary */}
+                    <aside className="md:col-span-3 space-y-4">
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10">
+                            {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
+                          </Avatar>
+                          <div>
+                            <div className="text-base font-semibold leading-none">{applicant?.name || "Applicant"}</div>
+                            <div className="text-xs text-muted-foreground">{applicant?.email || "—"}</div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
+                              {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border p-4 space-y-3">
+                        <div className="text-sm font-semibold">Quick Facts</div>
+                        <InfoRow label="Phone" value={applicant?.phone} />
+                        <InfoRow label="Email" value={applicant?.email} />
+                        <InfoRow label="Source" value={applicant?.source} />
+                        <InfoRow label="Applied For" value={applicant?.job} />
+                        <Separator />
+                        {/* Timeline small */}
+                        {(() => {
+                          const items = []
+                          if (applicant?.interviewDate) items.push({ label: 'First Interview Booked', date: applicant.interviewDate })
+                          if (applicant?.secondInterviewDate) items.push({ label: 'Second Interview Booked', date: applicant.secondInterviewDate })
+                          if (applicant?.createdAt) items.push({ label: 'Application Submitted', date: applicant.createdAt })
+                          if (items.length === 0) return null
+                          items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          return (
+                            <div>
+                              <div className="text-sm font-semibold mb-2">Timeline</div>
+                              <ol className="relative border-l pl-4">
+                                {items.map((ev, idx) => (
+                                  <li key={`${ev.label}-${idx}`} className="mb-3 ml-2">
+                                    <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
+                                    <div className="text-sm font-medium">{ev.label}</div>
+                                    <div className="text-xs text-muted-foreground">{formatDate(ev.date)}</div>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </aside>
+
+                    {/* Right main content */}
+                    <section className="md:col-span-9 space-y-4">
+                      {/* A - Title */}
+                      <div className="rounded-lg border p-4 flex items-center justify-between">
+                        <h3 className="text-base font-semibold">Applicant Detail</h3>
+                      </div>
+
+                      {/* B - Applicant Information */}
+                      <div className="rounded-lg border p-4">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                          <InfoRow label="Email" value={applicant?.email} />
+                          <InfoRow label="Phone" value={applicant?.phone} />
+                          <InfoRow label="Interview Date" value={applicant?.interviewDate ? formatDate(applicant.interviewDate) : '—'} />
+                          <InfoRow label="Second Interview" value={applicant?.secondInterviewDate ? formatDate(applicant.secondInterviewDate) : '—'} />
+                          <InfoRow label="Source" value={applicant?.source} />
+                          <InfoRow label="Application Date" value={applicant?.createdAt ? formatDate(applicant.createdAt) : '—'} />
+                        </div>
+                      </div>
+
+                      {/* D - Monthly Review (demo) */}
+                      {(() => {
+                        const isOnboarding = String(applicant?.stage || '').toLowerCase() === 'hired'
+                        if (!isOnboarding) return null
+                        const demoReviews = [
+                          { id: 'rev-1', month: 'Oct 2025', status: 'Completed', notes: 'Good progress on onboarding tasks.' },
+                          { id: 'rev-2', month: 'Sep 2025', status: 'Completed', notes: 'KPI meets expectations.' },
+                        ]
+                        return (
+                          <div className="rounded-lg border p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold">Monthly Review</h4>
+                              <Button size="sm" className="h-8">+ New Review</Button>
+                            </div>
+                            <ul className="divide-y rounded-md border bg-background">
+                              {demoReviews.map((r) => (
+                                <li key={r.id} className="px-3 py-2 flex items-center justify-between">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium">{r.month}</div>
+                                    <div className="text-xs text-muted-foreground truncate">{r.notes}</div>
+                                  </div>
+                                  <Badge variant="secondary" className="shrink-0">{r.status}</Badge>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )
+                      })()}
+
+                      {/* C - Documents Grid + Add */}
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-semibold">Documents</div>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={selectedDocType}
+                              onValueChange={(val) => { setSelectedDocType(val); setShowAddDropzone(true); setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0) }}
+                            >
+                              <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Select missing document" /></SelectTrigger>
+                              <SelectContent>
+                                {['CV','Portfolio of Cases','Testimonials','Reference 1','Reference 2','DBS Check','DISC PDF','Appraisal Doc'].map((n) => (
+                                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button size="sm" disabled={!selectedDocType || !hasPendingFiles} onClick={() => { try { dropzoneSubmitRef.current?.() } catch {} }} className="h-8">+ Add</Button>
+                          </div>
+                        </div>
+                        {selectedDocType && (
+                          <div ref={addDocRef} className="mb-3">
+                            <div className="text-xs text-muted-foreground mb-2">Upload files for <span className="text-red-500">{selectedDocType}</span></div>
+                            <UploadDropzone registerSubmit={(fn) => { dropzoneSubmitRef.current = fn }} onFilesChange={(files) => setHasPendingFiles(files.length > 0)} showActions={false} onSubmit={async (files) => {
+                              const optimistic = files.map((f, i) => ({ id: `optimistic-${Date.now()}-${i}`, name: `${selectedDocType} - ${f.name}`, category: 'Application', source: 'Initial Application', uploadedAt: new Date().toISOString(), fileUrl: '', status: 'Uploading…', type: f.type || 'Unknown', field: selectedDocType, originalName: f.name, size: f.size || 0 }))
+                              setOptimisticDocs((prev) => [...prev, ...optimistic])
+                              try {
+                                if (!applicant || !files?.length || !selectedDocType) return
+                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', selectedDocType)
+                                const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
+                                if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'Upload failed') }
+                                await mutate?.()
+                              } finally { setOptimisticDocs([]); setHasPendingFiles(false); setSelectedDocType('') }
+                            }} />
+                          </div>
+                        )}
+                        {(applicant?.allDocuments?.length || 0) + (optimisticDocs?.length || 0) > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {[...(applicant?.allDocuments || []), ...(optimisticDocs || [])].map((doc, idx) => (
+                              <div key={`${doc.id}-${idx}`} className="rounded-md border p-3 flex items-center justify-between">
+                                <div className="min-w-0 flex items-center gap-2">
+                                  <FileText className="h-4 w-4 shrink-0" />
+                                  <div className="min-w-0">
+                                    <div className="text-sm truncate">{doc.name}</div>
+                                    <div className="text-xs text-muted-foreground truncate">{doc.category} • {doc.source}</div>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="shrink-0">{doc.status}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">No documents yet.</div>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                ) : (
+                  <Tabs value={tab} onValueChange={setTab}>
 
                   <TabsContent value="overview" className="mt-4">
                     {isLoading ? (
@@ -239,351 +391,40 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
                         <Separator className="my-4" />
 
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" className="cursor-pointer bg-transparent">
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Open in Airtable
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="cursor-pointer bg-transparent"
-                            onClick={() => setTab("feedback")}
-                            title="Submit attachments as feedback"
-                          >
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Submit Feedback
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </TabsContent>
+                        {/* Applicant details shown above timeline; buttons removed */}
 
-                  <TabsContent value="documents" className="mt-4 space-y-4">
-                    {isLoading ? (
-                      <div className="space-y-4">
-                        <div className="h-4 bg-muted animate-pulse rounded" />
-                        <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
-                        <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium">All Documents</span>
-                          <span className="text-muted-foreground">({docsInfo.present})</span>
-                        </div>
-                        
-                        {/* Show all documents if any exist */}
-                        {(applicant?.allDocuments?.length || 0) + (optimisticDocs?.length || 0) > 0 && (
-                          <div className="space-y-3">
-                            <ul className="divide-y rounded-md border bg-background">
-                              {[...(applicant?.allDocuments || []), ...(optimisticDocs || [])].map((doc, idx) => (
-                                <li key={`${doc.id}-${idx}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 transition-colors">
-                                  <div className="flex min-w-0 items-center gap-2 flex-1">
-                                    <FileText className="h-4 w-4 shrink-0" />
-                                    <div className="min-w-0 flex-1">
-                                      <span className="truncate text-sm block">{doc.name}</span>
-                                      <span className="text-xs text-muted-foreground">{doc.category} • {doc.source}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="shrink-0">
-                                      {doc.status}
-                                    </Badge>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => handleFileClick(doc)}
-                                      title="View document"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {/* Show message if no documents */}
-                        {(!applicant?.allDocuments || applicant.allDocuments.length === 0) && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                            <p>No documents found for this applicant</p>
-                          </div>
-                        )}
-
-                        {/* Upload dropzone appears ABOVE controls when a type is selected */}
-                        {selectedDocType && (
-                          <div ref={addDocRef} className="space-y-3">
-                            <div className="text-sm text-muted-foreground">Upload files for <span className="text-red-500">{selectedDocType}</span></div>
-                            <UploadDropzone
-                              registerSubmit={(fn) => { dropzoneSubmitRef.current = fn }}
-                              onFilesChange={(files) => setHasPendingFiles(files.length > 0)}
-                              showActions={false}
-                              onSubmit={async (files) => {
-                                // Optimistic add
-                                const optimistic = files.map((f, i) => ({
-                                  id: `optimistic-${Date.now()}-${i}`,
-                                  name: `${selectedDocType} - ${f.name}`,
-                                  category: 'Application',
-                                  source: 'Initial Application',
-                                  uploadedAt: new Date().toISOString(),
-                                  fileUrl: '',
-                                  status: 'Uploading…',
-                                  type: f.type || 'Unknown',
-                                  field: selectedDocType,
-                                  originalName: f.name,
-                                  size: f.size || 0,
-                                }))
-                                setOptimisticDocs((prev) => [...prev, ...optimistic])
-
-                                try {
-                                  if (!applicant || !files?.length || !selectedDocType) return
-                                  const fd = new FormData()
-                                  files.forEach((f) => fd.append('files', f))
-                                  fd.append('fieldName', selectedDocType)
-                                  const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
-                                  if (!res.ok) {
-                                    const err = await res.json().catch(() => ({}))
-                                    throw new Error(err?.error || 'Upload failed')
-                                  }
-                                  await mutate?.()
-                                } finally {
-                                  setOptimisticDocs([])
-                                  setHasPendingFiles(false)
-                                  setSelectedDocType("")
-                                }
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {/* Add Document Controls (below list) */}
-                        <div className="pt-2 mt-2 border-t pr-10 md:pr-12">
-                          {(() => {
-                            // Compute missing initial application docs based on consolidated documents
-                            const PRESENT_FIELDS = new Set(
-                              ([...(applicant?.allDocuments || []), ...(optimisticDocs || [])])
-                                .filter((d) => d?.source === 'Initial Application' && d?.field)
-                                .map((d) => d.field)
-                            )
-                            const ALL_FIELDS = [
-                              'CV',
-                              'Portfolio of Cases',
-                              'Testimonials',
-                              'Reference 1',
-                              'Reference 2',
-                              'DBS Check',
-                              'DISC PDF',
-                              'Appraisal Doc',
-                            ]
-                            const missing = ALL_FIELDS.filter((f) => !PRESENT_FIELDS.has(f))
-
-                            return (
-                              <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-2 pr-2">
-                                  <Select
-                                    value={selectedDocType}
-                                    onValueChange={(val) => {
-                                      setSelectedDocType(val)
-                                      setShowAddDropzone(true)
-                                      setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
-                                    }}
-                                  >
-                                    <SelectTrigger className="w-56 shrink-0">
-                                      <SelectValue placeholder={missing.length ? "Select missing document" : "No missing documents"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {missing.length === 0 ? (
-                                        <div className="px-3 py-2 text-xs text-muted-foreground">All initial documents present</div>
-                                      ) : (
-                                        missing.map((name) => (
-                                          <SelectItem key={name} value={name}>{name}</SelectItem>
-                                        ))
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    variant="default"
-                                    disabled={!selectedDocType || !hasPendingFiles}
-                                    onClick={() => {
-                                      try { dropzoneSubmitRef.current?.() } catch {}
-                                    }}
-                                    className="cursor-pointer shrink-0"
-                                  >
-                                    Add Document
-                                  </Button>
-                                </div>
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      </>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="feedback" className="mt-4 space-y-4">
-                    {/* Upload Section */}
-                    <div className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        Drop files below to submit feedback. Only attachments are saved.
-                      </div>
-                      <UploadDropzone
-                        onSubmit={async (files) => {
-                          const meta = files.map((f) => ({ name: f.name, size: f.size, type: f.type }))
-                          await handleSubmitFeedback(meta)
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Feedback Documents Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium">Feedback Documents</span>
-                          <span className="text-muted-foreground">({feedbackDocuments?.length || 0})</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={refreshFeedback}
-                          disabled={feedbackRefreshing}
-                          className="h-6 w-6 p-0"
-                          title="Refresh feedback documents"
-                        >
-                          <RefreshCw className={`h-3 w-3 ${feedbackRefreshing ? 'animate-spin' : ''}`} />
-                        </Button>
-                      </div>
-
-                      {/* Loading state */}
-                      {feedbackLoading && (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                          <span className="text-sm text-muted-foreground">Loading feedback documents...</span>
-                        </div>
-                      )}
-
-                      {/* Error state */}
-                      {feedbackError && (
-                        <div className="text-center py-8 text-destructive">
-                          <p className="text-sm font-medium mb-2">Error loading feedback documents</p>
-                          <p className="text-xs text-muted-foreground">{feedbackError.message || 'Unknown error occurred'}</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={refreshFeedback}
-                            className="mt-2"
-                          >
-                            Try Again
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Show feedback documents grouped by stage */}
-                      {!feedbackLoading && !feedbackError && feedbackDocuments && feedbackDocuments.length > 0 && (
-                        <div className="space-y-4">
-                          {Object.entries(documentsByStage).map(([stage, docs]) => (
-                            <div key={stage} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-medium">{stage}</h4>
-                                <Badge variant="secondary" className="text-xs">
-                                  {docs.length} document{docs.length !== 1 ? 's' : ''}
-                                </Badge>
-                              </div>
-                              <ul className="divide-y rounded-md border bg-background">
-                                {docs.map((doc, idx) => {
-                                  // Format the date for display
-                                  const uploadDate = new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                  })
-                                  
-                                  return (
-                                    <li key={`${doc.id}-${idx}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 transition-colors">
-                                      <div className="flex min-w-0 items-center gap-2 flex-1">
-                                        <FileText className="h-4 w-4 shrink-0" />
-                                        <div className="min-w-0 flex-1">
-                                          <span className="truncate text-sm block">{doc.documentType} - {uploadDate}</span>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 w-8 p-0"
-                                          onClick={() => handleFileClick(doc)}
-                                          title="View document"
-                                        >
-                                          <Eye className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </li>
-                                  )
-                                })}
-                              </ul>
+                        {/* Timeline (after details) */}
+                        {(() => {
+                          const items = []
+                          if (applicant?.interviewDate) items.push({ label: 'First Interview Booked', date: applicant.interviewDate })
+                          if (applicant?.secondInterviewDate) items.push({ label: 'Second Interview Booked', date: applicant.secondInterviewDate })
+                          if (applicant?.createdAt) items.push({ label: 'Application Submitted', date: applicant.createdAt })
+                          if (items.length === 0) return null
+                          items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          return (
+                            <div className="mt-4">
+                              <div className="text-sm font-semibold mb-2">Timeline</div>
+                              <ol className="relative border-l pl-4">
+                                {items.map((ev, idx) => (
+                                  <li key={`${ev.label}-${idx}`} className="mb-4 ml-2">
+                                    <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
+                                    <div className="text-sm font-medium">{ev.label}</div>
+                                    <div className="text-xs text-muted-foreground">{formatDate(ev.date)}</div>
+                                  </li>
+                                ))}
+                              </ol>
                             </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Show message if no feedback documents */}
-                      {!feedbackLoading && !feedbackError && (!feedbackDocuments || feedbackDocuments.length === 0) && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>No feedback documents found for this applicant</p>
-                          <p className="text-xs mt-1">Documents from First Interview Questions, Second Interview Questions, and Docs - After Second Interview will appear here</p>
-                        </div>
-                      )}
-
-                      {/* Cache indicator */}
-                      {feedbackFromCache && (
-                        <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                          Showing cached data • Click refresh to get latest
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Legacy Feedback Files Section (for backward compatibility) */}
-                    {feedbackFiles.length > 0 && (
-                      <>
-                        <Separator className="my-4" />
-                        <div className="space-y-3">
-                          <div className="text-sm font-medium">Legacy Feedback Files</div>
-                          <ul className="divide-y rounded-md border bg-background">
-                            {feedbackFiles.map((f, idx) => (
-                              <li key={`${f.name}-${idx}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 transition-colors">
-                                <div className="flex min-w-0 items-center gap-2 flex-1">
-                                  <FileText className="h-4 w-4 shrink-0" />
-                                  <span className="truncate text-sm">{f.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">{Math.round((f.size || 0) / 1024)} KB</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleFileClick(f)}
-                                    title="View feedback file"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                          )
+                        })()}
                       </>
                     )}
-                    
-                    <Separator className="my-2" />
-                    <div className="text-xs text-muted-foreground">
-                      Note: Feedback documents are now stored directly in Airtable Feedback table.
-                    </div>
                   </TabsContent>
+
+                  {/* Documents section removed with tabs */}
+
+                  {/* Feedback section removed with tabs */}
                 </Tabs>
+                )}
               </div>
             </ScrollArea>
           </div>
