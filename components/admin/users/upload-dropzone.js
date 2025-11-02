@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { Card } from "@components/ui/card"
 
-export default function UploadDropzone({ onSubmit }) {
+export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange, showActions = true, submitLabel = "Submit Feedback" }) {
   const [files, setFiles] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
@@ -28,6 +28,12 @@ export default function UploadDropzone({ onSubmit }) {
     await onSubmit?.(files)
     setFiles([])
   }
+
+  // Expose submit handler to parent and emit file changes
+  useEffect(() => {
+    try { registerSubmit?.(handleSubmit) } catch {}
+    try { onFilesChange?.(files) } catch {}
+  }, [files])
 
   return (
     <div className="space-y-3">
@@ -74,19 +80,21 @@ export default function UploadDropzone({ onSubmit }) {
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          className="cursor-pointer bg-transparent"
-          onClick={() => setFiles([])}
-          disabled={files.length === 0}
-        >
-          Clear
-        </Button>
-        <Button className="cursor-pointer" onClick={handleSubmit} disabled={files.length === 0}>
-          Submit Feedback
-        </Button>
-      </div>
+      {showActions && (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            className="cursor-pointer bg-transparent"
+            onClick={() => setFiles([])}
+            disabled={files.length === 0}
+          >
+            Clear
+          </Button>
+          <Button className="cursor-pointer" onClick={handleSubmit} disabled={files.length === 0}>
+            {submitLabel}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -668,7 +668,7 @@ export async function GET(request, { params }) {
       status: 200,
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "private, max-age=300" // 5 minute cache
+        "Cache-Control": "private, no-store"
       }
     })
 

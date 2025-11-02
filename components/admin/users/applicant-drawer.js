@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useRef, useEffect } from "react"
-import { Sheet, SheetContent } from "@components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
@@ -56,6 +56,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [selectedDocType, setSelectedDocType] = useState("")
   const [showAddDropzone, setShowAddDropzone] = useState(false)
   const addDocRef = useRef(null)
+  const [optimisticDocs, setOptimisticDocs] = useState([])
+  const dropzoneSubmitRef = useRef(null)
+  const [hasPendingFiles, setHasPendingFiles] = useState(false)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -88,11 +91,11 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const docsInfo = useMemo(() => {
     if (!applicant) return { present: 0 }
     
-    // Just count total documents present
-    const present = applicant.allDocuments?.length || 0
+    // Count total including optimistic additions
+    const present = (applicant.allDocuments?.length || 0) + (optimisticDocs?.length || 0)
     
     return { present }
-  }, [applicant])
+  }, [applicant, optimisticDocs])
 
   const feedbackFiles = applicant?.feedbackFiles || []
 
@@ -159,6 +162,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full max-w-3xl pl-2 pr-4 md:pl-2 md:pr-6">
+          {/* Accessibility: provide required DialogTitle for SheetContent */}
+          <SheetHeader className="sr-only">
+            <SheetTitle>Applicant Details</SheetTitle>
+          </SheetHeader>
           <div className="flex h-full flex-col">
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
@@ -268,10 +275,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         </div>
                         
                         {/* Show all documents if any exist */}
-                        {applicant?.allDocuments && applicant.allDocuments.length > 0 && (
+                        {(applicant?.allDocuments?.length || 0) + (optimisticDocs?.length || 0) > 0 && (
                           <div className="space-y-3">
                             <ul className="divide-y rounded-md border bg-background">
-                              {applicant.allDocuments.map((doc, idx) => (
+                              {[...(applicant?.allDocuments || []), ...(optimisticDocs || [])].map((doc, idx) => (
                                 <li key={`${doc.id}-${idx}`} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 transition-colors">
                                   <div className="flex min-w-0 items-center gap-2 flex-1">
                                     <FileText className="h-4 w-4 shrink-0" />
@@ -308,12 +315,58 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           </div>
                         )}
 
-                        {/* Add Document Controls (moved below the list) */}
+                        {/* Upload dropzone appears ABOVE controls when a type is selected */}
+                        {selectedDocType && (
+                          <div ref={addDocRef} className="space-y-3">
+                            <div className="text-sm text-muted-foreground">Upload files for <span className="text-red-500">{selectedDocType}</span></div>
+                            <UploadDropzone
+                              registerSubmit={(fn) => { dropzoneSubmitRef.current = fn }}
+                              onFilesChange={(files) => setHasPendingFiles(files.length > 0)}
+                              showActions={false}
+                              onSubmit={async (files) => {
+                                // Optimistic add
+                                const optimistic = files.map((f, i) => ({
+                                  id: `optimistic-${Date.now()}-${i}`,
+                                  name: `${selectedDocType} - ${f.name}`,
+                                  category: 'Application',
+                                  source: 'Initial Application',
+                                  uploadedAt: new Date().toISOString(),
+                                  fileUrl: '',
+                                  status: 'Uploading…',
+                                  type: f.type || 'Unknown',
+                                  field: selectedDocType,
+                                  originalName: f.name,
+                                  size: f.size || 0,
+                                }))
+                                setOptimisticDocs((prev) => [...prev, ...optimistic])
+
+                                try {
+                                  if (!applicant || !files?.length || !selectedDocType) return
+                                  const fd = new FormData()
+                                  files.forEach((f) => fd.append('files', f))
+                                  fd.append('fieldName', selectedDocType)
+                                  const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
+                                  if (!res.ok) {
+                                    const err = await res.json().catch(() => ({}))
+                                    throw new Error(err?.error || 'Upload failed')
+                                  }
+                                  await mutate?.()
+                                } finally {
+                                  setOptimisticDocs([])
+                                  setHasPendingFiles(false)
+                                  setSelectedDocType("")
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Add Document Controls (below list) */}
                         <div className="pt-2 mt-2 border-t">
                           {(() => {
                             // Compute missing initial application docs based on consolidated documents
                             const PRESENT_FIELDS = new Set(
-                              (applicant?.allDocuments || [])
+                              ([...(applicant?.allDocuments || []), ...(optimisticDocs || [])])
                                 .filter((d) => d?.source === 'Initial Application' && d?.field)
                                 .map((d) => d.field)
                             )
@@ -332,7 +385,14 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             return (
                               <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-2">
-                                  <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                                  <Select
+                                    value={selectedDocType}
+                                    onValueChange={(val) => {
+                                      setSelectedDocType(val)
+                                      setShowAddDropzone(true)
+                                      setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
+                                    }}
+                                  >
                                     <SelectTrigger className="w-56">
                                       <SelectValue placeholder={missing.length ? "Select missing document" : "No missing documents"} />
                                     </SelectTrigger>
@@ -348,35 +408,15 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                   </Select>
                                   <Button
                                     variant="default"
-                                    disabled={!selectedDocType}
-                                    onClick={() => setShowAddDropzone((v) => !v)}
+                                    disabled={!selectedDocType || !hasPendingFiles}
+                                    onClick={() => {
+                                      try { dropzoneSubmitRef.current?.() } catch {}
+                                    }}
                                     className="cursor-pointer"
                                   >
                                     Add Document
                                   </Button>
                                 </div>
-                                {showAddDropzone && (
-                                  <div ref={addDocRef} className="space-y-3">
-                                    <div className="text-sm text-muted-foreground">Upload files for {selectedDocType}</div>
-                                    <UploadDropzone
-                                      onSubmit={async (files) => {
-                                        // Use generic attachments route with fieldName
-                                        if (!applicant || !files?.length || !selectedDocType) return
-                                        const fd = new FormData()
-                                        files.forEach((f) => fd.append('files', f))
-                                        fd.append('fieldName', selectedDocType)
-                                        const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
-                                        if (!res.ok) {
-                                          const err = await res.json().catch(() => ({}))
-                                          throw new Error(err?.error || 'Upload failed')
-                                        }
-                                        await mutate?.()
-                                        setShowAddDropzone(false)
-                                        setSelectedDocType("")
-                                      }}
-                                    />
-                                  </div>
-                                )}
                               </div>
                             )
                           })()}
