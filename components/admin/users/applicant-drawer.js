@@ -189,20 +189,19 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
               </div>
             </div>
 
-            {/* Progress + Next Step */}
-            <div className="space-y-4 border-b px-5 pb-4 pt-3 md:px-6">
-              <ProgressStepper currentStage={applicant?.stage || ""} />
-              <NextStep applicant={applicant} onUpdated={(row) => {
-                onApplicantUpdated?.(row)
-                mutate?.() // Refresh the applicant data
-              }} />
-            </div>
-
             {/* Scrollable content */}
             <ScrollArea className="flex-1">
-              <div className="px-5 py-4 md:px-6">
+              <div className="px-5 pr-6 py-4 md:px-6 md:pr-8">
+                {/* Progress + Next Step now scrolls with content (only top identity remains sticky) */}
+                <div className="space-y-4 border-b pb-4 pt-1">
+                  <ProgressStepper currentStage={applicant?.stage || ""} />
+                  <NextStep applicant={applicant} onUpdated={(row) => {
+                    onApplicantUpdated?.(row)
+                    mutate?.() // Refresh the applicant data
+                  }} />
+                </div>
                 <Tabs value={tab} onValueChange={setTab}>
-                  <TabsList className="flex w-full flex-wrap gap-2 rounded-lg bg-muted/30 p-1">
+                  <TabsList className="flex w-full flex-wrap gap-2 rounded-lg bg-muted/30 p-1 justify-start">
                     <TabsTrigger value="overview" className="cursor-pointer rounded-md px-3 py-1.5">
                       Overview
                     </TabsTrigger>
@@ -362,7 +361,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         )}
 
                         {/* Add Document Controls (below list) */}
-                        <div className="pt-2 mt-2 border-t">
+                        <div className="pt-2 mt-2 border-t pr-10 md:pr-12">
                           {(() => {
                             // Compute missing initial application docs based on consolidated documents
                             const PRESENT_FIELDS = new Set(
@@ -384,7 +383,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
                             return (
                               <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 pr-2">
                                   <Select
                                     value={selectedDocType}
                                     onValueChange={(val) => {
@@ -393,7 +392,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                       setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
                                     }}
                                   >
-                                    <SelectTrigger className="w-56">
+                                    <SelectTrigger className="w-56 shrink-0">
                                       <SelectValue placeholder={missing.length ? "Select missing document" : "No missing documents"} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -412,7 +411,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                     onClick={() => {
                                       try { dropzoneSubmitRef.current?.() } catch {}
                                     }}
-                                    className="cursor-pointer"
+                                    className="cursor-pointer shrink-0"
                                   >
                                     Add Document
                                   </Button>
