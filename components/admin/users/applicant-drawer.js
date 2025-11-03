@@ -323,7 +323,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                           return (
                             <div>
-                              <div className="text-sm font-semibold mb-2">Timeline</div>
+                              <div className="text-sm font-semibold mb-2">Application Timeline</div>
                               <ol className="relative border-l pl-4">
                                 {items.map((ev, idx) => (
                                   <li key={`${ev.label}-${idx}`} className="mb-3 ml-2">
@@ -405,7 +405,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                       <div className="flex items-center gap-2 shrink-0">
                                         {completed ? (
                                           <>
-                                            <Badge variant="success">Completed</Badge>
+                                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">Completed</Badge>
                                             {Array.isArray(r.docs) && r.docs[0]?.url && (
                                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View document" onClick={() => {
                                                 const d = r.docs[0]
@@ -426,7 +426,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                           </>
                                         ) : (
                                           <>
-                                            <Badge variant="warning">Scheduled</Badge>
+                                            <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Scheduled</Badge>
                                             <Button size="sm" className="h-8" onClick={() => {
                                               // Open the upload modal prefilled to upload against this scheduled review
                                               // Reuse the existing modal by setting the default title
@@ -550,7 +550,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                           return (
                             <div className="mt-4">
-                              <div className="text-sm font-semibold mb-2">Timeline</div>
+                              <div className="text-sm font-semibold mb-4">Application Timeline</div>
                               <ol className="relative border-l pl-4">
                                 {items.map((ev, idx) => (
                                   <li key={`${ev.label}-${idx}`} className="mb-4 ml-2">

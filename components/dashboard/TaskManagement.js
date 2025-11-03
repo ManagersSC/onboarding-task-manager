@@ -43,6 +43,7 @@ import { Skeleton } from "@components/ui/skeleton"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
+import { Checkbox } from "@components/ui/checkbox"
 
 // Enhanced priority colors with very high priority
 const priorityColors = {
@@ -210,6 +211,12 @@ export function TaskManagement() {
     return Boolean(task?.applicantId)
   }
 
+  // Special task: Monthly Reviews
+  function isMonthlyReviewsTask(task) {
+    const t = (task?.taskType || "").toLowerCase().trim()
+    return t === "monthly reviews" || t === "monthly_reviews"
+  }
+
   // Build groups of tasks by applicant (both unclaimed and claimed)
   const applicantGroups = (() => {
     const groups = {}
@@ -320,6 +327,14 @@ export function TaskManagement() {
   const [resolveDialogTask, setResolveDialogTask] = useState(null)
   const [resolveNote, setResolveNote] = useState("")
 
+  // Monthly Reviews modal state
+  const [monthlyReviewsOpen, setMonthlyReviewsOpen] = useState(false)
+  const [monthlyReviewsLoading, setMonthlyReviewsLoading] = useState(false)
+  const [monthlyReviewsError, setMonthlyReviewsError] = useState("")
+  const [monthlyPeople, setMonthlyPeople] = useState([])
+  const [monthlySelected, setMonthlySelected] = useState({})
+  const [monthlyReviewsTaskId, setMonthlyReviewsTaskId] = useState(null)
+
   const openResolveDialog = (task) => {
     setResolveDialogTask(task)
     setResolveNote("")
@@ -401,6 +416,48 @@ export function TaskManagement() {
         setLoading(false)
       })
   }
+
+  const openMonthlyReviewsModal = async (task) => {
+    try {
+      setMonthlyReviewsError("")
+      setMonthlyReviewsLoading(true)
+      setMonthlyReviewsOpen(true)
+      setMonthlyReviewsTaskId(task?.id || null)
+      const res = await fetch("/api/admin/dashboard/new-hires")
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to fetch onboarding people")
+      const hires = Array.isArray(data?.newHires) ? data.newHires : []
+      // Best-effort filter for people currently onboarding
+      const onboarding = hires.filter((h) => h?.onboardingStarted === true || String(h?.onboardingStatus || "").toLowerCase() === "onboarding")
+      setMonthlyPeople(onboarding)
+      // Initialize checklist state (restore from session if available)
+      const init = {}
+      for (const p of onboarding) init[p.id] = false
+      try {
+        const key = task?.id ? `monthly_reviews_selected_${task.id}` : null
+        if (key) {
+          const saved = JSON.parse(sessionStorage.getItem(key) || "{}")
+          for (const pid of Object.keys(saved || {})) {
+            if (pid in init) init[pid] = Boolean(saved[pid])
+          }
+        }
+      } catch {}
+      setMonthlySelected(init)
+    } catch (e) {
+      setMonthlyReviewsError(e.message)
+    } finally {
+      setMonthlyReviewsLoading(false)
+    }
+  }
+
+  // Persist selection per task
+  useEffect(() => {
+    if (!monthlyReviewsTaskId) return
+    try {
+      const key = `monthly_reviews_selected_${monthlyReviewsTaskId}`
+      sessionStorage.setItem(key, JSON.stringify(monthlySelected || {}))
+    } catch {}
+  }, [monthlySelected, monthlyReviewsTaskId])
 
   const completeTask = async (taskId) => {
     const key = `complete-${taskId}`
@@ -676,7 +733,15 @@ export function TaskManagement() {
         transition={{ duration: 0.2, delay: index * 0.05 }}
         className="group relative"
       >
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 hover:border-border transition-all duration-200 cursor-pointer">
+        <div
+          className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 hover:border-border transition-all duration-200 cursor-pointer"
+          onClick={(e) => {
+            if (isMonthlyReviewsTask(task) && !isGlobalTask(task)) {
+              e.stopPropagation()
+              openMonthlyReviewsModal(task)
+            }
+          }}
+        >
           {/* Priority Indicator */}
           <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
             <PriorityIcon
@@ -1686,6 +1751,83 @@ export function TaskManagement() {
                     Resolve & Complete
                   </Button>
                 </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Monthly Reviews Modal */}
+        <AnimatePresence>
+          {monthlyReviewsOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-2xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <CalendarIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-foreground">Book Monthly Reviews</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setMonthlyReviewsOpen(false)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {monthlyReviewsLoading ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">Loading onboarding people…</div>
+                ) : monthlyReviewsError ? (
+                  <div className="py-10 text-center text-sm text-red-600">{monthlyReviewsError}</div>
+                ) : monthlyPeople.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">No people currently onboarding.</div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3">Select the people you want to include in this month's reviews.</p>
+                    <div className="border rounded-md divide-y">
+                      {monthlyPeople.map((p) => {
+                        const checked = !!monthlySelected[p.id]
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => setMonthlySelected((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                          >
+                            <div className="flex items-center justify-between p-3">
+                              <div className="min-w-0">
+                                <div className={`text-sm font-medium truncate ${checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                  {p.name}
+                                  {p.role && (
+                                    <span className={`ml-2 text-xs ${checked ? 'text-muted-foreground/70' : 'text-muted-foreground'} font-normal align-middle truncate`}>
+                                      {p.role}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(next) =>
+                                  setMonthlySelected((prev) => ({ ...prev, [p.id]: Boolean(next) }))
+                                }
+                                className="h-4 w-4 rounded-md border-primary/60 data-[state=unchecked]:bg-primary/5 focus-visible:ring-2 focus-visible:ring-primary/40"
+                              />
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button onClick={() => setMonthlyReviewsOpen(false)}>Done</Button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </div>
           )}
