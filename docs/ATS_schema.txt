@@ -1564,6 +1564,19 @@
                     },
                     "id": "fldNeCHBHD5wOUXnp",
                     "name": "Appraisal Doc"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldrwlXSxphHdrSU3",
+                    "name": "Monthly Review Dates"
+                },
+                {
+                    "type": "multipleAttachments",
+                    "options": {
+                        "isReversed": false
+                    },
+                    "id": "fldczOtp4oR8RXDq3",
+                    "name": "Monthly Review Docs"
                 }
             ],
             "views": [

@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
+import { logAuditEvent } from "@/lib/auditLogger"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -57,6 +58,19 @@ export async function POST(request, { params }) {
     for (const file of files) {
       await uploadFileToAirtable(id, fieldName, file)
       uploaded.push({ name: file.name, size: file.size, type: file.type })
+    }
+
+    try {
+      await logAuditEvent({
+        eventType: "Monthly Review Document Upload",
+        eventStatus: "Success",
+        userName: session.userName,
+        userRole: session.userRole,
+        userIdentifier: session.userEmail,
+        detailedMessage: `Uploaded ${uploaded.length} file(s) to ${fieldName} for applicant ${id}`,
+      })
+    } catch (e) {
+      logger?.error?.("audit log failed for attachments", e)
     }
 
     return new Response(

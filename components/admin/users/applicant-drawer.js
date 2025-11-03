@@ -18,6 +18,10 @@ import { useApplicant } from "@/hooks/useApplicant"
 import { useFeedbackDocuments } from "@/hooks/useFeedbackDocuments"
 import { ApplicantFileViewerModal } from "./applicant-file-viewer-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Input } from "@components/ui/input"
+import { Label } from "@components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@components/ui/dialog"
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
 
 function Initials({ name = "" }) {
   const [first, last] = String(name).split(" ")
@@ -232,26 +236,26 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                 )}
               </AnimatePresence>
             ) : (
-              <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-10 w-10">
-                    {isLoading ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <Initials name={applicant?.name} />
-                    )}
-                  </Avatar>
-                  <div>
-                    <h2 className="text-base font-semibold leading-none">
-                      {isLoading ? "Loading..." : applicant?.name || "Applicant"}
-                    </h2>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
-                      {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
-                    </div>
+            <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10">
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <Initials name={applicant?.name} />
+                  )}
+                </Avatar>
+                <div>
+                  <h2 className="text-base font-semibold leading-none">
+                    {isLoading ? "Loading..." : applicant?.name || "Applicant"}
+                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
+                    {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
                   </div>
                 </div>
               </div>
+            </div>
             )}
 
             {/* Scrollable content */}
@@ -368,11 +372,12 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           { id: 'rev-1', month: 'Oct 2025', status: 'Completed', notes: 'Good progress on onboarding tasks.' },
                           { id: 'rev-2', month: 'Sep 2025', status: 'Completed', notes: 'KPI meets expectations.' },
                         ]
+                        const [showScheduler, setShowScheduler] = [true, true] // keeps card spacing predictable; controls via local state below
                         return (
                           <div className="rounded-lg border p-4">
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="text-sm font-semibold">Monthly Review</h4>
-                              <Button size="sm" className="h-8">+ New Review</Button>
+                      <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} onDone={async () => { await mutate?.() }} />
                             </div>
                             <ul className="divide-y rounded-md border bg-background">
                               {demoReviews.map((r) => (
@@ -531,5 +536,318 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
         />
       )}
     </>
+  )
+}
+
+function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone }) {
+  const [open, setOpen] = useState(false)
+  const [date, setDate] = useState("")
+  const [confirming, setConfirming] = useState(false)
+  const [uploadMode, setUploadMode] = useState(false)
+  const [hasFiles, setHasFiles] = useState(false)
+  const submitRef = useRef(null)
+  const [currentMonth, setCurrentMonth] = useState(() => new Date())
+  const [eventsByDate, setEventsByDate] = useState({})
+  const [dayEvents, setDayEvents] = useState([])
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
+  const [hasConflict, setHasConflict] = useState(false)
+  const [title, setTitle] = useState("")
+
+  const timeOptions = useMemo(() => {
+    const opts = []
+    for (let h = 8; h <= 18; h++) {
+      for (const m of [0, 30]) {
+        const hh = String(h).padStart(2, '0')
+        const mm = String(m).padStart(2, '0')
+        opts.push({ value: `${hh}:${mm}`, label: `${((h % 12) || 12)}:${mm} ${h < 12 ? 'AM' : 'PM'}` })
+      }
+    }
+    return opts
+  }, [])
+
+  // Fetch month events on open or month change
+  useEffect(() => {
+    if (!open) return
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    const start = new Date(year, month, 1).toISOString()
+    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/dashboard/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+        if (!res.ok) throw new Error('Failed to fetch events')
+        const data = await res.json()
+        const map = {}
+        for (const ev of data || []) {
+          const s = new Date(ev.start?.dateTime || ev.start?.date)
+          const e = new Date(ev.end?.dateTime || ev.end?.date)
+          const key = s.toISOString().slice(0,10)
+          if (!map[key]) map[key] = []
+          map[key].push({
+            title: ev.summary || 'Event',
+            start: s,
+            end: e,
+          })
+        }
+        setEventsByDate(map)
+      } catch (e) {
+        console.error(e)
+        setEventsByDate({})
+      }
+    })()
+  }, [open, currentMonth])
+
+  // Update day events and conflict calc
+  useEffect(() => {
+    setDayEvents(eventsByDate[date] || [])
+  }, [eventsByDate, date])
+
+  useEffect(() => {
+    if (!date || !startTime || !endTime) { setHasConflict(false); return }
+    const [sh, sm] = startTime.split(':').map(Number)
+    const [eh, em] = endTime.split(':').map(Number)
+    const start = new Date(`${date}T${startTime}:00`)
+    const end = new Date(`${date}T${endTime}:00`)
+    if (end <= start) { setHasConflict(true); return }
+    const conflict = (eventsByDate[date] || []).some(ev => {
+      const s = ev.start, e = ev.end
+      return (start < e && end > s)
+    })
+    setHasConflict(conflict)
+  }, [date, startTime, endTime, eventsByDate])
+
+  return (
+    <>
+      <Button size="sm" className="h-8" onClick={() => { setOpen(true); setUploadMode(false); setTitle(`Monthly Review with ${applicantName || 'Applicant'}`) }}>
+        + New Review
+      </Button>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setDate(""); setUploadMode(false); setHasFiles(false) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Monthly Review</DialogTitle>
+            <DialogDescription>
+              Schedule a review date, or{" "}
+              <button type="button" className="underline underline-offset-2 text-muted-foreground" onClick={() => setUploadMode(true)}>
+                upload a review document
+              </button>
+            </DialogDescription>
+          </DialogHeader>
+          {!uploadMode ? (
+            <div className="mt-3 space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Event Title</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Monthly Review with ${applicantName || 'Applicant'}`} className="h-9" />
+              </div>
+              <MonthOnlyPicker
+                selected={date}
+                onSelect={(val) => setDate(val)}
+                currentMonth={currentMonth}
+                onMonthChange={setCurrentMonth}
+                eventsByDate={eventsByDate}
+              />
+              {/* Selected day details and time selection */}
+              {date && (
+                <div className="rounded-md border p-3">
+                  <div className="text-sm font-medium mb-2">{date}</div>
+                  {dayEvents.length > 0 ? (
+                    <div className="space-y-1 mb-3">
+                      {dayEvents.map((ev, i) => (
+                        <div key={i} className="text-xs text-muted-foreground flex items-center gap-2">
+                          <ClockIcon className="h-3 w-3" />
+                          {ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <span className="opacity-80">• {ev.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground mb-3">No events for this day</div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={startTime} onValueChange={(v) => {
+                      setStartTime(v)
+                      if (endTime && endTime <= v) {
+                        const next = timeOptions.find((t) => t.value > v)
+                        setEndTime(next ? next.value : "")
+                      }
+                    }}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={endTime} onValueChange={setEndTime}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
+                      <SelectContent>
+                        {(startTime ? timeOptions.filter((t) => t.value > startTime) : timeOptions).map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {hasConflict && (
+                    <div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>
+                  )}
+                  {startTime && endTime && endTime <= startTime && (
+                    <div className="mt-1 text-xs text-red-500">End time must be after start time.</div>
+                  )}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button
+                  disabled={!date || !startTime || !endTime || endTime <= startTime || !title.trim() || confirming || hasConflict}
+                  onClick={async () => {
+                    try {
+                      setConfirming(true)
+                      // 1) Update Airtable schedule (audit + notification inside route)
+                      const res = await fetch(`/api/admin/users/${applicantId}/monthly-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, startTime, endTime, title }) })
+                      if (!res.ok) throw new Error('Failed to schedule')
+                      // 2) Create Google Calendar event (same format used in CalendarPreview)
+                      const startDT = `${date}T${startTime}:00`
+                      const endDT = `${date}T${endTime}:00`
+                      const calRes = await fetch('/api/admin/dashboard/calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          summary: title,
+                          description: `Monthly Review for applicant ${applicantName}`,
+                          start: { dateTime: startDT, timeZone: 'Europe/London' },
+                          end: { dateTime: endDT, timeZone: 'Europe/London' },
+                          createMeet: false,
+                        }),
+                      })
+                      if (!calRes.ok) throw new Error('Calendar creation failed')
+                      toast.success('Monthly review scheduled and calendar event created')
+                      setOpen(false)
+                      await onDone?.()
+                    } catch (e) {
+                      console.error(e)
+                      toast.error(e.message || 'Failed to schedule monthly review')
+                    } finally {
+                      setConfirming(false)
+                    }
+                  }}
+                >
+                  {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <UploadDropzone
+                registerSubmit={(fn) => { submitRef.current = fn }}
+                onFilesChange={(files) => setHasFiles(files.length > 0)}
+                showActions={false}
+                onSubmit={async (files) => {
+                  try {
+                    const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', 'Monthly Review Docs')
+                    const res = await fetch(`/api/admin/users/${applicantId}/attachments`, { method: 'POST', body: fd })
+                    if (!res.ok) throw new Error('Upload failed')
+                    toast.success('Monthly review document uploaded')
+                    setOpen(false)
+                    await onDone?.()
+                  } catch (e) {
+                    console.error(e)
+                    toast.error(e.message || 'Upload failed')
+                  }
+                }}
+              />
+              <div className="space-y-2">
+                <div className="text-center">
+                  <button type="button" className="text-xs text-muted-foreground underline underline-offset-2" onClick={() => setUploadMode(false)}>
+                    back to date scheduling
+                  </button>
+                </div>
+                <div className="flex justify-end">
+                  <Button size="sm" disabled={!hasFiles} onClick={() => { try { submitRef.current?.() } catch {} }}>
+                    Upload
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, eventsByDate = {} }) {
+  const [current, setCurrent] = useState(() => currentMonth || new Date())
+  useEffect(() => { if (currentMonth) setCurrent(currentMonth) }, [currentMonth])
+  const year = current.getFullYear()
+  const month = current.getMonth()
+  const monthName = current.toLocaleString("default", { month: "long" })
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const firstDayOfMonth = new Date(year, month, 1).getDay()
+
+  const totalCells = Math.ceil((daysInMonth + firstDayOfMonth) / 7) * 7
+  const cells = Array.from({ length: totalCells }, (_, i) => {
+    const dayIndex = i - firstDayOfMonth
+    if (dayIndex < 0 || dayIndex >= daysInMonth) {
+      const date = new Date(year, month, dayIndex + 1)
+      return { isEmpty: true, date, day: date.getDate() }
+    }
+    const day = dayIndex + 1
+    const date = new Date(year, month, day)
+    const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return { isEmpty: false, date, day, dateString }
+  })
+
+  const weeks = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+  const isToday = (d) => {
+    const t = new Date()
+    return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear()
+  }
+
+  return (
+    <div className="rounded-md border p-3">
+      <div className="flex items-center justify-between mb-2">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month - 1, 1); setCurrent(d); onMonthChange?.(d) }}>
+          <ChevronLeftIcon className="h-4 w-4" />
+        </Button>
+        <div className="text-sm font-medium">{monthName} {year}</div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month + 1, 1); setCurrent(d); onMonthChange?.(d) }}>
+          <ChevronRightIcon className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-7 text-center mb-1">
+        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i) => (
+          <div key={i} className="text-xs text-muted-foreground">{d}</div>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-1">
+            {week.map((cell, di) => cell.isEmpty ? (
+              <div key={`e-${wi}-${di}`} className="h-9" />
+            ) : (
+              <Button
+                key={cell.dateString}
+                variant="ghost"
+                size="sm"
+                className={`h-9 p-0 relative ${
+                  selected === cell.dateString
+                    ? "bg-primary text-primary-foreground"
+                    : isToday(cell.date)
+                      ? "border"
+                      : ""
+                }`}
+                onClick={() => onSelect?.(cell.dateString)}
+              >
+                <span>{cell.day}</span>
+                {(eventsByDate[cell.dateString]?.length || 0) > 0 && (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                )}
+              </Button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
