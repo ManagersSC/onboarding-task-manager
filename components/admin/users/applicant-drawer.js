@@ -8,6 +8,7 @@ import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
 import NextStep from "./next-step"
@@ -60,6 +61,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const dropzoneSubmitRef = useRef(null)
   const [hasPendingFiles, setHasPendingFiles] = useState(false)
   const [wideView, setWideView] = useState(false)
+  const scrollRootRef = useRef(null)
+  const [showStickyHeader, setShowStickyHeader] = useState(false)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -128,6 +131,26 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     }
   }, [showAddDropzone])
 
+  // Observe scroll to toggle sticky header appearance
+  useEffect(() => {
+    if (!wideView) {
+      setShowStickyHeader(false)
+      return
+    }
+    const root = scrollRootRef.current
+    if (!root) return
+    const viewport = root.querySelector('[data-radix-scroll-area-viewport]')
+    if (!viewport) return
+    const onScroll = () => {
+      try {
+        setShowStickyHeader((viewport.scrollTop || 0) > 80)
+      } catch {}
+    }
+    onScroll()
+    viewport.addEventListener('scroll', onScroll, { passive: true })
+    return () => viewport.removeEventListener('scroll', onScroll)
+  }, [wideView])
+
   const handleSubmitAppraisal = async (files) => {
     if (!applicant || !files?.length) return
     const formData = new FormData()
@@ -182,29 +205,57 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
           </button>
           <div className="flex h-full flex-col">
             {/* Header */}
-            <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10">
-                  {isLoading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <Initials name={applicant?.name} />
-                  )}
-                </Avatar>
-                <div>
-                  <h2 className="text-base font-semibold leading-none">
-                    {isLoading ? "Loading..." : applicant?.name || "Applicant"}
-                  </h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
-                    {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+            {/* Header */}
+            {wideView ? (
+              <AnimatePresence>
+                {showStickyHeader && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-start justify-between gap-3 border-b px-5 py-3 md:px-6 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10">
+                        {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
+                      </Avatar>
+                      <div>
+                        <h2 className="text-base font-semibold leading-none">{isLoading ? "Loading..." : applicant?.name || "Applicant"}</h2>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
+                          {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            ) : (
+              <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-10 w-10">
+                    {isLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <Initials name={applicant?.name} />
+                    )}
+                  </Avatar>
+                  <div>
+                    <h2 className="text-base font-semibold leading-none">
+                      {isLoading ? "Loading..." : applicant?.name || "Applicant"}
+                    </h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
+                      {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Scrollable content */}
-            <ScrollArea className="flex-1">
+            <ScrollArea ref={scrollRootRef} className="flex-1">
               <div className="px-5 pr-6 py-4 md:px-6 md:pr-8">
                 {wideView ? (
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -229,8 +280,33 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         <div className="text-sm font-semibold">Quick Facts</div>
                         <InfoRow label="Phone" value={applicant?.phone} />
                         <InfoRow label="Email" value={applicant?.email} />
-                        <InfoRow label="Source" value={applicant?.source} />
                         <InfoRow label="Applied For" value={applicant?.job} />
+                        {/* Onboarding status */}
+                        {(() => {
+                          const paused = !!applicant?.onboardingPaused
+                          const start = applicant?.onboardingStartDate ? new Date(applicant.onboardingStartDate) : null
+                          const started = start && !Number.isNaN(start.getTime())
+                          const status = started ? (paused ? 'Paused' : 'Active') : 'Not started'
+                          return (
+                            <>
+                              <InfoRow label="Onboarding" value={status} />
+                              {started && (
+                                <>
+                                  <InfoRow label="Start" value={formatDate(applicant.onboardingStartDate)} />
+                                  {(() => {
+                                    const diffDays = Math.max(1, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                                    const week = Math.floor((diffDays - 1) / 7) + 1
+                                    return <InfoRow label="Progress" value={`Week ${week} • Day ${diffDays}`} />
+                                  })()}
+                                </>
+                              )}
+                            </>
+                          )
+                        })()}
+                        {/* Appraisal quick glance */}
+                        {applicant?.appraisalDate && <InfoRow label="Next Appraisal" value={formatDate(applicant.appraisalDate)} />}
+                        {applicant?.appraisalCreated && <InfoRow label="Appraisal Created" value="Yes" />}
+                        {applicant?.docsStatus && <InfoRow label="Docs Status" value={applicant.docsStatus} />}
                         <Separator />
                         {/* Timeline small */}
                         {(() => {
@@ -272,8 +348,15 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <InfoRow label="Phone" value={applicant?.phone} />
                           <InfoRow label="Interview Date" value={applicant?.interviewDate ? formatDate(applicant.interviewDate) : '—'} />
                           <InfoRow label="Second Interview" value={applicant?.secondInterviewDate ? formatDate(applicant.secondInterviewDate) : '—'} />
-                          <InfoRow label="Source" value={applicant?.source} />
                           <InfoRow label="Application Date" value={applicant?.createdAt ? formatDate(applicant.createdAt) : '—'} />
+                          <InfoRow label="Last Updated" value={applicant?.updatedAt ? formatDate(applicant.updatedAt) : '—'} />
+                          <InfoRow label="Address" value={applicant?.address} />
+                          <InfoRow label="Post Code" value={applicant?.postCode} />
+                          <InfoRow label="Date of Birth" value={applicant?.dateOfBirth} />
+                          {!!applicant?.criteriaScore && <InfoRow label="Criteria Score" value={String(applicant.criteriaScore)} />}
+                          {String(applicant?.stage || '').toLowerCase().startsWith('rejected') && applicant?.rejectionReason && (
+                            <InfoRow label="Rejection Reason" value={applicant.rejectionReason} />
+                          )}
                         </div>
                       </div>
 
@@ -352,7 +435,15 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                     <div className="text-xs text-muted-foreground truncate">{doc.category} • {doc.source}</div>
                                   </div>
                                 </div>
-                                <Badge variant="outline" className="shrink-0">{doc.status}</Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 shrink-0"
+                                  onClick={() => handleFileClick(doc)}
+                                  title="View document"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                               </div>
                             ))}
                           </div>
@@ -363,7 +454,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     </section>
                   </div>
                 ) : (
-                  <Tabs value={tab} onValueChange={setTab}>
+                <Tabs value={tab} onValueChange={setTab}>
 
                   <TabsContent value="overview" className="mt-4">
                     {isLoading ? (
@@ -410,10 +501,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                     <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
                                     <div className="text-sm font-medium">{ev.label}</div>
                                     <div className="text-xs text-muted-foreground">{formatDate(ev.date)}</div>
-                                  </li>
-                                ))}
+                                </li>
+                              ))}
                               </ol>
-                            </div>
+                          </div>
                           )
                         })()}
                       </>

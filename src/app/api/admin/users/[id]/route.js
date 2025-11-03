@@ -504,6 +504,11 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
       address: record.get('Address') || '',
       postCode: record.get('Post Code') || '',
       dateOfBirth: record.get('Date of Birth') || '',
+      onboardingStartDate: record.get('Onboarding Start Date') || '',
+      onboardingPaused: !!record.get('Onboarding Paused'),
+      appraisalDate: record.get('Appraisal Date') || '',
+      appraisalCreated: !!record.get('Appraisal Created'),
+      docsStatus: record.get('Docs Status') || '',
       criteriaScore: record.get('Criteria Score') || 0,
       rejectionReason: record.get('Rejection Reason') || '',
       
