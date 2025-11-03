@@ -45,7 +45,8 @@ export async function POST(request, { params }) {
 
     const formData = await request.formData()
     const fieldName = String(formData.get("fieldName") || "").trim()
-    const files = formData.getAll("files")
+    const title = String(formData.get("title") || "").trim()
+    let files = formData.getAll("files")
     if (!fieldName || files.length === 0) {
       return new Response(JSON.stringify({ error: "Missing fieldName or files" }), { status: 400 })
     }
@@ -54,10 +55,20 @@ export async function POST(request, { params }) {
     const recs = await base("Applicants").select({ filterByFormula: `RECORD_ID() = '${id}'`, fields: ["Name"], maxRecords: 1 }).firstPage()
     if (!recs || recs.length === 0) return new Response(JSON.stringify({ error: "Applicant not found" }), { status: 404 })
 
+    // Enforce single file for Monthly Review Docs
+    if (fieldName === 'Monthly Review Docs' && files.length > 1) {
+      files = [files[0]]
+    }
+
     const uploaded = []
     for (const file of files) {
-      await uploadFileToAirtable(id, fieldName, file)
-      uploaded.push({ name: file.name, size: file.size, type: file.type })
+      const arrayBuffer = await file.arrayBuffer()
+      // If a title is provided, replace the original filename entirely
+      const safeTitle = title ? title.replace(/[\\/:*?"<>|]/g, "-").trim() : ""
+      const newName = safeTitle || file.name
+      const newFile = new File([arrayBuffer], newName, { type: file.type })
+      await uploadFileToAirtable(id, fieldName, newFile)
+      uploaded.push({ name: newFile.name, size: newFile.size, type: newFile.type })
     }
 
     try {

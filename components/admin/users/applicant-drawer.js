@@ -22,6 +22,7 @@ import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@components/ui/dialog"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
+import { toast } from "sonner"
 
 function Initials({ name = "" }) {
   const [first, last] = String(name).split(" ")
@@ -553,6 +554,11 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
   const [endTime, setEndTime] = useState("")
   const [hasConflict, setHasConflict] = useState(false)
   const [title, setTitle] = useState("")
+  const [uploadTitle, setUploadTitle] = useState(() => {
+    const d = new Date()
+    return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`
+  })
+  const [uploading, setUploading] = useState(false)
 
   const timeOptions = useMemo(() => {
     const opts = []
@@ -738,9 +744,10 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
                 registerSubmit={(fn) => { submitRef.current = fn }}
                 onFilesChange={(files) => setHasFiles(files.length > 0)}
                 showActions={false}
+                maxFiles={1}
                 onSubmit={async (files) => {
                   try {
-                    const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', 'Monthly Review Docs')
+                    const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', 'Monthly Review Docs'); fd.append('title', uploadTitle)
                     const res = await fetch(`/api/admin/users/${applicantId}/attachments`, { method: 'POST', body: fd })
                     if (!res.ok) throw new Error('Upload failed')
                     toast.success('Monthly review document uploaded')
@@ -753,14 +760,18 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
                 }}
               />
               <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Document Title</Label>
+                  <Input value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} className="h-9" />
+                </div>
                 <div className="text-center">
                   <button type="button" className="text-xs text-muted-foreground underline underline-offset-2" onClick={() => setUploadMode(false)}>
                     back to date scheduling
                   </button>
                 </div>
                 <div className="flex justify-end">
-                  <Button size="sm" disabled={!hasFiles} onClick={() => { try { submitRef.current?.() } catch {} }}>
-                    Upload
+                  <Button size="sm" disabled={!hasFiles || uploading || !uploadTitle.trim()} onClick={async () => { try { setUploading(true); await submitRef.current?.() } finally { setUploading(false) } }}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upload'}
                   </Button>
                 </div>
               </div>

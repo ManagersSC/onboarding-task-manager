@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { Card } from "@components/ui/card"
 
-export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange, showActions = true, submitLabel = "Submit Feedback" }) {
+export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange, showActions = true, submitLabel = "Submit Feedback", maxFiles = Infinity }) {
   const [files, setFiles] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
@@ -13,19 +13,28 @@ export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange
     e.preventDefault()
     setDragOver(false)
     const dropped = Array.from(e.dataTransfer.files || [])
-    if (dropped.length) setFiles((prev) => [...prev, ...dropped])
+    if (dropped.length) setFiles((prev) => {
+      const next = [...prev, ...dropped]
+      if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
+      return next
+    })
   }, [])
 
   const onPick = useCallback((e) => {
     const picked = Array.from(e.target.files || [])
-    if (picked.length) setFiles((prev) => [...prev, ...picked])
+    if (picked.length) setFiles((prev) => {
+      const next = [...prev, ...picked]
+      if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
+      return next
+    })
   }, [])
 
   const removeAt = (i) => setFiles((prev) => prev.filter((_, idx) => idx !== i))
 
   const handleSubmit = async () => {
     if (files.length === 0) return
-    await onSubmit?.(files)
+    const toSend = Number.isFinite(maxFiles) ? files.slice(0, maxFiles) : files
+    await onSubmit?.(toSend)
     setFiles([])
   }
 
@@ -56,7 +65,7 @@ export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange
             browse
           </button>
         </div>
-        <div className="text-xs text-muted-foreground">PDF, DOCX, images. Multiple files supported.</div>
+        <div className="text-xs text-muted-foreground">PDF, DOCX, images.</div>
         <input ref={inputRef} type="file" multiple className="hidden" onChange={onPick} aria-label="Choose files" />
       </Card>
 
