@@ -365,32 +365,82 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         </div>
                       </div>
 
-                      {/* D - Monthly Review (demo) */}
+                      {/* D - Monthly Review (dynamic) */}
                       {(() => {
-                        const isOnboarding = String(applicant?.stage || '').toLowerCase() === 'hired'
-                        if (!isOnboarding) return null
-                        const demoReviews = [
-                          { id: 'rev-1', month: 'Oct 2025', status: 'Completed', notes: 'Good progress on onboarding tasks.' },
-                          { id: 'rev-2', month: 'Sep 2025', status: 'Completed', notes: 'KPI meets expectations.' },
-                        ]
-                        const [showScheduler, setShowScheduler] = [true, true] // keeps card spacing predictable; controls via local state below
+                        const reviews = Array.isArray(applicant?.monthlyReviews) ? [...applicant.monthlyReviews] : []
+                        const parsePeriod = (p) => {
+                          if (!p) return 0
+                          // p expected YYYY-MM
+                          const [y, m] = String(p).split('-').map((v) => parseInt(v, 10))
+                          if (!y || !m) return 0
+                          return y * 100 + m
+                        }
+                        reviews.sort((a,b) => parsePeriod(b.period) - parsePeriod(a.period))
+                        const formatPeriod = (p) => {
+                          if (!p) return ''
+                          const [y, m] = p.split('-').map((v) => parseInt(v, 10))
+                          if (!y || !m) return p
+                          const dt = new Date(y, m - 1, 1)
+                          return dt.toLocaleString('default', { month: 'short', year: 'numeric' })
+                        }
                         return (
                           <div className="rounded-lg border p-4">
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="text-sm font-semibold">Monthly Review</h4>
-                      <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} onDone={async () => { await mutate?.() }} />
+                              <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} onDone={async () => { await mutate?.() }} />
                             </div>
-                            <ul className="divide-y rounded-md border bg-background">
-                              {demoReviews.map((r) => (
-                                <li key={r.id} className="px-3 py-2 flex items-center justify-between">
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-medium">{r.month}</div>
-                                    <div className="text-xs text-muted-foreground truncate">{r.notes}</div>
-                                  </div>
-                                  <Badge variant="secondary" className="shrink-0">{r.status}</Badge>
-                                </li>
-                              ))}
-                            </ul>
+                            {reviews.length === 0 ? (
+                              <div className="text-sm text-muted-foreground">No monthly reviews yet.</div>
+                            ) : (
+                              <ul className="divide-y rounded-md border bg-background">
+                                {reviews.map((r) => {
+                                  const title = r.title || formatPeriod(r.period)
+                                  const completed = !!r.hasDocs
+                                  return (
+                                    <li key={r.id} className="px-3 py-2 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-medium truncate">{title || formatPeriod(r.period)}</div>
+                                        {r.period && (<div className="text-xs text-muted-foreground">{formatPeriod(r.period)}</div>)}
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        {completed ? (
+                                          <>
+                                            <Badge variant="success">Completed</Badge>
+                                            {Array.isArray(r.docs) && r.docs[0]?.url && (
+                                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View document" onClick={() => {
+                                                const d = r.docs[0]
+                                                handleFileClick({
+                                                  id: `${r.id}-0`,
+                                                  name: d.filename || (r.title || formatPeriod(r.period) || 'Review Document'),
+                                                  originalName: d.filename,
+                                                  type: d.type,
+                                                  size: d.size,
+                                                  fileUrl: d.url,
+                                                  source: 'Monthly Review',
+                                                  category: 'Review',
+                                                })
+                                              }}>
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Badge variant="warning">Scheduled</Badge>
+                                            <Button size="sm" className="h-8" onClick={() => {
+                                              // Open the upload modal prefilled to upload against this scheduled review
+                                              // Reuse the existing modal by setting the default title
+                                              const monthLabel = title || formatPeriod(r.period)
+                                              document.dispatchEvent(new CustomEvent('open-monthly-review-upload', { detail: { applicantId: applicant?.id, uploadTitle: monthLabel, reviewId: r.id } }))
+                                            }}>Upload</Button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            )}
                           </div>
                         )
                       })()}
@@ -559,6 +609,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
     return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`
   })
   const [uploading, setUploading] = useState(false)
+  const [targetReviewId, setTargetReviewId] = useState("")
 
   const timeOptions = useMemo(() => {
     const opts = []
@@ -603,6 +654,20 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
       }
     })()
   }, [open, currentMonth])
+
+  // Allow other components to open upload mode for a specific scheduled review
+  useEffect(() => {
+    const handler = (e) => {
+      const detail = e?.detail || {}
+      if (detail?.applicantId !== applicantId) return
+      setTargetReviewId(String(detail?.reviewId || ""))
+      if (detail?.uploadTitle) setUploadTitle(String(detail.uploadTitle))
+      setOpen(true)
+      setUploadMode(true)
+    }
+    document.addEventListener('open-monthly-review-upload', handler)
+    return () => document.removeEventListener('open-monthly-review-upload', handler)
+  }, [applicantId])
 
   // Update day events and conflict calc
   useEffect(() => {
@@ -747,11 +812,34 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
                 maxFiles={1}
                 onSubmit={async (files) => {
                   try {
-                    const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', 'Monthly Review Docs'); fd.append('title', uploadTitle)
-                    const res = await fetch(`/api/admin/users/${applicantId}/attachments`, { method: 'POST', body: fd })
+                    let reviewId = targetReviewId
+                    if (!reviewId) {
+                      // Ensure a Monthly Review exists for this upload (create via schedule endpoint)
+                      const now = new Date()
+                      const parsed = uploadTitle.match(/^(\w+)\s+(\d{4})$/)
+                      let dateStr
+                      if (parsed) {
+                        const monthName = parsed[1]
+                        const year = parseInt(parsed[2], 10)
+                        const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth()
+                        dateStr = `${year}-${String(monthIndex + 1).padStart(2,'0')}-01`
+                      } else {
+                        dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
+                      }
+                      const scheduleRes = await fetch(`/api/admin/users/${applicantId}/monthly-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr, title: uploadTitle }) })
+                      if (!scheduleRes.ok) throw new Error('Failed to prepare review')
+                      const scheduleJson = await scheduleRes.json()
+                      reviewId = scheduleJson.reviewId
+                      if (!reviewId) throw new Error('Missing review id')
+                    }
+
+                    // Upload doc to the Monthly Review
+                    const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('title', uploadTitle)
+                    const res = await fetch(`/api/admin/users/${applicantId}/monthly-reviews/${reviewId}/docs`, { method: 'POST', body: fd })
                     if (!res.ok) throw new Error('Upload failed')
                     toast.success('Monthly review document uploaded')
                     setOpen(false)
+                    setTargetReviewId("")
                     await onDone?.()
                   } catch (e) {
                     console.error(e)

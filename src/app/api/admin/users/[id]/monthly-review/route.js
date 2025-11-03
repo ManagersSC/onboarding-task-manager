@@ -27,13 +27,23 @@ export async function POST(request, { params }) {
     const title = String(body?.title || "Monthly Review").trim()
     if (!dateStr) return new Response(JSON.stringify({ error: "date is required (YYYY-MM-DD)" }), { status: 400 })
 
-    // Fetch existing field to append
-    const rec = await base("Applicants").find(id)
-    const existing = rec.get("Monthly Review Dates") || ""
-    const scheduleLine = startTime && endTime ? `${dateStr} ${startTime}-${endTime} • ${title}` : `${dateStr} • ${title}`
-    const toAppend = existing ? `${existing}\n${scheduleLine}` : scheduleLine
+    // Create Monthly Reviews record instead of appending free-text
+    const period = `${dateStr.slice(0, 7)}` // YYYY-MM
+    const startDateTime = startTime ? `${dateStr}T${startTime}:00` : null
+    const endDateTime = endTime ? `${dateStr}T${endTime}:00` : null
 
-    await base("Applicants").update(id, { "Monthly Review Dates": toAppend })
+    const created = await base("Monthly Reviews").create([
+      {
+        fields: {
+          Applicant: [id],
+          Title: title,
+          Period: period,
+          ...(startDateTime ? { Start: new Date(startDateTime).toISOString() } : {}),
+          ...(endDateTime ? { End: new Date(endDateTime).toISOString() } : {}),
+        },
+      },
+    ])
+    const review = created?.[0]
 
     try {
       await logAuditEvent({
@@ -42,7 +52,7 @@ export async function POST(request, { params }) {
         userName: session.userName,
         userRole: session.userRole,
         userIdentifier: session.userEmail,
-        detailedMessage: `Scheduled monthly review for applicant ${id} on ${dateStr} ${startTime && endTime ? `${startTime}-${endTime}` : ""} • ${title}`,
+        detailedMessage: `Scheduled monthly review (reviewId: ${review?.id}) for applicant ${id} on ${dateStr} ${startTime && endTime ? `${startTime}-${endTime}` : ""} • ${title}`,
       })
     } catch (e) {
       logger?.error?.("audit log failed for monthly review", e)
@@ -67,7 +77,10 @@ export async function POST(request, { params }) {
       logger?.error?.("createNotification failed for monthly review", e)
     }
 
-    return new Response(JSON.stringify({ success: true, date: dateStr, startTime, endTime, title }), { status: 200, headers: { "Content-Type": "application/json" } })
+    return new Response(
+      JSON.stringify({ success: true, date: dateStr, startTime, endTime, title, period, reviewId: review?.id }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
   } catch (err) {
     logger?.error?.("monthly-review schedule failed", err)
     return new Response(JSON.stringify({ error: "Failed to schedule monthly review" }), { status: 500 })

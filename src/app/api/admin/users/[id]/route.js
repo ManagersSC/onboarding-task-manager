@@ -647,8 +647,36 @@ export async function GET(request, { params }) {
     // Consolidate all documents
     const allDocuments = consolidateAllDocuments(applicantRecord, documentRecords)
     
-         // Format applicant data with consolidated documents and proper feedback records
-     const applicant = formatDetailedApplicant(applicantRecord, allDocuments, feedbackRecords)
+    // Fetch Monthly Reviews linked to this applicant
+    let monthlyReviews = []
+    try {
+      const linkedIds = applicantRecord.get('Monthly Reviews') || []
+      let reviewRecords = []
+      if (Array.isArray(linkedIds) && linkedIds.length > 0) {
+        const orFormula = linkedIds.length === 1
+          ? `RECORD_ID() = '${linkedIds[0]}'`
+          : `OR(${linkedIds.map((rid) => `RECORD_ID() = '${rid}'`).join(',')})`
+        reviewRecords = await base('Monthly Reviews').select({
+          filterByFormula: orFormula,
+        }).all()
+      }
+      monthlyReviews = reviewRecords.map(r => ({
+        id: r.id,
+        title: r.get('Title') || '',
+        period: r.get('Period') || '',
+        start: r.get('Start') || '',
+        end: r.get('End') || '',
+        docs: (r.get('Docs') || []).map(att => ({ url: att?.url, filename: att?.filename, size: att?.size, type: att?.type })),
+        hasDocs: Array.isArray(r.get('Docs')) && r.get('Docs').length > 0,
+      }))
+    } catch (e) {
+      logger?.error?.('Failed to fetch Monthly Reviews', e)
+      monthlyReviews = []
+    }
+
+    // Format applicant data with consolidated documents and proper feedback records
+    const applicant = formatDetailedApplicant(applicantRecord, allDocuments, feedbackRecords)
+    applicant.monthlyReviews = monthlyReviews
 
     logger.info(`Successfully formatted applicant ${id} data with ${allDocuments.length} total documents`)
     logger.info(`Document categories found: ${Object.keys(applicant.documentsByCategory || {}).join(', ')}`)

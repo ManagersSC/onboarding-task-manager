@@ -1566,17 +1566,15 @@
                     "name": "Appraisal Doc"
                 },
                 {
-                    "type": "multilineText",
-                    "id": "fldrwlXSxphHdrSU3",
-                    "name": "Monthly Review Dates"
-                },
-                {
-                    "type": "multipleAttachments",
+                    "type": "multipleRecordLinks",
                     "options": {
-                        "isReversed": false
+                        "linkedTableId": "tblfGMjLxwu8VKKgi",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldSNHS1Kp4glO6KB"
                     },
-                    "id": "fldczOtp4oR8RXDq3",
-                    "name": "Monthly Review Docs"
+                    "id": "fldVQnUof2uvkMXw7",
+                    "name": "Monthly Reviews"
                 }
             ],
             "views": [
@@ -5986,6 +5984,138 @@
             "views": [
                 {
                     "id": "viwWRdnuT4We1YPQV",
+                    "name": "Grid view",
+                    "type": "grid"
+                }
+            ]
+        },
+        {
+            "id": "tblfGMjLxwu8VKKgi",
+            "name": "Monthly Reviews",
+            "primaryFieldId": "fldEdOAqIXGQWzFBB",
+            "fields": [
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "\"MR-\" & RECORD_ID()",
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "singleLineText"
+                        }
+                    },
+                    "id": "fldEdOAqIXGQWzFBB",
+                    "name": "Id"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fld6d5ZdHD3QJVxjN",
+                    "name": "Period"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldjVXICDQZDRDBOg",
+                    "name": "Title"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fld1cCv3z0yCtEVfU",
+                    "name": "Start"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldA5C27KW0CsEQWQ",
+                    "name": "End"
+                },
+                {
+                    "type": "multipleAttachments",
+                    "options": {
+                        "isReversed": false
+                    },
+                    "id": "fldTGrb0AJ8iaVEkW",
+                    "name": "Docs"
+                },
+                {
+                    "type": "createdTime",
+                    "options": {
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldgzcjmnjq0fO6Wk",
+                    "name": "Created Time"
+                },
+                {
+                    "type": "lastModifiedTime",
+                    "options": {
+                        "isValid": true,
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldOE87cKcHgHaz2M",
+                    "name": "Updated Time"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl4ldFExsS5hWR3L",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldVQnUof2uvkMXw7"
+                    },
+                    "id": "fldSNHS1Kp4glO6KB",
+                    "name": "Applicant"
+                }
+            ],
+            "views": [
+                {
+                    "id": "viwolr2DInnHMvKgF",
                     "name": "Grid view",
                     "type": "grid"
                 }
