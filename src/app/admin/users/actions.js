@@ -13,6 +13,7 @@ function allowedNextTransition(current, requested) {
   return (
     (current === "New Application" && requested === "First Interview Invite Sent") ||
     (current === "Reviewed" && requested === "Second Interview Invite Sent") ||
+    (current === "Under Review" && requested === "Second Interview Invite Sent") ||
     (current === "Reviewed (2nd)" && requested === "Hired")
   )
 }

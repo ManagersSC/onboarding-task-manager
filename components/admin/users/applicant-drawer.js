@@ -23,6 +23,8 @@ import { Label } from "@components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@components/ui/dialog"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
 import { toast } from "sonner"
+import { updateApplicant } from "@/app/admin/users/actions"
+import { generateColorFromString } from "@/lib/utils/colour-hash"
 
 function Initials({ name = "" }) {
   const [first, last] = String(name).split(" ")
@@ -115,6 +117,70 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     mutate?.() // Refresh the applicant data
     refreshFeedback?.() // Refresh feedback documents
     setTab("feedback")
+  }
+
+  const getNextAdminStage = (currentStage) => {
+    switch (currentStage) {
+      case "New Application":
+        return "First Interview Invite Sent"
+      case "Under Review":
+        return "Second Interview Invite Sent"
+      case "Reviewed":
+        return "Second Interview Invite Sent"
+      case "Reviewed (2nd)":
+        return "Hired"
+      default:
+        return ""
+    }
+  }
+
+  const [advancing, setAdvancing] = useState(false)
+  const nextStage = getNextAdminStage(applicant?.stage)
+  const canAdvance = !!applicant?.id && !!nextStage
+  const actionLabel = useMemo(() => {
+    if (!nextStage) return "Advance Stage"
+    if (nextStage === "First Interview Invite Sent") return "Send First Interview Invite"
+    if (nextStage === "Second Interview Invite Sent") return "Send Second Interview Invite"
+    if (nextStage === "Hired") return "Hire"
+    return "Advance Stage"
+  }, [nextStage])
+
+  const stageColor = useMemo(() => {
+    const col = generateColorFromString(applicant?.stage || "")
+    if (!col) return {}
+    let isDark = false
+    try {
+      isDark = typeof window !== "undefined" && document.documentElement.classList.contains("dark")
+    } catch {}
+    const bg = isDark ? col.dark : col.light
+    const text = isDark ? "hsl(0, 0%, 96%)" : "hsl(220, 13%, 18%)"
+    return { backgroundColor: bg, color: text, borderColor: bg }
+  }, [applicant?.stage])
+
+  const handleAdvanceStage = async () => {
+    if (!canAdvance) return
+    setConfirmStage(nextStage)
+    setConfirmOpen(true)
+  }
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmStage, setConfirmStage] = useState("")
+  const [confirming, setConfirming] = useState(false)
+
+  const confirmAndAdvance = async () => {
+    if (!applicant?.id || !confirmStage) { setConfirmOpen(false); return }
+    try {
+      setConfirming(true)
+      await updateApplicant({ id: applicant.id, stage: confirmStage })
+      toast.success(`Stage updated to ${confirmStage}`)
+      setConfirmOpen(false)
+      await mutate?.()
+      onApplicantUpdated?.()
+    } catch (e) {
+      toast.error(e?.message || "Failed to change stage")
+    } finally {
+      setConfirming(false)
+    }
   }
 
   const handleFileClick = (file) => {
@@ -219,7 +285,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-start justify-between gap-3 border-b px-5 py-3 md:px-6 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+                    className="flex items-center justify-between gap-3 border-b px-4 py-2 md:px-5 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
@@ -228,33 +294,54 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       <div>
                         <h2 className="text-base font-semibold leading-none">{isLoading ? "Loading..." : applicant?.name || "Applicant"}</h2>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
+                          <Badge variant="secondary" style={stageColor}>{applicant?.stage || "—"}</Badge>
                           {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        disabled={!canAdvance || advancing}
+                        onClick={handleAdvanceStage}
+                        title={canAdvance ? actionLabel : "No manual next stage available"}
+                        className="h-8"
+                      >
+                        {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                      </Button>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             ) : (
-            <div className="flex items-start justify-between gap-3 border-b px-5 py-4 md:px-6">
-              <div className="flex items-start gap-3">
+            <div className="border-b px-4 py-3 md:px-5">
+              <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  {isLoading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <Initials name={applicant?.name} />
-                  )}
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
                 </Avatar>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-base font-semibold leading-none">
                     {isLoading ? "Loading..." : applicant?.name || "Applicant"}
                   </h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
-                    {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
-                  </div>
+                  {!!applicant?.email && (
+                    <div className="text-xs text-muted-foreground truncate">{applicant.email}</div>
+                  )}
                 </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="secondary" style={stageColor}>{applicant?.stage || "—"}</Badge>
+                {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+              </div>
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  disabled={!canAdvance || advancing}
+                  onClick={handleAdvanceStage}
+                  title={canAdvance ? actionLabel : "No manual next stage available"}
+                  className="h-8"
+                >
+                  {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                </Button>
               </div>
             </div>
             )}
@@ -274,10 +361,11 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <div>
                             <div className="text-base font-semibold leading-none">{applicant?.name || "Applicant"}</div>
                             <div className="text-xs text-muted-foreground">{applicant?.email || "—"}</div>
-                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <Badge variant="secondary">{applicant?.stage || "—"}</Badge>
-                              {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
-                            </div>
+                            {applicant?.job && (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">{applicant.job}</Badge>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -342,15 +430,25 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     {/* Right main content */}
                     <section className="md:col-span-9 space-y-4">
                       {/* A - Title */}
-                      <div className="rounded-lg border p-4 flex items-center justify-between">
+                      <div className="rounded-lg border px-3 py-2 flex items-center justify-between">
                         <h3 className="text-base font-semibold">Applicant Detail</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" style={stageColor}>{applicant?.stage || "—"}</Badge>
+                          <Button
+                            size="sm"
+                            disabled={!canAdvance || advancing}
+                            onClick={handleAdvanceStage}
+                            title={canAdvance ? actionLabel : "No manual next stage available"}
+                            className="h-8"
+                          >
+                            {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                          </Button>
+                        </div>
                       </div>
 
                       {/* B - Applicant Information */}
                       <div className="rounded-lg border p-4">
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          <InfoRow label="Email" value={applicant?.email} />
-                          <InfoRow label="Phone" value={applicant?.phone} />
                           <InfoRow label="Interview Date" value={applicant?.interviewDate ? formatDate(applicant.interviewDate) : '—'} />
                           <InfoRow label="Second Interview" value={applicant?.secondInterviewDate ? formatDate(applicant.secondInterviewDate) : '—'} />
                           <InfoRow label="Application Date" value={applicant?.createdAt ? formatDate(applicant.createdAt) : '—'} />
@@ -367,6 +465,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
                       {/* D - Monthly Review (dynamic) */}
                       {(() => {
+                        const paused = !!applicant?.onboardingPaused
+                        const startDate = applicant?.onboardingStartDate ? new Date(applicant.onboardingStartDate) : null
+                        const started = startDate && !Number.isNaN(startDate.getTime())
+                        if (!(started && !paused)) return null
                         const reviews = Array.isArray(applicant?.monthlyReviews) ? [...applicant.monthlyReviews] : []
                         const parsePeriod = (p) => {
                           if (!p) return 0
@@ -522,8 +624,6 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     ) : (
                       <>
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          <InfoRow label="Email" value={applicant?.email} />
-                          <InfoRow label="Phone" value={applicant?.phone} />
                           <InfoRow
                             label="Interview Dates"
                             value={
@@ -586,6 +686,26 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
           onOpenChange={handleFileViewerClose}
         />
       )}
+
+      {/* Confirm Stage Change */}
+      <Dialog open={confirmOpen} onOpenChange={(v) => { if (!confirming) setConfirmOpen(v) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Stage Change</DialogTitle>
+            <DialogDescription>
+              {confirmStage === "First Interview Invite Sent" && "This will send the first interview invite to the applicant."}
+              {confirmStage === "Second Interview Invite Sent" && "This will send the second interview invite to the applicant."}
+              {confirmStage === "Hired" && "This will mark the applicant as Hired."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={confirming} className="h-8">Cancel</Button>
+            <Button onClick={confirmAndAdvance} disabled={confirming} className="h-8">
+              {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
