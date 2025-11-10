@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -70,6 +70,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [wideView, setWideView] = useState(false)
   const scrollRootRef = useRef(null)
   const [showStickyHeader, setShowStickyHeader] = useState(false)
+  const [selectedFeedbackStage, setSelectedFeedbackStage] = useState("")
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -118,10 +120,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     hasData: hasFeedbackData,
     isFromCache: feedbackFromCache
   } = useFeedbackDocuments(applicantId, {
-    enabled: tab === "feedback", // Only load when feedback tab is active
-    refreshInterval: tab === "feedback" ? 30000 : 0, // Only refresh when tab is active
-    revalidateOnFocus: tab === "feedback", // Only revalidate on focus when tab is active
-    revalidateOnReconnect: tab === "feedback", // Only revalidate on reconnect when tab is active
+    enabled: tab === "feedback" || wideView, // Also load when expanded view is active
+    refreshInterval: (tab === "feedback" || wideView) ? 30000 : 0,
+    revalidateOnFocus: tab === "feedback" || wideView,
+    revalidateOnReconnect: tab === "feedback" || wideView,
     onSuccess: (data) => {
       console.log('Feedback documents loaded successfully:', data)
     },
@@ -572,6 +574,78 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         )
                       })()}
 
+                      {/* E - Feedback Documents */}
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-semibold">Feedback Documents</div>
+                          <div className="flex items-center gap-2">
+                            <Select value={selectedFeedbackStage} onValueChange={setSelectedFeedbackStage}>
+                              <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Select feedback stage" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="First Interview">First Interview Feedback</SelectItem>
+                                <SelectItem value="Second Interview">Second Interview Feedback</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button size="sm" className="h-8" disabled={!selectedFeedbackStage} onClick={() => setFeedbackModalOpen(true)}>+ Add Feedback</Button>
+                          </div>
+                        </div>
+                        {Array.isArray(feedbackDocuments) && feedbackDocuments.length > 0 ? (
+                          <div className="space-y-3">
+                            {feedbackDocuments.map((doc, idx) => {
+                              const stageLabel = doc.interviewStage || doc.stage
+                              const friendly =
+                                stageLabel === "First Interview" ? "First Interview Doc" :
+                                stageLabel === "Second Interview" ? "Second Interview Doc" :
+                                (doc.name || doc.documentType || doc.originalName || "Document")
+                              const rating = parseInt(doc.rating || 0, 10) || 0
+                              const uploadedAt = doc.uploadedAt || doc.createdAt
+                              return (
+                                <div key={`${doc.id || idx}-${idx}`} className="rounded-md border p-3 w-full">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-medium truncate">{friendly}</div>
+                                      <div className="text-xs text-muted-foreground">{stageLabel || 'Feedback'}{uploadedAt ? ` • ${formatDate(uploadedAt)}` : ''}</div>
+                                      {!!doc.notes && (
+                                        <div className="text-xs text-muted-foreground truncate">{doc.notes}</div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {rating > 0 && (
+                                        <div className="flex items-center gap-0.5">
+                                          {[1,2,3,4,5].map((n) => (
+                                            <Star key={n} className={`h-4 w-4 ${n <= rating ? "fill-yellow-400 stroke-yellow-500" : "stroke-muted-foreground"}`} />
+                                          ))}
+                                        </div>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 shrink-0"
+                                        onClick={() => handleFileClick({
+                                          id: doc.id || `${idx}`,
+                                          name: doc.name || doc.documentType || 'Feedback Document',
+                                          originalName: doc.originalName || doc.fileName,
+                                          type: doc.type || doc.fileType || 'application/octet-stream',
+                                          size: doc.size || doc.fileSize || 0,
+                                          fileUrl: doc.fileUrl || doc.url,
+                                          source: 'Feedback',
+                                          category: stageLabel || 'Interview',
+                                        })}
+                                        title="View document"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">No feedback documents yet.</div>
+                        )}
+                      </div>
+
                       {/* C - Documents Grid + Add */}
                       <div className="rounded-lg border p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -731,10 +805,123 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Feedback Upload Modal */}
+      <FeedbackUploadModal
+        open={feedbackModalOpen}
+        onOpenChange={(v) => { setFeedbackModalOpen(v); if (!v) { setSelectedFeedbackStage("") } }}
+        defaultStage={selectedFeedbackStage}
+        applicantId={applicant?.id}
+        onDone={async () => { await refreshFeedback?.() }}
+      />
     </>
   )
 }
 
+function RatingStars({ value = 0, onChange }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1,2,3,4,5].map((n) => (
+        <button key={n} type="button" className="h-6 w-6 flex items-center justify-center" onClick={() => onChange?.(n)} aria-label={`${n} stars`}>
+          <Star className={`h-5 w-5 ${n <= value ? "fill-yellow-400 stroke-yellow-500" : "stroke-muted-foreground"}`} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FeedbackUploadModal({ open, onOpenChange, defaultStage = "", applicantId, onDone }) {
+  const [stage, setStage] = useState(defaultStage || "")
+  const [notesFirst, setNotesFirst] = useState("")
+  const [notesSecond, setNotesSecond] = useState("")
+  const [rating, setRating] = useState(0)
+  const [hasFiles, setHasFiles] = useState(false)
+  const submitRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  useEffect(() => { if (defaultStage) setStage(defaultStage) }, [defaultStage])
+
+  const handleSubmit = async (files) => {
+    const fd = new FormData()
+    fd.append('interviewStage', stage)
+    const notes = stage === "First Interview" ? notesFirst : stage === "Second Interview" ? notesSecond : ""
+    if (notes) fd.append('notes', notes)
+    if (rating) fd.append('rating', String(rating))
+    for (const f of files || []) fd.append('files', f)
+    const res = await fetch(`/api/admin/users/${applicantId}/feedback`, { method: 'POST', body: fd })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.userError || err?.error || "Upload failed")
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Interview Feedback</DialogTitle>
+          <DialogDescription>Upload a feedback document and optional notes and rating.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Interview Stage</Label>
+              <Select value={stage} onValueChange={setStage}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select stage" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="First Interview">First Interview</SelectItem>
+                  <SelectItem value="Second Interview">Second Interview</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Rating</Label>
+              <RatingStars value={rating} onChange={setRating} />
+            </div>
+          </div>
+          {stage === "First Interview" && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">First Interview Notes (optional)</Label>
+              <Input value={notesFirst} onChange={(e) => setNotesFirst(e.target.value)} placeholder="Notes..." className="h-9" />
+            </div>
+          )}
+          {stage === "Second Interview" && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Second Interview Notes (optional)</Label>
+              <Input value={notesSecond} onChange={(e) => setNotesSecond(e.target.value)} placeholder="Notes..." className="h-9" />
+            </div>
+          )}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              {stage === "Second Interview" ? "Second Interview Doc" : stage === "First Interview" ? "First Interview Doc" : "Feedback Document"}
+            </Label>
+          </div>
+          <UploadDropzone
+            registerSubmit={(fn) => { submitRef.current = fn }}
+            onFilesChange={(files) => setHasFiles(files.length > 0)}
+            showActions={false}
+            maxFiles={3}
+            onSubmit={async (files) => {
+              try {
+                await handleSubmit(files)
+                toast.success('Feedback uploaded')
+                onOpenChange?.(false)
+                await onDone?.()
+              } catch (e) {
+                toast.error(e?.message || 'Upload failed')
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <Button size="sm" disabled={!stage || !hasFiles || uploading} onClick={async () => { try { setUploading(true); await submitRef.current?.() } finally { setUploading(false) } }}>
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upload'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone }) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState("")
