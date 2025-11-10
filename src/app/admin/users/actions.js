@@ -29,12 +29,24 @@ export async function updateApplicant(payload) {
     if (!allowedNextTransition(existing.stage, stage)) {
       throw new Error("Transition not allowed")
     }
+
+    // Append to Stage History JSON (do not overwrite existing)
+    const nowIso = new Date().toISOString()
+    let history = []
+    try {
+      if (Array.isArray(existing.stageHistory)) history = [...existing.stageHistory]
+      else if (typeof existing.stageHistory === "string" && existing.stageHistory.trim()) {
+        history = JSON.parse(existing.stageHistory)
+      }
+    } catch {}
+    history.push({ stage, at: nowIso })
+
     if (inviteStageNeedsLocation(stage)) {
       const loc = normalizeLocationLabel(location || existing.location)
       if (!loc) throw new Error("Interview Location required for this stage")
-      return await updateApplicantInStore(id, { stage, location: loc })
+      return await updateApplicantInStore(id, { stage, location: loc, stageHistory: history })
     }
-    return await updateApplicantInStore(id, { stage })
+    return await updateApplicantInStore(id, { stage, stageHistory: history })
   }
 
   if (location) {
@@ -182,7 +194,18 @@ export async function attachFeedback({ id, files = [] }) {
   }
 
   if (nextStage !== withFeedback.stage) {
-    return await updateApplicantInStore(id, { stage: nextStage })
+    // Append to Stage History JSON
+    const nowIso = new Date().toISOString()
+    let history = []
+    try {
+      if (Array.isArray(before.stageHistory)) history = [...before.stageHistory]
+      else if (typeof before.stageHistory === "string" && before.stageHistory.trim()) {
+        history = JSON.parse(before.stageHistory)
+      }
+    } catch {}
+    history.push({ stage: nextStage, at: nowIso })
+
+    return await updateApplicantInStore(id, { stage: nextStage, stageHistory: history })
   }
   return withFeedback
 }

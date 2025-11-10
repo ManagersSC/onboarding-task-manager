@@ -299,6 +299,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
       location: record.get('Interview Location') || '',
       interviewDate: record.get('Interview Date') || '',
       secondInterviewDate: record.get('Second Interview Date') || '',
+      stageHistory: record.get('Stage History') || '',
       
       // Enhanced document tracking
       docs: {

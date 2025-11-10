@@ -74,6 +74,37 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
 
+  const applicationTimelineItems = useMemo(() => {
+    if (!applicant) return []
+    // Parse history (array or JSON string)
+    const raw = applicant.stageHistory
+    let hist = []
+    try {
+      if (Array.isArray(raw)) hist = raw
+      else if (typeof raw === "string" && raw.trim()) hist = JSON.parse(raw)
+    } catch {
+      hist = []
+    }
+    // Build list as recorded in history only
+    const items = (hist || [])
+      .filter((e) => e && e.stage)
+      .map((e, i) => ({
+        idx: i,
+        label: e.stage,
+        at: e.at || e.date || e.timestamp || null,
+        ts: (() => {
+          const t = Date.parse(e.at || e.date || e.timestamp || "")
+          return Number.isNaN(t) ? Infinity : t
+        })(),
+      }))
+    // Sort chronologically; unknown timestamps stay at the end in recorded order
+    items.sort((a, b) => {
+      if (a.ts === b.ts) return a.idx - b.idx
+      return a.ts - b.ts
+    })
+    return items.map(({ label, at }) => ({ label, at }))
+  }, [applicant])
+
   // Use the feedback documents hook with smart caching
   const {
     documents: feedbackDocuments,
@@ -402,28 +433,22 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         {applicant?.docsStatus && <InfoRow label="Docs Status" value={applicant.docsStatus} />}
                         <Separator />
                         {/* Timeline small */}
-                        {(() => {
-                          const items = []
-                          if (applicant?.interviewDate) items.push({ label: 'First Interview Booked', date: applicant.interviewDate })
-                          if (applicant?.secondInterviewDate) items.push({ label: 'Second Interview Booked', date: applicant.secondInterviewDate })
-                          if (applicant?.createdAt) items.push({ label: 'Application Submitted', date: applicant.createdAt })
-                          if (items.length === 0) return null
-                          items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                          return (
-                            <div>
-                              <div className="text-sm font-semibold mb-2">Application Timeline</div>
-                              <ol className="relative border-l pl-4">
-                                {items.map((ev, idx) => (
-                                  <li key={`${ev.label}-${idx}`} className="mb-3 ml-2">
-                                    <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
-                                    <div className="text-sm font-medium">{ev.label}</div>
-                                    <div className="text-xs text-muted-foreground">{formatDate(ev.date)}</div>
-                                  </li>
-                                ))}
-                              </ol>
-                            </div>
-                          )
-                        })()}
+                        <div>
+                          <div className="text-sm font-semibold mb-2">Application Timeline</div>
+                          {applicationTimelineItems.length > 0 ? (
+                            <ol className="relative border-l pl-4">
+                              {applicationTimelineItems.map((ev, idx) => (
+                                <li key={`${ev.label}-${idx}`} className="mb-3 ml-2">
+                                  <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
+                                  <div className="text-sm font-medium">{ev.label}</div>
+                                  <div className="text-xs text-muted-foreground">{ev.at ? formatDate(ev.at) : "—"}</div>
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No stage history yet.</div>
+                          )}
+                        </div>
                       </div>
                     </aside>
 
