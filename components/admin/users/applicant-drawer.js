@@ -106,6 +106,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     revalidateOnReconnect: true
   })
 
+  const [appraisalOpen, setAppraisalOpen] = useState(false)
   const applicationTimelineItems = useMemo(() => {
     if (!applicant) return []
     // Parse history (array or JSON string)
@@ -788,6 +789,69 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           </div>
                         )
                       })()}
+
+                      {/* D3 - Appraisals (Hired only) */}
+                      {isHiredStage && (
+                        <div className="rounded-lg border p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold">Appraisals</h4>
+                            <Button size="sm" className="h-8" onClick={() => setAppraisalOpen(true)}>Set Date</Button>
+                          </div>
+                          {(() => {
+                            let appraisals = []
+                            try {
+                              const raw = applicant?.appraisalHistory
+                              const parsed = typeof raw === "string" ? JSON.parse(raw) : (raw || {})
+                              if (parsed && Array.isArray(parsed.appraisals)) appraisals = parsed.appraisals
+                            } catch {}
+                            appraisals.sort((a,b) => new Date(b?.appraisalDate || b?.updatedAt || 0) - new Date(a?.appraisalDate || a?.updatedAt || 0))
+                            return appraisals.length > 0 ? (
+                              <ul className="space-y-2">
+                                {appraisals.map((a, idx) => (
+                                  <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border p-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-medium truncate">Year {a?.year || '—'}</div>
+                                        <div className="text-xs text-muted-foreground">Appraisal: {a?.appraisalDate ? formatDate(a.appraisalDate) : '—'}</div>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">{a?.updatedAt ? `Updated ${formatDate(a.updatedAt)}` : ''}</div>
+                                    </div>
+                                    {Array.isArray(a?.steps) && a.steps.length > 0 && (
+                                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {a.steps.map((s, i) => (
+                                          <div key={`${s?.id || 'step'}-${i}`} className="rounded border p-2">
+                                            <div className="text-xs font-medium">{s?.label || 'Step'}</div>
+                                            <div className="mt-1">
+                                              {s?.completedAt ? (
+                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">Completed • {formatDate(s.completedAt)}</Badge>
+                                              ) : (
+                                                <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Pending</Badge>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {!!a?.notes && <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">{a.notes}</div>}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">No appraisal history yet.</div>
+                            )
+                          })()}
+                          <Separator className="my-3" />
+                          <AppraisalDateSetter
+                            open={appraisalOpen}
+                            onOpenChange={setAppraisalOpen}
+                            applicantId={applicant?.id}
+                            applicantName={applicant?.name}
+                            applicantEmail={applicant?.email}
+                            currentDate={applicant?.appraisalDate}
+                            onUpdated={async () => { await mutate?.() }}
+                          />
+                        </div>
+                      )}
 
                       {/* E - Feedback Documents */}
                       <div className="rounded-lg border p-4">
@@ -1647,5 +1711,211 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
         ))}
       </div>
     </div>
+  )
+}
+
+function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = "Applicant", applicantEmail = "", currentDate, onUpdated }) {
+  const [date, setDate] = useState("")
+  useEffect(() => {
+    if (!open) return
+    try {
+      if (!currentDate) { setDate(""); return }
+      const d = new Date(currentDate)
+      if (Number.isNaN(d.getTime())) { setDate(""); return }
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      setDate(`${y}-${m}-${day}`)
+    } catch { setDate("") }
+  }, [open, currentDate])
+  const [saving, setSaving] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingDate, setPendingDate] = useState("")
+  const [calMonth, setCalMonth] = useState(() => new Date())
+  const timeOptions = useMemo(() => {
+    const opts = []
+    for (let h = 8; h <= 18; h++) {
+      for (const m of [0, 30]) {
+        const hh = String(h).padStart(2, '0')
+        const mm = String(m).padStart(2, '0')
+        opts.push({ value: `${hh}:${mm}`, label: `${((h % 12) || 12)}:${mm} ${h < 12 ? 'AM' : 'PM'}` })
+      }
+    }
+    return opts
+  }, [])
+  const [eventsByDate, setEventsByDate] = useState({})
+  const [dayEvents, setDayEvents] = useState([])
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
+  const [hasConflict, setHasConflict] = useState(false)
+
+  // Fetch month events on open or month change
+  useEffect(() => {
+    if (!open) return
+    const year = calMonth.getFullYear()
+    const month = calMonth.getMonth()
+    const start = new Date(year, month, 1).toISOString()
+    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/dashboard/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+        if (!res.ok) throw new Error('Failed to fetch events')
+        const data = await res.json()
+        const map = {}
+        for (const ev of data || []) {
+          const s = new Date(ev.start?.dateTime || ev.start?.date)
+          const e = new Date(ev.end?.dateTime || ev.end?.date)
+          const key = s.toISOString().slice(0,10)
+          if (!map[key]) map[key] = []
+          map[key].push({
+            title: ev.summary || 'Event',
+            start: s,
+            end: e,
+          })
+        }
+        setEventsByDate(map)
+      } catch {
+        setEventsByDate({})
+      }
+    })()
+  }, [open, calMonth])
+
+  // Update day events
+  useEffect(() => { setDayEvents(eventsByDate[date] || []) }, [eventsByDate, date])
+
+  // Compute conflicts
+  useEffect(() => {
+    if (!date || !startTime || !endTime) { setHasConflict(false); return }
+    const [sh, sm] = startTime.split(':').map(Number)
+    const [eh, em] = endTime.split(':').map(Number)
+    const start = new Date(`${date}T${startTime}:00`)
+    const end = new Date(`${date}T${endTime}:00`)
+    if (end <= start) { setHasConflict(true); return }
+    const conflict = (eventsByDate[date] || []).some(ev => (start < ev.end && end > ev.start))
+    setHasConflict(conflict)
+  }, [date, startTime, endTime, eventsByDate])
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!saving) onOpenChange?.(v) }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Set Appraisal Date</DialogTitle>
+          <DialogDescription>Choose a date for the next appraisal and confirm to update.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Appraisal Date</Label>
+            <div className="text-sm">{date ? formatDate(date) : "—"}</div>
+          </div>
+          <MonthOnlyPicker
+            selected={date}
+            onSelect={(val) => setDate(val)}
+            currentMonth={calMonth}
+            onMonthChange={setCalMonth}
+            eventsByDate={eventsByDate}
+          />
+          {date && (
+            <div className="rounded-md border p-3">
+              <div className="text-sm font-medium mb-2">{date}</div>
+              {dayEvents.length > 0 ? (
+                <div className="space-y-1 mb-3">
+                  {dayEvents.map((ev, i) => (
+                    <div key={i} className="text-xs text-muted-foreground">{ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.title}</div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground mb-3">No events for this day</div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={startTime} onValueChange={(v) => {
+                  setStartTime(v)
+                  if (endTime && endTime <= v) {
+                    const next = timeOptions.find((t) => t.value > v)
+                    setEndTime(next ? next.value : "")
+                  }
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={endTime} onValueChange={setEndTime}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
+                  <SelectContent>
+                    {(startTime ? timeOptions.filter((t) => t.value > startTime) : timeOptions).map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {hasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
+              {startTime && endTime && endTime <= startTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" className="h-8" onClick={() => onOpenChange?.(false)} disabled={saving}>Cancel</Button>
+            <Button className="h-8" disabled={!date || !startTime || !endTime || endTime <= startTime || hasConflict || saving} onClick={() => setConfirmOpen(true)}>Continue</Button>
+          </div>
+        </div>
+      </DialogContent>
+      <Dialog open={confirmOpen} onOpenChange={(v) => { if (!saving) setConfirmOpen(v) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Appraisal Date</DialogTitle>
+            <DialogDescription>Set the appraisal date to {date || "—"} and create an appointment event?</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" className="h-8" onClick={() => setConfirmOpen(false)} disabled={saving}>Cancel</Button>
+            <Button
+              className="h-8"
+              disabled={saving}
+              onClick={async () => {
+                if (!applicantId || !date || !startTime || !endTime) return
+                try {
+                  setSaving(true)
+                  const res = await fetch(`/api/admin/users/${applicantId}/appraisal-date`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                  })
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    throw new Error(err?.error || 'Failed to set appraisal date')
+                  }
+                  // Create appointment event in calendar
+                  const startDT = `${date}T${startTime}:00`
+                  const endDT = `${date}T${endTime}:00`
+                  const calRes = await fetch('/api/admin/dashboard/calendar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      summary: 'Appraisal Appointment',
+                      description: `Appointment event: Appraisal for applicant ${applicantName}`,
+                      start: { dateTime: startDT, timeZone: 'Europe/London' },
+                      end: { dateTime: endDT, timeZone: 'Europe/London' },
+                      attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
+                      createMeet: false,
+                    }),
+                  })
+                  if (!calRes.ok) {
+                    const err = await calRes.json().catch(() => ({}))
+                    throw new Error(err?.error || 'Failed to create calendar appointment')
+                  }
+                  toast.success('Appraisal date updated')
+                  setConfirmOpen(false)
+                  onOpenChange?.(false)
+                  await onUpdated?.()
+                } catch (e) {
+                  toast.error(e?.message || 'Failed to update appraisal date')
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Dialog>
   )
 }
