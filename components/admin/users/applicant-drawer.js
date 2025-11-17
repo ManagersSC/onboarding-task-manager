@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -72,6 +72,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [showStickyHeader, setShowStickyHeader] = useState(false)
   const [selectedFeedbackStage, setSelectedFeedbackStage] = useState("")
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+  const [deleteReviewOpen, setDeleteReviewOpen] = useState(false)
+  const [deleteReviewTarget, setDeleteReviewTarget] = useState({ id: "", title: "" })
+  const [deletingReview, setDeletingReview] = useState(false)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
@@ -267,6 +270,26 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     await mutate?.()
     setShowAddDropzone(false)
     setSelectedDocType("")
+  }
+
+  const handleDeleteScheduledReview = async () => {
+    if (!applicant?.id || !deleteReviewTarget?.id) return
+    try {
+      setDeletingReview(true)
+      const res = await fetch(`/api/admin/users/${applicant.id}/monthly-reviews/${deleteReviewTarget.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || "Failed to delete scheduled review")
+      }
+      toast.success("Scheduled review deleted")
+      setDeleteReviewOpen(false)
+      setDeleteReviewTarget({ id: "", title: "" })
+      await mutate?.()
+    } catch (e) {
+      toast.error(e?.message || "Failed to delete scheduled review")
+    } finally {
+      setDeletingReview(false)
+    }
   }
 
 
@@ -562,6 +585,18 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                               const monthLabel = title || formatPeriod(r.period)
                                               document.dispatchEvent(new CustomEvent('open-monthly-review-upload', { detail: { applicantId: applicant?.id, uploadTitle: monthLabel, reviewId: r.id } }))
                                             }}>Upload</Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-8 w-8 p-0"
+                                              title="Delete scheduled review"
+                                              onClick={() => {
+                                                setDeleteReviewTarget({ id: r.id, title })
+                                                setDeleteReviewOpen(true)
+                                              }}
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
                                           </>
                                         )}
                                       </div>
@@ -740,28 +775,22 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         {/* Applicant details shown above timeline; buttons removed */}
 
                         {/* Timeline (after details) */}
-                        {(() => {
-                          const items = []
-                          if (applicant?.interviewDate) items.push({ label: 'First Interview Booked', date: applicant.interviewDate })
-                          if (applicant?.secondInterviewDate) items.push({ label: 'Second Interview Booked', date: applicant.secondInterviewDate })
-                          if (applicant?.createdAt) items.push({ label: 'Application Submitted', date: applicant.createdAt })
-                          if (items.length === 0) return null
-                          items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                          return (
-                            <div className="mt-4">
-                              <div className="text-sm font-semibold mb-4">Application Timeline</div>
-                              <ol className="relative border-l pl-4">
-                                {items.map((ev, idx) => (
-                                  <li key={`${ev.label}-${idx}`} className="mb-4 ml-2">
-                                    <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
-                                    <div className="text-sm font-medium">{ev.label}</div>
-                                    <div className="text-xs text-muted-foreground">{formatDate(ev.date)}</div>
+                        <div className="mt-4">
+                          <div className="text-sm font-semibold mb-4">Application Timeline</div>
+                          {applicationTimelineItems.length > 0 ? (
+                            <ol className="relative border-l pl-4">
+                              {applicationTimelineItems.map((ev, idx) => (
+                                <li key={`${ev.label}-${idx}`} className="mb-4 ml-2">
+                                  <span className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-foreground" />
+                                  <div className="text-sm font-medium">{ev.label}</div>
+                                  <div className="text-xs text-muted-foreground">{ev.at ? formatDate(ev.at) : "—"}</div>
                                 </li>
                               ))}
-                              </ol>
-                          </div>
-                          )
-                        })()}
+                            </ol>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No stage history yet.</div>
+                          )}
+                        </div>
                       </>
                     )}
                   </TabsContent>
@@ -814,6 +843,24 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
         applicantId={applicant?.id}
         onDone={async () => { await refreshFeedback?.() }}
       />
+
+      {/* Delete Scheduled Monthly Review */}
+      <Dialog open={deleteReviewOpen} onOpenChange={(v) => { if (!deletingReview) setDeleteReviewOpen(v) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete scheduled review?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the scheduled monthly review{deleteReviewTarget?.title ? ` (“${deleteReviewTarget.title}”)` : ""}. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setDeleteReviewOpen(false)} disabled={deletingReview} className="h-8">Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteScheduledReview} disabled={deletingReview} className="h-8">
+              {deletingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
