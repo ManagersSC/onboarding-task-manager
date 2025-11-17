@@ -28,7 +28,7 @@ export async function POST(request, { params }) {
 
     try {
       await logAuditEvent({
-        eventType: "Appraisal Date Updated",
+        eventType: "Appraisal Date Update",
         eventStatus: "Success",
         userName: session.userName,
         userRole: session.userRole,

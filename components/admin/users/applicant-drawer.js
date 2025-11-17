@@ -659,7 +659,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <div className="rounded-lg border p-4">
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="text-sm font-semibold">Monthly Review</h4>
-                              <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} onDone={async () => { await mutate?.() }} />
+                              <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} applicantEmail={applicant?.email} onDone={async () => { await mutate?.() }} />
                             </div>
                             {reviews.length === 0 ? (
                               <div className="text-sm text-muted-foreground">No monthly reviews yet.</div>
@@ -1353,7 +1353,7 @@ function FeedbackUploadModal({ open, onOpenChange, defaultStage = "", applicantI
     </Dialog>
   )
 }
-function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone }) {
+function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applicantEmail = "", onDone }) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState("")
   const [confirming, setConfirming] = useState(false)
@@ -1367,6 +1367,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
   const [endTime, setEndTime] = useState("")
   const [hasConflict, setHasConflict] = useState(false)
   const [title, setTitle] = useState("")
+  const [eventType, setEventType] = useState("Meeting")
   const [uploadTitle, setUploadTitle] = useState(() => {
     const d = new Date()
     return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`
@@ -1473,6 +1474,21 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
                 <Label className="text-xs text-muted-foreground">Event Title</Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Monthly Review with ${applicantName || 'Applicant'}`} className="h-9" />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Event Type</Label>
+                  <Select value={eventType} onValueChange={setEventType}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select event type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Meeting">Meeting</SelectItem>
+                      <SelectItem value="Appointment">Appointment</SelectItem>
+                      <SelectItem value="Deadline">Deadline</SelectItem>
+                      <SelectItem value="Event">Event</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <MonthOnlyPicker
                 selected={date}
                 onSelect={(val) => setDate(val)}
@@ -1543,10 +1559,11 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", onDone
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                          summary: title,
-                          description: `Monthly Review for applicant ${applicantName}`,
+                          summary: `${eventType}: ${title}`,
+                          description: `${eventType} for applicant ${applicantName}${applicantEmail ? '' : ' • Attendee: applicant email unavailable (added to description)'} `,
                           start: { dateTime: startDT, timeZone: 'Europe/London' },
                           end: { dateTime: endDT, timeZone: 'Europe/London' },
+                          attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
                           createMeet: false,
                         }),
                       })
