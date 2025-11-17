@@ -13,6 +13,7 @@ function allowedNextTransition(current, requested) {
   return (
     (current === "New Application" && requested === "First Interview Invite Sent") ||
     (current === "Reviewed" && requested === "Second Interview Invite Sent") ||
+    (current === "Under Review" && requested === "Second Interview Invite Sent") ||
     (current === "Reviewed (2nd)" && requested === "Hired")
   )
 }
@@ -28,16 +29,79 @@ export async function updateApplicant(payload) {
     if (!allowedNextTransition(existing.stage, stage)) {
       throw new Error("Transition not allowed")
     }
+
+    // Append to Stage History JSON (do not overwrite existing)
+    const nowIso = new Date().toISOString()
+    let history = []
+    try {
+      if (Array.isArray(existing.stageHistory)) history = [...existing.stageHistory]
+      else if (typeof existing.stageHistory === "string" && existing.stageHistory.trim()) {
+        history = JSON.parse(existing.stageHistory)
+      }
+    } catch {}
+    history.push({ stage, at: nowIso })
+
+    let result
     if (inviteStageNeedsLocation(stage)) {
       const loc = normalizeLocationLabel(location || existing.location)
       if (!loc) throw new Error("Interview Location required for this stage")
-      return await updateApplicantInStore(id, { stage, location: loc })
+      result = await updateApplicantInStore(id, { stage, location: loc, stageHistory: history })
+    } else {
+      result = await updateApplicantInStore(id, { stage, stageHistory: history })
     }
-    return await updateApplicantInStore(id, { stage })
+    // Audit log
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "Applicant Stage Update",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Stage change via server action: ${existing.stage || "—"} → ${stage} for applicant ${id}${result?.location ? ` • Location: ${result.location}` : ""}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for updateApplicant", err)
+    }
+    return result
   }
 
   if (location) {
-    return await updateApplicantInStore(id, { location: normalizeLocationLabel(location) })
+    const updated = await updateApplicantInStore(id, { location: normalizeLocationLabel(location) })
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "Applicant Location Update",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Location updated to ${updated?.location || "Unknown"} for applicant ${id}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for location update", err)
+    }
+    return updated
   }
 
   return existing
@@ -181,7 +245,67 @@ export async function attachFeedback({ id, files = [] }) {
   }
 
   if (nextStage !== withFeedback.stage) {
-    return await updateApplicantInStore(id, { stage: nextStage })
+    // Append to Stage History JSON
+    const nowIso = new Date().toISOString()
+    let history = []
+    try {
+      if (Array.isArray(before.stageHistory)) history = [...before.stageHistory]
+      else if (typeof before.stageHistory === "string" && before.stageHistory.trim()) {
+        history = JSON.parse(before.stageHistory)
+      }
+    } catch {}
+    history.push({ stage: nextStage, at: nowIso })
+
+    const updated = await updateApplicantInStore(id, { stage: nextStage, stageHistory: history })
+    // Audit for feedback + stage update
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "Interview Feedback Upload",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Feedback files attached (${files?.length || 0} file(s)); stage advanced ${before.stage || "—"} → ${nextStage} for applicant ${id}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for feedback attach", err)
+    }
+    return updated
+  }
+  // Audit for feedback only (no stage change)
+  try {
+    const cookieStore = await cookies()
+    const sealedSession = cookieStore.get("session")?.value
+    let session = null
+    if (sealedSession) {
+      session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+    }
+    const userEmail = session?.userEmail || "Unknown"
+    const userRole = session?.userRole || "admin"
+    const userName = session?.userName || userEmail
+    const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+    await logAuditEvent({
+      eventType: "Interview Feedback Upload",
+      eventStatus: "Success",
+      userRole,
+      userName,
+      userIdentifier: userEmail,
+      detailedMessage: `Feedback files attached (${files?.length || 0} file(s)); stage unchanged (${withFeedback.stage}) for applicant ${id}`,
+      request: fakeRequest,
+    })
+  } catch (err) {
+    logger?.error?.("audit log failed for feedback attach (no stage change)", err)
   }
   return withFeedback
 }

@@ -114,6 +114,7 @@ export async function GET(req) {
         applicantName: applicantId ? (applicantNameById[applicantId] || "Unknown") : "",
         flaggedReason: task.fields["Flagged Reason"] || "",
         resolutionNote: task.fields["Resolution Note"] || "",
+        taskType: task.fields["Task Type"] || "Standard",
       });
     });
 
@@ -174,7 +175,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { title, description, assignTo, urgency, dueDate, createdBy, createdById } = body;
+    const { title, description, assignTo, urgency, dueDate, createdBy, createdById, taskType } = body;
 
     // Validate required fields
     if (!title || !assignTo || !urgency || !dueDate || !createdBy) {
@@ -202,6 +203,7 @@ export async function POST(req) {
       '📆 Due Date': dueDate,
       '👩 Created By': createdById ? [createdById] : [],
       '🚀 Status': 'In-progress', // default status
+      ...(taskType ? { 'Task Type': taskType } : {}),
     };
 
     // Create the record in Airtable

@@ -407,6 +407,11 @@
                                 "color": "grayLight2"
                             },
                             {
+                                "id": "selMFZVkVgcF4mtn0",
+                                "name": "Manual",
+                                "color": "blueLight1"
+                            },
+                            {
                                 "id": "sel1apXPTDVLzj983",
                                 "name": "Other",
                                 "color": "orangeLight2"
@@ -1551,6 +1556,60 @@
                     },
                     "id": "fld7BCqmdQkfUp0kA",
                     "name": "Onboarding Manual Import"
+                },
+                {
+                    "type": "multipleAttachments",
+                    "options": {
+                        "isReversed": false
+                    },
+                    "id": "fldNeCHBHD5wOUXnp",
+                    "name": "Appraisal Doc"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tblfGMjLxwu8VKKgi",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": false,
+                        "inverseLinkFieldId": "fldSNHS1Kp4glO6KB"
+                    },
+                    "id": "fldVQnUof2uvkMXw7",
+                    "name": "Monthly Reviews"
+                },
+                {
+                    "type": "lastModifiedTime",
+                    "options": {
+                        "isValid": true,
+                        "referencedFieldIds": [
+                            "fldT0HrnrTYg7YyiL"
+                        ],
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldPIjwydMpxOmUUv",
+                    "name": "Stage Changed At"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldB0lUOY5477Ljp3",
+                    "name": "Stage History"
+                },
+                {
+                    "type": "multilineText",
+                    "id": "fldrnRVH15LptSFzV",
+                    "name": "Appraisal History"
                 }
             ],
             "views": [
@@ -2909,6 +2968,25 @@
                     "name": "🚀 Status"
                 },
                 {
+                    "type": "singleSelect",
+                    "options": {
+                        "choices": [
+                            {
+                                "id": "selHmiHYtJTiF1zIs",
+                                "name": "Default",
+                                "color": "grayLight1"
+                            },
+                            {
+                                "id": "selXdxmbualkbnpw8",
+                                "name": "Monthly Reviews",
+                                "color": "cyanBright"
+                            }
+                        ]
+                    },
+                    "id": "fldv9LfTsox0hlbYK",
+                    "name": "Task Type"
+                },
+                {
                     "type": "multipleRecordLinks",
                     "options": {
                         "linkedTableId": "tblfXqkA0Cna59UUk",
@@ -3610,6 +3688,11 @@
                 {
                     "id": "viwwTOkJpjVLkgXGH",
                     "name": "Grid view",
+                    "type": "grid"
+                },
+                {
+                    "id": "viwc0t4LmkjeSoEFK",
+                    "name": "Grid view copy",
                     "type": "grid"
                 },
                 {
@@ -5367,6 +5450,26 @@
                                 "color": "cyanBright"
                             },
                             {
+                                "id": "selkp7UrOpkQMj4Wm",
+                                "name": "New Hire Added",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "sel9VHcS75cKQL9cg",
+                                "name": "Applicant Stage Update",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selMCAxlM6tu9y5qj",
+                                "name": "Interview Feedback Upload",
+                                "color": "cyanBright"
+                            },
+                            {
+                                "id": "selxSKZJIxiZRfZmh",
+                                "name": "Applicant Location Update",
+                                "color": "cyanBright"
+                            },
+                            {
                                 "id": "sel2w5lXJtiaJheTY",
                                 "name": "Server",
                                 "color": "orangeBright"
@@ -5955,6 +6058,138 @@
             "views": [
                 {
                     "id": "viwWRdnuT4We1YPQV",
+                    "name": "Grid view",
+                    "type": "grid"
+                }
+            ]
+        },
+        {
+            "id": "tblfGMjLxwu8VKKgi",
+            "name": "Monthly Reviews",
+            "primaryFieldId": "fldEdOAqIXGQWzFBB",
+            "fields": [
+                {
+                    "type": "formula",
+                    "options": {
+                        "isValid": true,
+                        "formula": "\"MR-\" & RECORD_ID()",
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "singleLineText"
+                        }
+                    },
+                    "id": "fldEdOAqIXGQWzFBB",
+                    "name": "Id"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fld6d5ZdHD3QJVxjN",
+                    "name": "Period"
+                },
+                {
+                    "type": "singleLineText",
+                    "id": "fldjVXICDQZDRDBOg",
+                    "name": "Title"
+                },
+                {
+                    "type": "multipleAttachments",
+                    "options": {
+                        "isReversed": false
+                    },
+                    "id": "fldTGrb0AJ8iaVEkW",
+                    "name": "Docs"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fld1cCv3z0yCtEVfU",
+                    "name": "Start"
+                },
+                {
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {
+                            "name": "local",
+                            "format": "l"
+                        },
+                        "timeFormat": {
+                            "name": "12hour",
+                            "format": "h:mma"
+                        },
+                        "timeZone": "client"
+                    },
+                    "id": "fldA5C27KW0CsEQWQ",
+                    "name": "End"
+                },
+                {
+                    "type": "createdTime",
+                    "options": {
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldgzcjmnjq0fO6Wk",
+                    "name": "Created Time"
+                },
+                {
+                    "type": "lastModifiedTime",
+                    "options": {
+                        "isValid": true,
+                        "referencedFieldIds": [],
+                        "result": {
+                            "type": "dateTime",
+                            "options": {
+                                "dateFormat": {
+                                    "name": "local",
+                                    "format": "l"
+                                },
+                                "timeFormat": {
+                                    "name": "12hour",
+                                    "format": "h:mma"
+                                },
+                                "timeZone": "client"
+                            }
+                        }
+                    },
+                    "id": "fldOE87cKcHgHaz2M",
+                    "name": "Updated Time"
+                },
+                {
+                    "type": "multipleRecordLinks",
+                    "options": {
+                        "linkedTableId": "tbl4ldFExsS5hWR3L",
+                        "isReversed": false,
+                        "prefersSingleRecordLink": true,
+                        "inverseLinkFieldId": "fldVQnUof2uvkMXw7"
+                    },
+                    "id": "fldSNHS1Kp4glO6KB",
+                    "name": "Applicant"
+                }
+            ],
+            "views": [
+                {
+                    "id": "viwolr2DInnHMvKgF",
                     "name": "Grid view",
                     "type": "grid"
                 }

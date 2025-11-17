@@ -83,6 +83,8 @@ export async function POST(req) {
     if (createMeet) insertParams.conferenceDataVersion = 1;
     if (eventBody.attendees && eventBody.attendees.length > 0) insertParams.sendUpdates = 'all';
     const event = await calendar.events.insert(insertParams);
+    // Invalidate cache so subsequent GET reflects the new event immediately
+    calendarCache = {};
     return NextResponse.json(event.data);
   } catch (err) {
     console.error(err);
@@ -121,6 +123,8 @@ export async function PATCH(req) {
     if (createMeet) patchParams.conferenceDataVersion = 1;
     if (eventData.attendees && eventData.attendees.length > 0) patchParams.sendUpdates = 'all';
     const event = await calendar.events.patch(patchParams);
+    // Invalidate cache after update
+    calendarCache = {};
     return NextResponse.json(event.data);
   } catch (err) {
     console.error(err);
@@ -138,6 +142,8 @@ export async function DELETE(req) {
     const oauth2Client = getOAuth2Client();
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     await calendar.events.delete({ calendarId: 'primary', eventId });
+    // Invalidate cache after deletion
+    calendarCache = {};
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);

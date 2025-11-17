@@ -96,8 +96,7 @@ export async function POST(request, { params }) {
     // Create feedback record in Airtable
     const feedbackFields = {
       'Applicant': [id],
-      'Interview Stage': interviewStage,
-      'Created Time': new Date().toISOString()
+      'Interview Stage': interviewStage
     }
 
     // Add notes based on interview stage
@@ -140,6 +139,8 @@ export async function POST(request, { params }) {
         throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`)
       }
     }
+
+    // Note: Per latest requirement, do NOT change applicant stage or merge records here.
 
     // Log audit event
     logAuditEvent({

@@ -335,6 +335,7 @@ export async function GET(req, { params }) {
       createdBy: record.fields["👩 Created By"] || "",
       for: record.fields["👨 Assigned Staff"] || "",
       flaggedReason: record.fields["Flagged Reason"] || "",
+      taskType: record.fields["Task Type"] || "Standard",
     };
     return new Response(JSON.stringify({ task }), { status: 200 });
   } catch (e) {
