@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -220,6 +220,18 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     return { backgroundColor: bg, color: text, borderColor: bg }
   }, [applicant?.stage])
 
+  const hiredBadgeClass = "bg-emerald-500/15 text-emerald-600 border-emerald-500/20"
+  const renderStageBadge = () => {
+    const label = applicant?.stage || "—"
+    if (label === "Hired") {
+      return <Badge variant="outline" className={hiredBadgeClass}>{label}</Badge>
+    }
+    return <Badge variant="secondary" style={stageColor}>{label}</Badge>
+  }
+  const stageLower = String(applicant?.stage || "").toLowerCase()
+  const isHiredStage = stageLower === "hired"
+  const isRejectedStage = stageLower.startsWith("rejected")
+
   const handleAdvanceStage = async () => {
     if (!canAdvance) return
     setConfirmStage(nextStage)
@@ -229,6 +241,12 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmStage, setConfirmStage] = useState("")
   const [confirming, setConfirming] = useState(false)
+  const [overrideOpen, setOverrideOpen] = useState(false)
+  const [overrideConfirmed, setOverrideConfirmed] = useState(false)
+  const [overrideAction, setOverrideAction] = useState("")
+  const [overrideSubmitting, setOverrideSubmitting] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
 
   const confirmAndAdvance = async () => {
     if (!applicant?.id || !confirmStage) { setConfirmOpen(false); return }
@@ -409,15 +427,31 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        disabled={!canAdvance || advancing}
-                        onClick={handleAdvanceStage}
-                        title={canAdvance ? actionLabel : "No manual next stage available"}
-                        className="h-8"
-                      >
-                        {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                      {!isHiredStage && (
+                        <Button
+                          size="sm"
+                          disabled={!canAdvance || advancing}
+                          onClick={handleAdvanceStage}
+                          title={canAdvance ? actionLabel : "No manual next stage available"}
+                          className="h-8"
+                        >
+                          {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
+                        <Pencil className="h-4 w-4" />
                       </Button>
+                      {!isHiredStage && !isRejectedStage && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-8"
+                          title="Reject applicant"
+                          onClick={() => setRejectOpen(true)}
+                        >
+                          Reject
+                        </Button>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -438,19 +472,35 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                 </div>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="secondary" style={stageColor}>{applicant?.stage || "—"}</Badge>
+                {renderStageBadge()}
                 {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </div>
               <div className="mt-2">
-                <Button
-                  size="sm"
-                  disabled={!canAdvance || advancing}
-                  onClick={handleAdvanceStage}
-                  title={canAdvance ? actionLabel : "No manual next stage available"}
-                  className="h-8"
-                >
-                  {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
-                </Button>
+                {!isHiredStage && (
+                  <Button
+                    size="sm"
+                    disabled={!canAdvance || advancing}
+                    onClick={handleAdvanceStage}
+                    title={canAdvance ? actionLabel : "No manual next stage available"}
+                    className="h-8"
+                  >
+                    {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                  </Button>
+                )}
+                {!isHiredStage && !isRejectedStage && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-8 ml-2"
+                    title="Reject applicant"
+                    onClick={() => setRejectOpen(true)}
+                  >
+                    Reject
+                  </Button>
+                )}
               </div>
             </div>
             )}
@@ -536,16 +586,32 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       <div className="rounded-lg border px-3 py-2 flex items-center justify-between">
                         <h3 className="text-base font-semibold">Applicant Detail</h3>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" style={stageColor}>{applicant?.stage || "—"}</Badge>
-                          <Button
-                            size="sm"
-                            disabled={!canAdvance || advancing}
-                            onClick={handleAdvanceStage}
-                            title={canAdvance ? actionLabel : "No manual next stage available"}
-                            className="h-8"
-                          >
-                            {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                          {renderStageBadge()}
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
+                          {!isHiredStage && (
+                            <Button
+                              size="sm"
+                              disabled={!canAdvance || advancing}
+                              onClick={handleAdvanceStage}
+                              title={canAdvance ? actionLabel : "No manual next stage available"}
+                              className="h-8"
+                            >
+                              {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : (canAdvance ? actionLabel : "Advance Stage")}
+                            </Button>
+                          )}
+                          {!isHiredStage && !isRejectedStage && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-8"
+                              title="Reject applicant"
+                              onClick={() => setRejectOpen(true)}
+                            >
+                              Reject
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -961,6 +1027,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
               {confirmStage === "First Interview Invite Sent" && "This will send the first interview invite to the applicant."}
               {confirmStage === "Second Interview Invite Sent" && "This will send the second interview invite to the applicant."}
               {confirmStage === "Hired" && "This will mark the applicant as Hired."}
+              {(!["First Interview Invite Sent","Second Interview Invite Sent","Hired"].includes(confirmStage)) && `Change stage to "${confirmStage}"?`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
@@ -969,6 +1036,122 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
               {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Confirmation */}
+      <Dialog open={rejectOpen} onOpenChange={(v) => { if (!rejecting) setRejectOpen(v) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Applicant</DialogTitle>
+            <DialogDescription>
+              This will set the stage to "Rejected". Are you sure?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" className="h-8" onClick={() => setRejectOpen(false)} disabled={rejecting}>Cancel</Button>
+            <Button
+              variant="destructive"
+              className="h-8"
+              disabled={rejecting}
+              onClick={async () => {
+                if (!applicant?.id) return
+                try {
+                  setRejecting(true)
+                  const res = await fetch(`/api/admin/users/${applicant.id}/stage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ newStage: "Rejected", source: "Applicant Drawer - Reject Button" })
+                  })
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    throw new Error(err?.error || "Failed to reject applicant")
+                  }
+                  toast.success("Applicant rejected")
+                  setRejectOpen(false)
+                  await mutate?.()
+                  onApplicantUpdated?.()
+                } catch (e) {
+                  toast.error(e?.message || "Failed to reject applicant")
+                } finally {
+                  setRejecting(false)
+                }
+              }}
+            >
+              {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reject"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stage Override Flow */}
+      <Dialog open={overrideOpen} onOpenChange={(v) => { if (!overrideSubmitting) { setOverrideOpen(v); if (!v) { setOverrideConfirmed(false); setOverrideAction("") } } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Override Stage</DialogTitle>
+            <DialogDescription>
+              {overrideConfirmed ? "Choose an action to set the applicant's stage." : "Do you want to override the stage change?"}
+            </DialogDescription>
+          </DialogHeader>
+          {!overrideConfirmed ? (
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" className="h-8" onClick={() => setOverrideOpen(false)}>Cancel</Button>
+              <Button className="h-8" onClick={() => setOverrideConfirmed(true)}>Proceed</Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Action</Label>
+                <Select value={overrideAction} onValueChange={setOverrideAction}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select action" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="First">Send First Interview Invite</SelectItem>
+                    <SelectItem value="Second">Send Second Interview</SelectItem>
+                    <SelectItem value="Hire">Hire!</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" className="h-8" onClick={() => setOverrideOpen(false)} disabled={overrideSubmitting}>Cancel</Button>
+                <Button
+                  className="h-8"
+                  disabled={!overrideAction || overrideSubmitting}
+                  onClick={async () => {
+                    if (!applicant?.id) return
+                    try {
+                      setOverrideSubmitting(true)
+                      let newStage = ""
+                      if (overrideAction === "First") newStage = "First Interview Invite Sent"
+                      else if (overrideAction === "Second") newStage = "Second Interview Invite Sent"
+                      else if (overrideAction === "Hire") newStage = "Hired"
+                      if (!newStage) throw new Error("Invalid action")
+                      const res = await fetch(`/api/admin/users/${applicant.id}/stage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ newStage, source: "Applicant Drawer - Override" })
+                      })
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => ({}))
+                        throw new Error(err?.error || "Failed to change stage")
+                      }
+                      toast.success(`Stage updated to ${newStage}`)
+                      setOverrideOpen(false)
+                      setOverrideConfirmed(false)
+                      setOverrideAction("")
+                      await mutate?.()
+                      onApplicantUpdated?.()
+                    } catch (e) {
+                      toast.error(e?.message || "Failed to change stage")
+                    } finally {
+                      setOverrideSubmitting(false)
+                    }
+                  }}
+                >
+                  {overrideSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
