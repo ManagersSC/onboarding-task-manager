@@ -62,6 +62,10 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileViewerOpen, setFileViewerOpen] = useState(false)
   const [selectedDocType, setSelectedDocType] = useState("")
+  const [selectedDocMeta, setSelectedDocMeta] = useState(null)
+  const [docCoreOptions, setDocCoreOptions] = useState([])
+  const [docDocumentsOptions, setDocDocumentsOptions] = useState([])
+  const [docOptionsLoading, setDocOptionsLoading] = useState(false)
   const [showAddDropzone, setShowAddDropzone] = useState(false)
   const addDocRef = useRef(null)
   const [optimisticDocs, setOptimisticDocs] = useState([])
@@ -257,6 +261,32 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     viewport.addEventListener('scroll', onScroll, { passive: true })
     return () => viewport.removeEventListener('scroll', onScroll)
   }, [wideView])
+
+  // Fetch dynamic attachment fields (Core = Applicants, Documents = Documents)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setDocOptionsLoading(true)
+        const res = await fetch('/api/admin/users/attachments/fields', { method: 'GET' })
+        if (!res.ok) throw new Error('Failed to load document fields')
+        const data = await res.json()
+        if (cancelled) return
+        const core = Array.isArray(data?.core) ? data.core.map((f) => ({ ...f, table: 'Applicants' })) : []
+        const docs = Array.isArray(data?.documents) ? data.documents.map((f) => ({ ...f, table: 'Documents' })) : []
+        setDocCoreOptions(core)
+        setDocDocumentsOptions(docs)
+      } catch (e) {
+        console.error(e)
+        // No toast here to avoid noise; the dropdown will remain empty.
+        setDocCoreOptions([])
+        setDocDocumentsOptions([])
+      } finally {
+        if (!cancelled) setDocOptionsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const handleSubmitAppraisal = async (files) => {
     if (!applicant || !files?.length) return
@@ -686,17 +716,37 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         <div className="flex items-center justify-between mb-3">
                           <div className="text-sm font-semibold">Documents</div>
                           <div className="flex items-center gap-2">
-                            <Select
-                              value={selectedDocType}
-                              onValueChange={(val) => { setSelectedDocType(val); setShowAddDropzone(true); setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0) }}
-                            >
-                              <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Select missing document" /></SelectTrigger>
-                              <SelectContent>
-                                {['CV','Portfolio of Cases','Testimonials','Reference 1','Reference 2','DBS Check','DISC PDF','Appraisal Doc'].map((n) => (
-                                  <SelectItem key={n} value={n}>{n}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {(() => {
+                              const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldName}` : ""
+                              return (
+                                <Select
+                                  value={valueKey}
+                                  onValueChange={(val) => {
+                                    const [table, fieldName] = String(val).split("::")
+                                    const all = [...docCoreOptions, ...docDocumentsOptions]
+                                    const meta = all.find((o) => o.table === table && o.fieldName === fieldName)
+                                    setSelectedDocMeta(meta || null)
+                                    setSelectedDocType(meta?.label || "")
+                                    setShowAddDropzone(true)
+                                    setTimeout(() => addDocRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
+                                  }}
+                                  disabled={docOptionsLoading || (!docCoreOptions.length && !docDocumentsOptions.length)}
+                                >
+                                  <SelectTrigger className="h-8 w-56"><SelectValue placeholder={docOptionsLoading ? "Loading..." : "Select missing document"} /></SelectTrigger>
+                                  <SelectContent>
+                                    <div className="px-2 py-1 text-xs text-muted-foreground">Core</div>
+                                    {docCoreOptions.map((o) => (
+                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                    ))}
+                                    <Separator className="my-1" />
+                                    <div className="px-2 py-1 text-xs text-muted-foreground">Documents</div>
+                                    {docDocumentsOptions.map((o) => (
+                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )
+                            })()}
                             <Button size="sm" disabled={!selectedDocType || !hasPendingFiles} onClick={() => { try { dropzoneSubmitRef.current?.() } catch {} }} className="h-8">+ Add</Button>
                           </div>
                         </div>
@@ -704,15 +754,18 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <div ref={addDocRef} className="mb-3">
                             <div className="text-xs text-muted-foreground mb-2">Upload files for <span className="text-red-500">{selectedDocType}</span></div>
                             <UploadDropzone registerSubmit={(fn) => { dropzoneSubmitRef.current = fn }} onFilesChange={(files) => setHasPendingFiles(files.length > 0)} showActions={false} onSubmit={async (files) => {
-                              const optimistic = files.map((f, i) => ({ id: `optimistic-${Date.now()}-${i}`, name: `${selectedDocType} - ${f.name}`, category: 'Application', source: 'Initial Application', uploadedAt: new Date().toISOString(), fileUrl: '', status: 'Uploading…', type: f.type || 'Unknown', field: selectedDocType, originalName: f.name, size: f.size || 0 }))
+                              const optimistic = files.map((f, i) => ({ id: `optimistic-${Date.now()}-${i}`, name: `${selectedDocType} - ${f.name}`, category: selectedDocMeta?.table || 'Application', source: 'Upload', uploadedAt: new Date().toISOString(), fileUrl: '', status: 'Uploading…', type: f.type || 'Unknown', field: selectedDocType, originalName: f.name, size: f.size || 0 }))
                               setOptimisticDocs((prev) => [...prev, ...optimistic])
                               try {
-                                if (!applicant || !files?.length || !selectedDocType) return
-                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', selectedDocType)
-                                const res = await fetch(`/api/admin/users/${applicant.id}/attachments`, { method: 'POST', body: fd })
+                                if (!applicant || !files?.length || !selectedDocType || !selectedDocMeta) return
+                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', selectedDocMeta.fieldName)
+                                const endpoint = selectedDocMeta.table === 'Documents'
+                                  ? `/api/admin/users/${applicant.id}/documents/attachments`
+                                  : `/api/admin/users/${applicant.id}/attachments`
+                                const res = await fetch(endpoint, { method: 'POST', body: fd })
                                 if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'Upload failed') }
                                 await mutate?.()
-                              } finally { setOptimisticDocs([]); setHasPendingFiles(false); setSelectedDocType('') }
+                              } finally { setOptimisticDocs([]); setHasPendingFiles(false); setSelectedDocType(''); setSelectedDocMeta(null) }
                             }} />
                           </div>
                         )}
