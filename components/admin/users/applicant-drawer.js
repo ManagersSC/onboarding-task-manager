@@ -23,6 +23,8 @@ import { Label } from "@components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@components/ui/dialog"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
 import { toast } from "sonner"
+import { useQuizSubmissions } from "@/hooks/useQuizSubmissions"
+import { QuizSubmissionAnswersModal } from "./quiz-submission-answers-modal"
 import { updateApplicant } from "@/app/admin/users/actions"
 import { generateColorFromString } from "@/lib/utils/colour-hash"
 
@@ -79,9 +81,30 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const [deleteReviewOpen, setDeleteReviewOpen] = useState(false)
   const [deleteReviewTarget, setDeleteReviewTarget] = useState({ id: "", title: "" })
   const [deletingReview, setDeletingReview] = useState(false)
+  const [answersModalOpen, setAnswersModalOpen] = useState(false)
+  const [answersModalSubmission, setAnswersModalSubmission] = useState(null)
 
   // Use the new hook to fetch applicant data
   const { applicant, isLoading, error, mutate } = useApplicant(applicantId)
+
+  // Derived onboarding state and quizzes hook (must come after applicant is defined)
+  const isOnboardingActive = useMemo(() => {
+    const paused = !!applicant?.onboardingPaused
+    const startDate = applicant?.onboardingStartDate ? new Date(applicant.onboardingStartDate) : null
+    const started = startDate && !Number.isNaN(startDate.getTime())
+    return !!(started && !paused)
+  }, [applicant])
+  const {
+    submissions: quizSubmissions,
+    questionsById: quizQuestionsById,
+    isLoading: quizLoading,
+    error: quizError,
+    refresh: refreshQuizzes
+  } = useQuizSubmissions(applicant?.id, {
+    enabled: !!applicant?.id && isOnboardingActive && (tab === "overview" || wideView),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  })
 
   const applicationTimelineItems = useMemo(() => {
     if (!applicant) return []
@@ -635,6 +658,67 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                 })}
                               </ul>
                             )}
+                          </div>
+                        )
+                      })()}
+
+                      {/* D2 - Onboarding Quizzes (dynamic) - below Monthly Review */}
+                      {(() => {
+                        if (!isOnboardingActive) return null
+                        return (
+                          <div className="rounded-lg border p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold">Onboarding Quizzes</h4>
+                              <Button size="sm" className="h-8" variant="ghost" onClick={() => refreshQuizzes?.()}>
+                                {quizLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            {quizError ? (
+                              <div className="text-sm text-destructive">Failed to load quiz submissions.</div>
+                            ) : quizLoading ? (
+                              <div className="space-y-2">
+                                <div className="h-4 bg-muted animate-pulse rounded" />
+                                <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+                                <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                              </div>
+                            ) : (Array.isArray(quizSubmissions) && quizSubmissions.length > 0) ? (
+                              <ul className="divide-y rounded-md border bg-background">
+                                {quizSubmissions.map((s) => {
+                                  const submitted = s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "—"
+                                  const total = s.totalScore || 0
+                                  const score = s.score || 0
+                                  return (
+                                    <li key={s.id} className="px-3 py-2 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-medium truncate">{s.quizTitle || "Quiz"}</div>
+                                        <div className="text-xs text-muted-foreground">{submitted}</div>
+                                        <div className="text-xs mt-1">Score: {score} / {total}</div>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Badge variant={s.passed ? "outline" : "outline"} className={s.passed ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : "bg-red-500/15 text-red-600 border-red-500/20"}>{s.passed ? "Passed" : "Failed"}</Badge>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          title="View answers"
+                                          onClick={() => { setAnswersModalSubmission(s); setAnswersModalOpen(true) }}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">No quiz submissions yet.</div>
+                            )}
+                            <QuizSubmissionAnswersModal
+                              open={answersModalOpen}
+                              onOpenChange={setAnswersModalOpen}
+                              submission={answersModalSubmission}
+                              questionsById={quizQuestionsById}
+                            />
                           </div>
                         )
                       })()}
