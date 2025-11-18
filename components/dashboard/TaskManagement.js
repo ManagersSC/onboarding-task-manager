@@ -238,9 +238,15 @@ export function TaskManagement() {
 function isAppraisalTask(task) {
   const typeStr = (task?.taskType || task?.type || "").toLowerCase().trim()
   const titleStr = (task?.title || "").toLowerCase()
-  return typeStr.includes("appraisal") || titleStr.includes("appraisal")
+  return task?.isAppraisal === true || typeStr.includes("appraisal") || titleStr.includes("appraisal")
 }
 
+// Detect specific Appraisal: Action Plan task (requires isAppraisal)
+function isAppraisalActionPlanTask(task) {
+  const typeStr = (task?.taskType || task?.type || "").toLowerCase().trim()
+  if (!task?.isAppraisal) return false
+  return typeStr === "appraisal: action plan" || typeStr === "action: action plan" || typeStr.includes("action plan")
+}
   // Build groups of tasks by applicant (both unclaimed and claimed)
   const applicantGroups = (() => {
     const groups = {}
@@ -498,12 +504,30 @@ function isAppraisalTask(task) {
     const timer = setTimeout(async () => {
       pendingTimersRef.current.delete(key)
       try {
+        // Identify task context for special handling
+        const findTaskById = (id) => {
+          const all = [...(lastTasksRef.current?.upcoming || []), ...(lastTasksRef.current?.overdue || []), ...(lastTasksRef.current?.flagged || [])]
+          return all.find((t) => t.id === id)
+        }
+        const taskCtx = findTaskById(taskId)
         const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "complete" }),
         })
         if (!response.ok) throw new Error("Failed to complete task")
+        // If Appraisal Action Plan task, mark step completed in Appraisal History
+        if (taskCtx && isAppraisalActionPlanTask(taskCtx) && taskCtx.applicantId) {
+          try {
+            await fetch(`/api/admin/users/${taskCtx.applicantId}/appraisal-history`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ stepId: "sent_finalised_action_plan" }),
+            })
+          } catch (e) {
+            console.error("Failed to update appraisal history step:", e)
+          }
+        }
         // Backend done; no need to refetch immediately due to optimistic update
       } catch (err) {
         toast.error("Error completing task: " + err.message)
