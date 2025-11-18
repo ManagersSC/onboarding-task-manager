@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil, CheckCircle2, Circle, AlertCircle, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -232,6 +232,20 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const stageLower = String(applicant?.stage || "").toLowerCase()
   const isHiredStage = stageLower === "hired"
   const isRejectedStage = stageLower.startsWith("rejected")
+  const [expandedAppraisals, setExpandedAppraisals] = useState({})
+
+  // Determine if Appraisal History long text exists (string in Airtable)
+  const appraisalHistoryRaw = useMemo(() => {
+    const val =
+      applicant?.appraisalHistory ??
+      applicant?.AppraisalHistory ??
+      applicant?.appraisal_history ??
+      applicant?.["Appraisal History"]
+    return typeof val === "string" ? val : ""
+  }, [applicant])
+  const hasAppraisalHistory = useMemo(() => {
+    return !!appraisalHistoryRaw && appraisalHistoryRaw.trim().length > 0
+  }, [appraisalHistoryRaw])
 
   const handleAdvanceStage = async () => {
     if (!canAdvance) return
@@ -790,8 +804,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         )
                       })()}
 
-                      {/* D3 - Appraisals (Hired only) */}
-                      {isHiredStage && (
+                      {/* D3 - Appraisals (visible when Hired OR history exists) */}
+                      {(isHiredStage || hasAppraisalHistory) && (
                         <div className="rounded-lg border p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">Appraisals</h4>
@@ -800,41 +814,112 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           {(() => {
                             let appraisals = []
                             try {
-                              const raw = applicant?.appraisalHistory
-                              const parsed = typeof raw === "string" ? JSON.parse(raw) : (raw || {})
+                              const raw = appraisalHistoryRaw
+                              const parsed = typeof raw === "string" ? JSON.parse(raw.trim()) : (raw || {})
                               if (parsed && Array.isArray(parsed.appraisals)) appraisals = parsed.appraisals
                             } catch {}
+
+                            // Sort by appraisalDate or updatedAt (newest first)
                             appraisals.sort((a,b) => new Date(b?.appraisalDate || b?.updatedAt || 0) - new Date(a?.appraisalDate || a?.updatedAt || 0))
+
+                            const now = new Date()
+                            const getStatus = (a) => {
+                              const steps = Array.isArray(a?.steps) ? a.steps : []
+                              const total = steps.length
+                              const completed = steps.filter((s) => !!s?.completedAt).length
+                              const nextIdx = steps.findIndex((s) => !s?.completedAt)
+                              const allDone = total > 0 && completed === total
+                              const appraisalDt = a?.appraisalDate ? new Date(a.appraisalDate) : null
+                              const overdue = !allDone && appraisalDt && appraisalDt < now
+                              if (allDone) return { label: "Completed", tone: "success" }
+                              if (overdue) return { label: "Overdue", tone: "destructive" }
+                              if (appraisalDt && appraisalDt > now) return { label: "Upcoming", tone: "secondary" }
+                              return { label: "In Progress", tone: "info" }
+                            }
+                            const renderStatusBadge = (status) => {
+                              if (status.tone === "success") return <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">{status.label}</Badge>
+                              if (status.tone === "destructive") return <Badge variant="outline" className="bg-red-500/15 text-red-600 border-red-500/20">{status.label}</Badge>
+                              if (status.tone === "info") return <Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/20">{status.label}</Badge>
+                              return <Badge variant="secondary">{status.label}</Badge>
+                            }
+
                             return appraisals.length > 0 ? (
-                              <ul className="space-y-2">
-                                {appraisals.map((a, idx) => (
-                                  <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border p-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                      <div className="min-w-0">
-                                        <div className="text-sm font-medium truncate">Year {a?.year || '—'}</div>
-                                        <div className="text-xs text-muted-foreground">Appraisal: {a?.appraisalDate ? formatDate(a.appraisalDate) : '—'}</div>
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">{a?.updatedAt ? `Updated ${formatDate(a.updatedAt)}` : ''}</div>
-                                    </div>
-                                    {Array.isArray(a?.steps) && a.steps.length > 0 && (
-                                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {a.steps.map((s, i) => (
-                                          <div key={`${s?.id || 'step'}-${i}`} className="rounded border p-2">
-                                            <div className="text-xs font-medium">{s?.label || 'Step'}</div>
-                                            <div className="mt-1">
-                                              {s?.completedAt ? (
-                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">Completed • {formatDate(s.completedAt)}</Badge>
-                                              ) : (
-                                                <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Pending</Badge>
-                                              )}
-                                            </div>
+                              <ul className="space-y-3">
+                                {appraisals.map((a, idx) => {
+                                  const steps = Array.isArray(a?.steps) ? a.steps : []
+                                  const nextIdx = steps.findIndex((s) => !s?.completedAt)
+                                  const currentStep = nextIdx >= 0 ? steps[nextIdx] : null
+                                  const status = getStatus(a)
+                                  const isCurrent = idx === 0
+                                  return (
+                                    <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border p-3">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold truncate">Year {a?.year || '—'}</div>
+                                            {isCurrent && <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/20">Current</Badge>}
                                           </div>
-                                        ))}
+                                          <div className="text-xs text-muted-foreground">
+                                            Appraisal: {a?.appraisalDate ? formatDate(a.appraisalDate) : '—'}
+                                            {a?.updatedAt ? ` • Updated ${formatDate(a.updatedAt)}` : ''}
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0">{renderStatusBadge(status)}</div>
                                       </div>
-                                    )}
-                                    {!!a?.notes && <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">{a.notes}</div>}
-                                  </li>
-                                ))}
+
+                                      {isCurrent && currentStep && (
+                                        <div className="mt-3 text-xs">
+                                          <span className="text-muted-foreground">Current step: </span>
+                                          <span className="font-medium">{currentStep?.label || '—'}</span>
+                                        </div>
+                                      )}
+
+                                      {/* Toggle for non-current appraisals */}
+                                      {!isCurrent && steps.length > 0 && (
+                                        <div className="mt-3">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2"
+                                            onClick={() => setExpandedAppraisals((prev) => ({ ...prev, [idx]: !prev[idx] }))}
+                                          >
+                                            <ChevronDown className={`h-4 w-4 mr-1 transition-transform ${expandedAppraisals[idx] ? "rotate-180" : ""}`} />
+                                            <span className="text-xs">{expandedAppraisals[idx] ? "Hide steps" : "Show steps"}</span>
+                                          </Button>
+                                        </div>
+                                      )}
+
+                                      {(isCurrent || expandedAppraisals[idx]) && steps.length > 0 && (
+                                        <div className="mt-3">
+                                          <ol className="space-y-2">
+                                            {steps.map((s, i) => {
+                                              const done = !!s?.completedAt
+                                              const isActive = !done && (i === nextIdx)
+                                              const textClass = done ? "" : "text-muted-foreground"
+                                              return (
+                                                <li key={`${s?.id || 'step'}-${i}`} className="flex items-start gap-2">
+                                                  <div className="pt-0.5">
+                                                    {done ? (
+                                                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                    ) : isActive ? (
+                                                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                                                    ) : (
+                                                      <Circle className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                  </div>
+                                                  <div className="min-w-0">
+                                                    <div className={`text-xs font-medium ${textClass}`}>{s?.label || 'Step'}</div>
+                                                    {done ? <div className="text-[11px] text-muted-foreground mt-0.5">Completed • {formatDate(s.completedAt)}</div> : null}
+                                                  </div>
+                                                </li>
+                                              )
+                                            })}
+                                          </ol>
+                                        </div>
+                                      )}
+                                    </li>
+                                  )
+                                })}
                               </ul>
                             ) : (
                               <div className="text-sm text-muted-foreground">No appraisal history yet.</div>

@@ -31,6 +31,12 @@ export async function POST(request, { params }) {
 
     let historyString
     let historyObj
+
+    const STEP_ORDER = [
+      { id: "set_appraisal_date", label: "Set Appraisal Date" },
+      { id: "sent_pre_appraisal_form", label: "2 weeks before appraisal date: Send Pre-Appraisal Form" },
+      { id: "sent_finalised_action_plan", label: "2 days after appraisal date: Send Finalised Action Plan + Goals" },
+    ]
     try {
       const records = await base("Applicants")
         .select({ filterByFormula: `RECORD_ID() = '${id}'`, fields: ["Appraisal History"], maxRecords: 1 })
@@ -55,33 +61,34 @@ export async function POST(request, { params }) {
             year,
             appraisalDate: appraisalDateIso,
           }
-          const steps = Array.isArray(existing.steps) ? existing.steps.slice() : []
-          steps.push({ id: "set_appraisal_date", label: "Set Appraisal Date", completedAt: nowIso })
-          updated.steps = steps
+          const existingSteps = Array.isArray(existing.steps) ? existing.steps : []
+          const existingById = new Map(existingSteps.map((s) => [s?.id, s]))
+          const mergedSteps = STEP_ORDER.map((def) => {
+            const prev = existingById.get(def.id) || {}
+            if (def.id === "set_appraisal_date") {
+              return { id: def.id, label: def.label, completedAt: nowIso }
+            }
+            return { id: def.id, label: def.label, completedAt: prev.completedAt || null }
+          })
+          updated.steps = mergedSteps
           updated.createdAt = existing.createdAt || nowIso
           updated.updatedAt = nowIso
           historyObj.appraisals[idx] = updated
         } else {
-          historyObj.appraisals.push({
-            year,
-            appraisalDate: appraisalDateIso,
-            steps: [{ id: "set_appraisal_date", label: "Set Appraisal Date", completedAt: nowIso }],
-            createdAt: nowIso,
-            updatedAt: nowIso,
-          })
+          const steps = STEP_ORDER.map((def) => ({
+            id: def.id,
+            label: def.label,
+            completedAt: def.id === "set_appraisal_date" ? nowIso : null,
+          }))
+          historyObj.appraisals.push({ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso })
         }
       } else {
-        historyObj = {
-          appraisals: [
-            {
-              year,
-              appraisalDate: appraisalDateIso,
-              steps: [{ id: "set_appraisal_date", label: "Set Appraisal Date", completedAt: nowIso }],
-              createdAt: nowIso,
-              updatedAt: nowIso,
-            },
-          ],
-        }
+        const steps = STEP_ORDER.map((def) => ({
+          id: def.id,
+          label: def.label,
+          completedAt: def.id === "set_appraisal_date" ? nowIso : null,
+        }))
+        historyObj = { appraisals: [{ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso }] }
       }
 
       historyString = JSON.stringify(historyObj)
