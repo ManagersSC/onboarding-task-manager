@@ -1898,6 +1898,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                     const err = await res.json().catch(() => ({}))
                     throw new Error(err?.error || 'Failed to set appraisal date')
                   }
+                  await res.json().catch(() => ({}))
                   // Create appointment event in calendar
                   const startDT = `${date}T${startTime}:00`
                   const endDT = `${date}T${endTime}:00`
