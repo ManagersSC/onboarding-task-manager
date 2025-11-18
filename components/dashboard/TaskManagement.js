@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
@@ -198,6 +199,22 @@ export function TaskManagement() {
   const [editedTask, setEditedTask] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
 
+  // Appraisal modal state
+  const [appraisalOpen, setAppraisalOpen] = useState(false)
+  const [appraisalSaving, setAppraisalSaving] = useState(false)
+  const [appraisalTaskId, setAppraisalTaskId] = useState(null)
+  const [appraisalApplicantId, setAppraisalApplicantId] = useState(null)
+  const [appraisalApplicantName, setAppraisalApplicantName] = useState("")
+  const [appraisalApplicantEmail, setAppraisalApplicantEmail] = useState("")
+  const [appraisalDate, setAppraisalDate] = useState("")
+  const [appraisalStartTime, setAppraisalStartTime] = useState("")
+  const [appraisalEndTime, setAppraisalEndTime] = useState("")
+  const [appraisalConfirmOpen, setAppraisalConfirmOpen] = useState(false)
+  const [appraisalCalMonth, setAppraisalCalMonth] = useState(() => new Date())
+  const [appraisalEventsByDate, setAppraisalEventsByDate] = useState({})
+  const [appraisalDayEvents, setAppraisalDayEvents] = useState([])
+  const [appraisalHasConflict, setAppraisalHasConflict] = useState(false)
+
   const [claimingTaskId, setClaimingTaskId] = useState(null)
   const pendingTimersRef = useRef(new Map())
 
@@ -216,6 +233,13 @@ export function TaskManagement() {
     const t = (task?.taskType || "").toLowerCase().trim()
     return t === "monthly reviews" || t === "monthly_reviews"
   }
+
+// Detect Appraisal tasks by type or title
+function isAppraisalTask(task) {
+  const typeStr = (task?.taskType || task?.type || "").toLowerCase().trim()
+  const titleStr = (task?.title || "").toLowerCase()
+  return typeStr.includes("appraisal") || titleStr.includes("appraisal")
+}
 
   // Build groups of tasks by applicant (both unclaimed and claimed)
   const applicantGroups = (() => {
@@ -621,6 +645,46 @@ export function TaskManagement() {
     }
   }, [editedTask, taskToEdit, staff])
 
+  // Fetch month events for appraisal modal (must be before any early return)
+  useEffect(() => {
+    if (!appraisalOpen) return
+    const year = appraisalCalMonth.getFullYear()
+    const month = appraisalCalMonth.getMonth()
+    const start = new Date(year, month, 1).toISOString()
+    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/dashboard/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+        if (!res.ok) throw new Error('Failed to fetch events')
+        const data = await res.json()
+        const map = {}
+        for (const ev of data || []) {
+          const s = new Date(ev.start?.dateTime || ev.start?.date)
+          const e = new Date(ev.end?.dateTime || ev.end?.date)
+          const key = s.toISOString().slice(0,10)
+          if (!map[key]) map[key] = []
+          map[key].push({ title: ev.summary || 'Event', start: s, end: e })
+        }
+        setAppraisalEventsByDate(map)
+      } catch {
+        setAppraisalEventsByDate({})
+      }
+    })()
+  }, [appraisalOpen, appraisalCalMonth])
+
+  useEffect(() => {
+    setAppraisalDayEvents(appraisalEventsByDate[appraisalDate] || [])
+  }, [appraisalEventsByDate, appraisalDate])
+
+  useEffect(() => {
+    if (!appraisalDate || !appraisalStartTime || !appraisalEndTime) { setAppraisalHasConflict(false); return }
+    const start = new Date(`${appraisalDate}T${appraisalStartTime}:00`)
+    const end = new Date(`${appraisalDate}T${appraisalEndTime}:00`)
+    if (end <= start) { setAppraisalHasConflict(true); return }
+    const conflict = (appraisalEventsByDate[appraisalDate] || []).some(ev => (start < ev.end && end > ev.start))
+    setAppraisalHasConflict(conflict)
+  }, [appraisalDate, appraisalStartTime, appraisalEndTime, appraisalEventsByDate])
+
   useEffect(() => {
     fetchTasks()
   }, [])
@@ -722,6 +786,52 @@ export function TaskManagement() {
     )
   }
 
+  // Time options for Appraisal modal
+  const appraisalTimeOptions = (() => {
+    const opts = []
+    for (let h = 8; h <= 18; h++) {
+      for (const m of [0, 30]) {
+        const hh = String(h).padStart(2, "0")
+        const mm = String(m).padStart(2, "0")
+        const label = `${((h % 12) || 12)}:${mm} ${h < 12 ? "AM" : "PM"}`
+        opts.push({ value: `${hh}:${mm}`, label })
+      }
+    }
+    return opts
+  })()
+
+  const openAppraisalModal = async (task) => {
+    if (!task?.applicantId) return
+    setAppraisalTaskId(task.id)
+    setAppraisalApplicantId(task.applicantId)
+    setAppraisalApplicantName(task.applicantName || "Applicant")
+    setAppraisalApplicantEmail(task.applicantEmail || "")
+    setAppraisalDate("")
+    setAppraisalStartTime("")
+    setAppraisalEndTime("")
+    setAppraisalCalMonth(new Date())
+    setAppraisalEventsByDate({})
+    setAppraisalDayEvents([])
+    setAppraisalHasConflict(false)
+    try {
+      if (!task.applicantEmail) {
+        const res = await fetch(`/api/admin/users/${task.applicantId}`)
+        if (res.ok) {
+          const data = await res.json()
+          const ap = data?.applicant
+          if (ap?.email) setAppraisalApplicantEmail(ap.email)
+          if (ap?.name) setAppraisalApplicantName(ap.name)
+        }
+      }
+    } catch {}
+    setAppraisalOpen(true)
+  }
+
+  const handleClaimAppraisalTask = async (task) => {
+    await handleClaimTask(task.id)
+    openAppraisalModal(task)
+  }
+
   const TaskItem = ({ task, index, tabId }) => {
     const PriorityIcon = priorityIcons[task.priority.toLowerCase().trim()] || Clock
 
@@ -739,6 +849,9 @@ export function TaskManagement() {
             if (isMonthlyReviewsTask(task) && !isGlobalTask(task)) {
               e.stopPropagation()
               openMonthlyReviewsModal(task)
+            } else if (isAppraisalTask(task) && !isGlobalTask(task)) {
+              e.stopPropagation()
+              openAppraisalModal(task)
             }
           }}
         >
@@ -839,7 +952,11 @@ export function TaskManagement() {
                       className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleClaimTask(task.id)
+                        if (isAppraisalTask(task)) {
+                          handleClaimAppraisalTask(task)
+                        } else {
+                          handleClaimTask(task.id)
+                        }
                       }}
                       disabled={claimingTaskId === task.id}
                     >
@@ -1189,10 +1306,10 @@ export function TaskManagement() {
     setEditDialogOpen(true)
   }
 
-  // Admin-only task lists (exclude hire completion tasks from main layout)
-  const adminUpcoming = (tasks.upcoming || []).filter((t) => !isHireCompletionTask(t))
-  const adminOverdue = (tasks.overdue || []).filter((t) => !isHireCompletionTask(t))
-  const adminFlagged = (tasks.flagged || []).filter((t) => !isHireCompletionTask(t))
+  // Admin-only task lists: exclude hire completion tasks EXCEPT Appraisal tasks (which we want in main area)
+  const adminUpcoming = (tasks.upcoming || []).filter((t) => !isHireCompletionTask(t) || isAppraisalTask(t))
+  const adminOverdue = (tasks.overdue || []).filter((t) => !isHireCompletionTask(t) || isAppraisalTask(t))
+  const adminFlagged = (tasks.flagged || []).filter((t) => !isHireCompletionTask(t) || isAppraisalTask(t))
 
   const tabCounts = {
     upcoming: adminUpcoming.length,
@@ -1213,6 +1330,83 @@ export function TaskManagement() {
     return all.filter((t) => !isGlobalTask(t))
   })()
 
+  // Month-only picker reused from Applicant Drawer
+  function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, eventsByDate = {} }) {
+    const [current, setCurrent] = useState(() => currentMonth || new Date())
+    useEffect(() => { if (currentMonth) setCurrent(currentMonth) }, [currentMonth])
+    const year = current.getFullYear()
+    const month = current.getMonth()
+    const monthName = current.toLocaleString("default", { month: "long" })
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const firstDayOfMonth = new Date(year, month, 1).getDay()
+
+    const totalCells = Math.ceil((daysInMonth + firstDayOfMonth) / 7) * 7
+    const cells = Array.from({ length: totalCells }, (_, i) => {
+      const dayIndex = i - firstDayOfMonth
+      if (dayIndex < 0 || dayIndex >= daysInMonth) {
+        const date = new Date(year, month, dayIndex + 1)
+        return { isEmpty: true, date, day: date.getDate() }
+      }
+      const day = dayIndex + 1
+      const date = new Date(year, month, day)
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      return { isEmpty: false, date, day, dateString }
+    })
+
+    const weeks = []
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+    const isToday = (d) => {
+      const t = new Date()
+      return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear()
+    }
+
+    return (
+      <div className="rounded-md border p-3">
+        <div className="flex items-center justify-between mb-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month - 1, 1); setCurrent(d); onMonthChange?.(d) }}>
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-medium">{monthName} {year}</div>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month + 1, 1); setCurrent(d); onMonthChange?.(d) }}>
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-7 text-center mb-1">
+          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i) => (
+            <div key={i} className="text-xs text-muted-foreground">{d}</div>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          {weeks.map((week, wi) => (
+            <div key={wi} className="grid grid-cols-7 gap-1">
+              {week.map((cell, di) => cell.isEmpty ? (
+                <div key={`e-${wi}-${di}`} className="h-9" />
+              ) : (
+                <Button
+                  key={cell.dateString}
+                  variant="ghost"
+                  size="sm"
+                  className={`h-9 p-0 relative ${selected === cell.dateString ? "bg-primary text-primary-foreground" : isToday(cell.date) ? "border" : ""}`}
+                  onClick={() => onSelect?.(cell.dateString)}
+                >
+                  <span>{cell.day}</span>
+                  {(eventsByDate[cell.dateString]?.length || 0) > 0 && (
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  )}
+                </Button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // (hooks moved above early returns)
+  // (removed duplicate MonthOnlyPicker and effects relocated above return)
   // Utility: best-effort extraction of a task's created timestamp
   const getCreatedTimestamp = (task) => {
     if (!task) return 0
@@ -1620,6 +1814,220 @@ export function TaskManagement() {
                     </div>
                   </div>
                 )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Appraisal Modal */}
+        <AnimatePresence>
+          {appraisalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <CalendarIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-foreground">Set Appraisal Date</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setAppraisalOpen(false)} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground">Applicant: <span className="text-foreground">{appraisalApplicantName}</span></div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Appraisal Date</Label>
+                    <div className="text-sm">{appraisalDate ? format(parse(appraisalDate, "yyyy-MM-dd", new Date()), "PPP") : "—"}</div>
+                  </div>
+
+                  <MonthOnlyPicker
+                    selected={appraisalDate}
+                    onSelect={(val) => setAppraisalDate(val)}
+                    currentMonth={appraisalCalMonth}
+                    onMonthChange={setAppraisalCalMonth}
+                    eventsByDate={appraisalEventsByDate}
+                  />
+
+                  {appraisalDate && (
+                    <div className="rounded-md border p-3">
+                      <div className="text-sm font-medium mb-2">{appraisalDate}</div>
+                      {appraisalDayEvents.length > 0 ? (
+                        <div className="space-y-1 mb-3">
+                          {appraisalDayEvents.map((ev, i) => (
+                            <div key={i} className="text-xs text-muted-foreground">{ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.title}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground mb-3">No events for this day</div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Start time</Label>
+                          <Select value={appraisalStartTime} onValueChange={(v) => {
+                            setAppraisalStartTime(v)
+                            if (appraisalEndTime && appraisalEndTime <= v) {
+                              const next = appraisalTimeOptions.find((t) => t.value > v)
+                              setAppraisalEndTime(next ? next.value : "")
+                            }
+                          }}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
+                            <SelectContent>
+                              {appraisalTimeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">End time</Label>
+                          <Select value={appraisalEndTime} onValueChange={setAppraisalEndTime}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
+                            <SelectContent>
+                              {(appraisalStartTime ? appraisalTimeOptions.filter((t) => t.value > appraisalStartTime) : appraisalTimeOptions).map((t) => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {appraisalHasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
+                      {appraisalStartTime && appraisalEndTime && appraisalEndTime <= appraisalStartTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Start time</Label>
+                      <Select value={appraisalStartTime} onValueChange={(v) => {
+                        setAppraisalStartTime(v)
+                        if (appraisalEndTime && appraisalEndTime <= v) {
+                          const next = appraisalTimeOptions.find((t) => t.value > v)
+                          setAppraisalEndTime(next ? next.value : "")
+                        }
+                      }}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
+                        <SelectContent>
+                          {appraisalTimeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">End time</Label>
+                      <Select value={appraisalEndTime} onValueChange={setAppraisalEndTime}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
+                        <SelectContent>
+                          {(appraisalStartTime ? appraisalTimeOptions.filter((t) => t.value > appraisalStartTime) : appraisalTimeOptions).map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setAppraisalOpen(false)} className="h-8">Cancel</Button>
+                    <Button
+                      className="h-8"
+                      disabled={!appraisalDate || !appraisalStartTime || !appraisalEndTime || appraisalEndTime <= appraisalStartTime || appraisalSaving}
+                      onClick={() => setAppraisalConfirmOpen(true)}
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Appraisal Confirm Dialog */}
+        <AnimatePresence>
+          {appraisalConfirmOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!appraisalSaving) setAppraisalConfirmOpen(false) }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold">Confirm Appraisal</h3>
+                  <Button variant="ghost" size="icon" onClick={() => { if (!appraisalSaving) setAppraisalConfirmOpen(false) }} className="h-7 w-7">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  This will set the appraisal date and create a calendar event for {appraisalApplicantName}.
+                  Once confirmed, this task will be marked as completed.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setAppraisalConfirmOpen(false)} className="h-8" disabled={appraisalSaving}>Cancel</Button>
+                  <Button
+                    className="h-8"
+                    disabled={appraisalSaving}
+                    onClick={async () => {
+                      if (!appraisalApplicantId || !appraisalDate || !appraisalStartTime || !appraisalEndTime) return
+                      try {
+                        setAppraisalSaving(true)
+                        // 1) Update appraisal date (also updates Appraisal History server-side)
+                        const res = await fetch(`/api/admin/users/${appraisalApplicantId}/appraisal-date`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ date: appraisalDate }),
+                        })
+                        if (!res.ok) {
+                          const err = await res.json().catch(() => ({}))
+                          throw new Error(err?.error || "Failed to set appraisal date")
+                        }
+                        // 2) Create calendar event
+                        const startDT = `${appraisalDate}T${appraisalStartTime}:00`
+                        const endDT = `${appraisalDate}T${appraisalEndTime}:00`
+                        const calRes = await fetch("/api/admin/dashboard/calendar", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            summary: "Appraisal Appointment",
+                            description: `Appointment event: Appraisal for applicant ${appraisalApplicantName}`,
+                            start: { dateTime: startDT, timeZone: "Europe/London" },
+                            end: { dateTime: endDT, timeZone: "Europe/London" },
+                            attendees: (appraisalApplicantEmail ? [{ email: appraisalApplicantEmail, displayName: appraisalApplicantName }] : []),
+                            createMeet: false,
+                          }),
+                        })
+                        if (!calRes.ok) {
+                          const err = await calRes.json().catch(() => ({}))
+                          throw new Error(err?.error || "Failed to create calendar appointment")
+                        }
+                        // 3) Mark task complete
+                        if (appraisalTaskId) {
+                          await completeTask(appraisalTaskId)
+                        }
+                        toast.success("Appraisal scheduled and task completed")
+                        setAppraisalConfirmOpen(false)
+                        setAppraisalOpen(false)
+                        fetchTasks()
+                      } catch (e) {
+                        toast.error(e?.message || "Failed to schedule appraisal")
+                      } finally {
+                        setAppraisalSaving(false)
+                      }
+                    }}
+                  >
+                    {appraisalSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Confirm"}
+                  </Button>
+                </div>
               </motion.div>
             </div>
           )}
