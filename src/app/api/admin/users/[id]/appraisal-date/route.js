@@ -24,8 +24,82 @@ export async function POST(request, { params }) {
       return new Response(JSON.stringify({ error: "Invalid date format (expected YYYY-MM-DD)" }), { status: 400, headers: { "Content-Type": "application/json" } })
     }
 
-    // Update Applicants.'Appraisal Date'
-    await base("Applicants").update([{ id, fields: { "Appraisal Date": dateStr } }])
+    // Build stringified JSON for 'Appraisal History' and merge with existing if present
+    const nowIso = new Date().toISOString()
+    const appraisalDateIso = new Date(`${dateStr}T09:00:00Z`).toISOString()
+    const year = Number(dateStr.slice(0, 4))
+
+    let historyString
+    let historyObj
+
+    const STEP_ORDER = [
+      { id: "set_appraisal_date", label: "Set Appraisal Date" },
+      { id: "sent_pre_appraisal_form", label: "2 weeks before appraisal date: Send Pre-Appraisal Form" },
+      { id: "sent_finalised_action_plan", label: "2 days after appraisal date: Send Finalised Action Plan + Goals" },
+    ]
+    try {
+      const records = await base("Applicants")
+        .select({ filterByFormula: `RECORD_ID() = '${id}'`, fields: ["Appraisal History"], maxRecords: 1 })
+        .firstPage()
+
+      const existingHistoryRaw = records?.[0]?.get?.("Appraisal History")
+
+      if (existingHistoryRaw && typeof existingHistoryRaw === "string" && existingHistoryRaw.trim()) {
+        try {
+          historyObj = JSON.parse(existingHistoryRaw)
+        } catch {
+          historyObj = null
+        }
+      }
+
+      if (historyObj && Array.isArray(historyObj.appraisals)) {
+        const idx = historyObj.appraisals.findIndex((a) => Number(a?.year) === year)
+        if (idx >= 0) {
+          const existing = historyObj.appraisals[idx] || {}
+          const updated = {
+            ...existing,
+            year,
+            appraisalDate: appraisalDateIso,
+          }
+          const existingSteps = Array.isArray(existing.steps) ? existing.steps : []
+          const existingById = new Map(existingSteps.map((s) => [s?.id, s]))
+          const mergedSteps = STEP_ORDER.map((def) => {
+            const prev = existingById.get(def.id) || {}
+            if (def.id === "set_appraisal_date") {
+              return { id: def.id, label: def.label, completedAt: nowIso }
+            }
+            return { id: def.id, label: def.label, completedAt: prev.completedAt || null }
+          })
+          updated.steps = mergedSteps
+          updated.createdAt = existing.createdAt || nowIso
+          updated.updatedAt = nowIso
+          historyObj.appraisals[idx] = updated
+        } else {
+          const steps = STEP_ORDER.map((def) => ({
+            id: def.id,
+            label: def.label,
+            completedAt: def.id === "set_appraisal_date" ? nowIso : null,
+          }))
+          historyObj.appraisals.push({ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso })
+        }
+      } else {
+        const steps = STEP_ORDER.map((def) => ({
+          id: def.id,
+          label: def.label,
+          completedAt: def.id === "set_appraisal_date" ? nowIso : null,
+        }))
+        historyObj = { appraisals: [{ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso }] }
+      }
+
+      historyString = JSON.stringify(historyObj)
+    } catch (e) {
+      logger?.error?.("failed to construct Appraisal History JSON", e)
+    }
+
+    // Update Applicants.'Appraisal Date' and 'Appraisal History' (if built)
+    const fieldsToUpdate = { "Appraisal Date": dateStr }
+    if (historyString) fieldsToUpdate["Appraisal History"] = historyString
+    await base("Applicants").update([{ id, fields: fieldsToUpdate }])
 
     try {
       await logAuditEvent({

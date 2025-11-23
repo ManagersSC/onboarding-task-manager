@@ -509,6 +509,7 @@ function consolidateAllDocuments(applicantRecord, documentRecords) {
       onboardingPaused: !!record.get('Onboarding Paused'),
       appraisalDate: record.get('Appraisal Date') || '',
       appraisalCreated: !!record.get('Appraisal Created'),
+      appraisalHistory: record.get('Appraisal History') || '',
       docsStatus: record.get('Docs Status') || '',
       criteriaScore: record.get('Criteria Score') || 0,
       rejectionReason: record.get('Rejection Reason') || '',
