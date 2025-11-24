@@ -655,56 +655,53 @@ export default function AdminQuizzesPage() {
                         const hasErrs = v.errors.length > 0
                         return (
                         <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""} ${hasDup || hasErrs ? "border-red-500/40" : ""}`}>
-                          <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
-                            <div>
-                              <div className="text-[11px] text-muted-foreground mb-1">Type</div>
-                              <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
-                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Question">Question</SelectItem>
-                                  <SelectItem value="Information">Information</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            {String(it.type || "").toLowerCase() !== "information" && (
-                              <div>
-                                <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
-                                <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
-                                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Radio">Radio</SelectItem>
-                                    <SelectItem value="Checkbox">Checkbox</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-wrap items-start gap-3">
+                                <div>
+                                  <div className="text-[11px] text-muted-foreground mb-1">Type</div>
+                                  <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
+                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Question">Question</SelectItem>
+                                      <SelectItem value="Information">Information</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {String(it.type || "").toLowerCase() !== "information" && (
+                                  <div>
+                                    <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
+                                    <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
+                                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Radio">Radio</SelectItem>
+                                        <SelectItem value="Checkbox">Checkbox</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            <div className="md:col-span-3">
-                              <div className="text-[11px] text-muted-foreground mb-1">Content</div>
-                              <RichTextEditor
-                                value={it.content || ""}
-                                onChange={(html) => markItemChange(idx, { content: html })}
-                              />
+                              <div className="w-44 shrink-0">
+                                <div className={`${hasDup ? "relative" : ""}`}>
+                                  <div className="text-[11px] text-muted-foreground mb-1">Order</div>
+                                  <Input value={String(it.order ?? "")} onChange={(e) => markItemChange(idx, { order: e.target.value })} className="h-8" />
+                                  {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
+                                </div>
+                                {String(it.type || "").toLowerCase() !== "information" && (
+                                  <div className="mt-2">
+                                    <div className="text-[11px] text-muted-foreground mb-1">Points</div>
+                                    <Input value={String(it.points ?? "")} onChange={(e) => markItemChange(idx, { points: e.target.value })} className="h-8" />
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className={`${hasDup ? "relative" : ""}`}>
-                              <div className="text-[11px] text-muted-foreground mb-1">Order</div>
-                              <Input
-                                value={String(it.order ?? "")}
-                                onChange={(e) => markItemChange(idx, { order: e.target.value })}
-                                className="h-8"
-                              />
-                              {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1">Content</div>
+                              <RichTextEditor value={it.content || ""} onChange={(html) => markItemChange(idx, { content: html })} />
                             </div>
                             {String(it.type || "").toLowerCase() !== "information" && (
                               <>
                                 <div>
-                                  <div className="text-[11px] text-muted-foreground mb-1">Points</div>
-                                  <Input
-                                    value={String(it.points ?? "")}
-                                    onChange={(e) => markItemChange(idx, { points: e.target.value })}
-                                    className="h-8"
-                                  />
-                                </div>
-                                <div className="md:col-span-3">
                                   <div className="text-[11px] text-muted-foreground mb-1">Options</div>
                                   <div className="space-y-2">
                                     {Array.isArray(it.optionsArray) && it.optionsArray.length > 0 ? it.optionsArray.map((opt, oi) => (
@@ -715,69 +712,38 @@ export default function AdminQuizzesPage() {
                                             const arr = [...it.optionsArray]; arr[oi] = e.target.value
                                             markItemChange(idx, { optionsArray: arr })
                                           }}
-                                          className="h-8"
+                                          className="h-8 flex-1"
                                           aria-label={`Option ${oi + 1}`}
                                         />
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 px-2"
-                                          onClick={() => {
-                                            const arr = it.optionsArray.filter((_, k) => k !== oi)
-                                            markItemChange(idx, { optionsArray: arr })
-                                          }}
-                                          title="Remove option"
-                                          aria-label={`Remove option ${oi + 1}`}
-                                        >
-                                          Remove
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 px-2"
-                                          onClick={() => {
-                                            const arr = [...it.optionsArray]; arr.splice(oi + 1, 0, opt)
-                                            markItemChange(idx, { optionsArray: arr })
-                                          }}
-                                          title="Duplicate option"
-                                          aria-label={`Duplicate option ${oi + 1}`}
-                                        >
-                                          Duplicate
-                                        </Button>
+                                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                          const arr = it.optionsArray.filter((_, k) => k !== oi)
+                                          markItemChange(idx, { optionsArray: arr })
+                                        }} title="Remove option" aria-label={`Remove option ${oi + 1}`}>Remove</Button>
+                                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                          const arr = [...it.optionsArray]; arr.splice(oi + 1, 0, opt)
+                                          markItemChange(idx, { optionsArray: arr })
+                                        }} title="Duplicate option" aria-label={`Duplicate option ${oi + 1}`}>Duplicate</Button>
                                       </div>
                                     )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
                                     <div className="flex items-center gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        className="h-8"
-                                        onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}
-                                      >
-                                        + Add option
-                                      </Button>
+                                      <Button size="sm" variant="secondary" className="h-8" onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}>+ Add option</Button>
                                       <Popover>
-                                        <PopoverTrigger asChild>
-                                          <Button size="sm" variant="outline" className="h-8">Bulk paste</Button>
-                                        </PopoverTrigger>
+                                        <PopoverTrigger asChild><Button size="sm" variant="outline" className="h-8">Bulk paste</Button></PopoverTrigger>
                                         <PopoverContent className="w-72 p-3">
                                           <div className="text-xs text-muted-foreground mb-1">Paste one option per line</div>
-                                          <Textarea
-                                            className="h-24"
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                                                const lines = String(e.currentTarget.value || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
-                                                if (lines.length) markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ...lines] })
-                                              }
-                                            }}
-                                            placeholder="Option 1\nOption 2"
-                                          />
+                                          <Textarea className="h-24" onKeyDown={(e) => {
+                                            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                                              const lines = String(e.currentTarget.value || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+                                              if (lines.length) markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ...lines] })
+                                            }
+                                          }} placeholder="Option 1\nOption 2" />
                                           <div className="mt-2 text-[11px] text-muted-foreground">Press Ctrl/Cmd+Enter to add</div>
                                         </PopoverContent>
                                       </Popover>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="md:col-span-3">
+                                <div>
                                   <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
                                   {String(it.qType || "").toLowerCase() === "checkbox" ? (
                                     <div className="space-y-2">
@@ -799,10 +765,7 @@ export default function AdminQuizzesPage() {
                                       })}
                                     </div>
                                   ) : (
-                                    <RadioGroup
-                                      value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
-                                      onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
-                                    >
+                                    <RadioGroup value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""} onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}>
                                       {(it.optionsArray || []).map((opt, oi) => (
                                         <Label key={oi} className="flex items-center gap-2 text-sm">
                                           <RadioGroupItem value={opt} />
