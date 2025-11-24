@@ -27,6 +27,7 @@ import { useQuizSubmissions } from "@/hooks/useQuizSubmissions"
 import { QuizSubmissionAnswersModal } from "./quiz-submission-answers-modal"
 import { updateApplicant } from "@/app/admin/users/actions"
 import { generateColorFromString } from "@/lib/utils/colour-hash"
+import Link from "next/link"
 
 function Initials({ name = "" }) {
   const [first, last] = String(name).split(" ")
@@ -750,9 +751,18 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <div className="rounded-lg border p-4">
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="text-sm font-semibold">Onboarding Quizzes</h4>
+                            <div className="flex items-center gap-1">
+                              <Link
+                                href={`/admin/quizzes?tab=submissions&applicantId=${encodeURIComponent(applicant?.id || "")}`}
+                                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                                title="View all quiz submissions"
+                              >
+                                View all
+                              </Link>
                               <Button size="sm" className="h-8" variant="ghost" onClick={() => refreshQuizzes?.()}>
                                 {quizLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                               </Button>
+                            </div>
                             </div>
                             {quizError ? (
                               <div className="text-sm text-destructive">Failed to load quiz submissions.</div>
