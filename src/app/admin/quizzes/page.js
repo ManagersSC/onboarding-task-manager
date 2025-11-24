@@ -15,6 +15,7 @@ import { Badge } from "@components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@components/ui/dialog"
 import { ScrollArea } from "@components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
+import useSWRImmutable from "swr/immutable"
 
 export default function AdminQuizzesPage() {
   const params = useSearchParams()
@@ -102,6 +103,82 @@ export default function AdminQuizzesPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [dateModalOpen, setDateModalOpen] = useState(false)
   const [pickedDate, setPickedDate] = useState(undefined)
+
+  // Quizzes tab data
+  const quizzesFetcher = async (url) => {
+    const r = await fetch(url); if (!r.ok) throw new Error("Failed to load quizzes"); return r.json()
+  }
+  const { data: quizzesData, mutate: refreshQuizzes } = useSWRImmutable(
+    tab === "quizzes" ? "/api/admin/quizzes" : null,
+    quizzesFetcher
+  )
+  const quizzes = quizzesData?.quizzes || []
+  const [editOpen, setEditOpen] = useState(false)
+  const [editQuiz, setEditQuiz] = useState(null)
+  const [editQuizDirty, setEditQuizDirty] = useState(false)
+  const [editItems, setEditItems] = useState([])
+  const [editOriginal, setEditOriginal] = useState({ quiz: null, items: [] })
+  const [previewOpen, setPreviewOpen] = useState(false)
+
+  const openEdit = async (quiz) => {
+    setEditQuiz({ id: quiz.id, title: quiz.title, pageTitle: quiz.pageTitle || "", passingScore: quiz.passingScore ?? "" })
+    setEditQuizDirty(false)
+    setEditItems([])
+    setEditOriginal({ quiz, items: [] })
+    setEditOpen(true)
+    try {
+      const r = await fetch(`/api/admin/quizzes/${quiz.id}/items`)
+      if (!r.ok) throw new Error("Failed to load items")
+      const j = await r.json()
+      const items = (j.items || []).map((it) => ({ ...it, _dirty: false }))
+      setEditItems(items)
+      setEditOriginal({ quiz, items: j.items || [] })
+    } catch {}
+  }
+
+  const markItemChange = (index, patch) => {
+    setEditItems((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], ...patch, _dirty: true }
+      return next
+    })
+  }
+
+  const saveQuizEdits = async () => {
+    if (!editQuiz) return
+    try {
+      // Save quiz fields if changed
+      const changedQuiz =
+        (editQuiz.pageTitle !== (editOriginal.quiz?.pageTitle || "")) ||
+        (String(editQuiz.passingScore ?? "") !== String(editOriginal.quiz?.passingScore ?? ""))
+      if (changedQuiz) {
+        await fetch(`/api/admin/quizzes/${editQuiz.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: editQuiz.passingScore })
+        })
+      }
+      // Save dirty items
+      for (const it of editItems) {
+        if (!it._dirty) continue
+        await fetch(`/api/admin/quizzes/items/${it.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: it.type,
+            qType: it.qType,
+            content: it.content,
+            options: it.options,
+            correctAnswer: it.correctAnswer,
+            order: it.order,
+            points: it.points
+          })
+        })
+      }
+      await refreshQuizzes?.()
+      setEditOpen(false)
+    } catch {}
+  }
 
   const activeChips = useMemo(() => {
     const chips = []
@@ -401,8 +478,18 @@ export default function AdminQuizzesPage() {
         </TabsContent>
 
         <TabsContent value="quizzes" className="mt-4">
-          <div className="rounded-md border p-4 text-sm text-muted-foreground">
-            Quizzes manager (list and edit) will go here.
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {quizzes.map((q) => (
+              <div key={q.id} className="rounded-md border p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{q.title || "Untitled Quiz"}</div>
+                    <div className="text-xs text-muted-foreground">Passing Score: {q.passingScore ?? "—"}</div>
+                  </div>
+                  <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
+                </div>
+              </div>
+            ))}
           </div>
         </TabsContent>
       </Tabs>
@@ -453,6 +540,170 @@ export default function AdminQuizzesPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Quiz Modal */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Edit Quiz</DialogTitle>
+            <DialogDescription>Update quiz settings and items. Changes are indicated.</DialogDescription>
+          </DialogHeader>
+          {editQuiz && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-2">
+                  <div className="text-xs text-muted-foreground mb-1">Page Title</div>
+                  <Input
+                    value={editQuiz.pageTitle}
+                    onChange={(e) => {
+                      setEditQuiz((q) => ({ ...q, pageTitle: e.target.value }))
+                      setEditQuizDirty(true)
+                    }}
+                    placeholder="Page Title"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Passing Score</div>
+                  <Input
+                    value={String(editQuiz.passingScore ?? "")}
+                    onChange={(e) => {
+                      setEditQuiz((q) => ({ ...q, passingScore: e.target.value }))
+                      setEditQuizDirty(true)
+                    }}
+                    placeholder="e.g., 70"
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">Questions & Information</div>
+                <div className="flex items-center gap-2">
+                  {editQuizDirty || editItems.some((i) => i._dirty) ? (
+                    <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Unsaved changes</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">No changes</Badge>
+                  )}
+                  <Button size="sm" variant="secondary" className="h-8" onClick={() => setPreviewOpen(true)}>Preview</Button>
+                  <Button size="sm" className="h-8" onClick={saveQuizEdits}>Save</Button>
+                </div>
+              </div>
+
+              <ScrollArea className="h-[55vh]">
+                <div className="space-y-3 pr-2">
+                  {editItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No items found.</div>
+                  ) : (
+                    editItems
+                      .slice()
+                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                      .map((it, idx) => (
+                        <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""}`}>
+                          <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1">Type</div>
+                              <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
+                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Question">Question</SelectItem>
+                                  <SelectItem value="Information">Information</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1">Q.Type</div>
+                              <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
+                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Radio">Radio</SelectItem>
+                                  <SelectItem value="Checkbox">Checkbox</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="md:col-span-3">
+                              <div className="text-[11px] text-muted-foreground mb-1">Content</div>
+                              <Input
+                                value={it.content}
+                                onChange={(e) => markItemChange(idx, { content: e.target.value })}
+                                className="h-8"
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1">Order</div>
+                              <Input
+                                value={String(it.order ?? "")}
+                                onChange={(e) => markItemChange(idx, { order: e.target.value })}
+                                className="h-8"
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[11px] text-muted-foreground mb-1">Points</div>
+                              <Input
+                                value={String(it.points ?? "")}
+                                onChange={(e) => markItemChange(idx, { points: e.target.value })}
+                                className="h-8"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <div className="text-[11px] text-muted-foreground mb-1">Options (separate with new lines)</div>
+                              <Input
+                                value={it.options}
+                                onChange={(e) => markItemChange(idx, { options: e.target.value })}
+                                placeholder="Option A<br>Option B"
+                                className="h-8"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
+                              <Input
+                                value={it.correctAnswer}
+                                onChange={(e) => markItemChange(idx, { correctAnswer: e.target.value })}
+                                placeholder="For checkbox, join with <br>"
+                                className="h-8"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{editQuiz?.pageTitle || editQuiz?.title || "Quiz Preview"}</DialogTitle>
+            <DialogDescription>This is how the quiz will look to users.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            <div className="space-y-3 pr-2">
+              {(editItems || []).slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0)).map((it) => (
+                <div key={it.id} className="rounded-md border p-3">
+                  <div className="text-sm font-medium">{it.content || "—"}</div>
+                  {it.type === "Information" ? (
+                    <div className="text-xs text-muted-foreground mt-1">Information</div>
+                  ) : (
+                    <div className="mt-2 text-sm">
+                      {(String(it.options || "").split("<br>").filter(Boolean)).map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <span className="inline-block h-3 w-3 rounded-full border" />
+                          <span>{opt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
