@@ -21,6 +21,16 @@ export default function AdminQuizzesPage() {
   const router = useRouter()
   const tab = params.get("tab") || "submissions"
 
+  const formatIsoToDmy = (iso) => {
+    try {
+      const [y, m, d] = String(iso).split("-")
+      if (!y || !m || !d) return iso
+      return `${d}-${m}-${y}`
+    } catch {
+      return iso
+    }
+  }
+
   const initial = useMemo(() => ({
     applicantId: params.get("applicantId") || "",
     quizId: params.get("quizId") || "",
@@ -91,30 +101,17 @@ export default function AdminQuizzesPage() {
   const [viewerSubmission, setViewerSubmission] = useState(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [dateModalOpen, setDateModalOpen] = useState(false)
-  const [pickedDate, setPickedDate] = useState(() => {
-    try {
-      return filters.from && filters.to && filters.from === filters.to ? new Date(filters.from) : undefined
-    } catch { return undefined }
-  })
-  useEffect(() => {
-    try {
-      if (filters.from && filters.to && filters.from === filters.to) {
-        setPickedDate(new Date(filters.from))
-      } else {
-        setPickedDate(undefined)
-      }
-    } catch { setPickedDate(undefined) }
-  }, [filters.from, filters.to])
+  const [pickedDate, setPickedDate] = useState(undefined)
 
   const activeChips = useMemo(() => {
     const chips = []
     if (filters.search) chips.push({ key: "search", label: `Search: ${filters.search}` })
     if (filters.passed) chips.push({ key: "passed", label: filters.passed === "true" ? "Passed" : "Failed" })
     if (filters.from && filters.to && filters.from === filters.to) {
-      chips.push({ key: "date", label: `Date: ${filters.from}` })
+      chips.push({ key: "date", label: `Date: ${formatIsoToDmy(filters.from)}` })
     } else {
-      if (filters.from) chips.push({ key: "from", label: `From: ${filters.from}` })
-      if (filters.to) chips.push({ key: "to", label: `To: ${filters.to}` })
+      if (filters.from) chips.push({ key: "from", label: `From: ${formatIsoToDmy(filters.from)}` })
+      if (filters.to) chips.push({ key: "to", label: `To: ${formatIsoToDmy(filters.to)}` })
     }
     if (filters.week) chips.push({ key: "week", label: `Week: ${filters.week}` })
     return chips
