@@ -12,18 +12,24 @@ function exec(cmd, val) {
 export default function RichTextEditor({ value = "", onChange, placeholder = "Write here...", className = "" }) {
   const ref = useRef(null)
 
+  const lastHtmlRef = useRef("")
+
   useEffect(() => {
     const el = ref.current
     if (!el) return
     // Only set when external value changes (avoid cursor jump)
     if (el.innerHTML !== String(value || "")) {
       el.innerHTML = String(value || "")
+      lastHtmlRef.current = String(value || "")
     }
   }, [value])
 
   const handleInput = () => {
     const html = ref.current?.innerHTML || ""
-    onChange?.(html)
+    if (html !== lastHtmlRef.current) {
+      lastHtmlRef.current = html
+      onChange?.(html)
+    }
   }
 
   const insertLink = () => {

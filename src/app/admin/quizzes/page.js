@@ -154,7 +154,19 @@ export default function AdminQuizzesPage() {
   const markItemChange = (index, patch) => {
     setEditItems((prev) => {
       const next = [...prev]
-      next[index] = { ...next[index], ...patch, _dirty: true }
+      const prevItem = next[index]
+      const updated = { ...prevItem, ...patch }
+      const pick = (it) => ({
+        type: it?.type || "",
+        qType: it?.qType || "",
+        content: it?.content || "",
+        optionsArray: Array.isArray(it?.optionsArray) ? it.optionsArray : [],
+        correctAnswerArray: Array.isArray(it?.correctAnswerArray) ? it.correctAnswerArray : [],
+        order: String(it?.order ?? ""),
+        points: String(it?.points ?? ""),
+      })
+      const changed = JSON.stringify(pick(prevItem)) !== JSON.stringify(pick(updated))
+      next[index] = { ...updated, _dirty: changed ? true : prevItem._dirty }
       return next
     })
   }
@@ -748,30 +760,47 @@ export default function AdminQuizzesPage() {
                                   {String(it.qType || "").toLowerCase() === "checkbox" ? (
                                     <div className="space-y-2">
                                       {(it.optionsArray || []).map((opt, oi) => {
+                                        const id = `cb-${idx}-${oi}`
                                         const checked = Array.isArray(it.correctAnswerArray) && it.correctAnswerArray.includes(opt)
                                         return (
-                                          <Label key={oi} className="flex items-center gap-2 text-sm">
+                                          <div key={id} className="flex items-center gap-2 text-sm">
                                             <Checkbox
+                                              id={id}
                                               checked={!!checked}
                                               onCheckedChange={(c) => {
+                                                const isChecked = !!c
                                                 const cur = Array.isArray(it.correctAnswerArray) ? [...it.correctAnswerArray] : []
-                                                if (c) { if (!cur.includes(opt)) cur.push(opt) } else { const i = cur.indexOf(opt); if (i >= 0) cur.splice(i,1) }
+                                                if (isChecked) {
+                                                  if (!cur.includes(opt)) cur.push(opt)
+                                                } else {
+                                                  const i = cur.indexOf(opt); if (i >= 0) cur.splice(i, 1)
+                                                }
                                                 markItemChange(idx, { correctAnswerArray: cur })
                                               }}
                                             />
-                                            <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
-                                          </Label>
+                                            <Label htmlFor={id} className="cursor-pointer">
+                                              <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                            </Label>
+                                          </div>
                                         )
                                       })}
                                     </div>
                                   ) : (
-                                    <RadioGroup value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""} onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}>
-                                      {(it.optionsArray || []).map((opt, oi) => (
-                                        <Label key={oi} className="flex items-center gap-2 text-sm">
-                                          <RadioGroupItem value={opt} />
-                                          <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
-                                        </Label>
-                                      ))}
+                                    <RadioGroup
+                                      value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
+                                      onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
+                                    >
+                                      {(it.optionsArray || []).map((opt, oi) => {
+                                        const id = `ra-${idx}-${oi}`
+                                        return (
+                                          <div key={id} className="flex items-center gap-2 text-sm">
+                                            <RadioGroupItem value={opt} id={id} />
+                                            <Label htmlFor={id} className="cursor-pointer">
+                                              <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                            </Label>
+                                          </div>
+                                        )
+                                      })}
                                     </RadioGroup>
                                   )}
                                 </div>
