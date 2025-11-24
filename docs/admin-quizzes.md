@@ -82,12 +82,23 @@ Rules:
 
 ### Current state
 - Subtle “View all” link added in Applicant Drawer.
-- Admin page scaffolded with tabs and search box; ready to connect to API.
+- Quizzes Admin includes Submissions and Quizzes tabs.
 - Submissions endpoint implemented for filtering; returns `submissions` and `questionsById`.
+- Quizzes tab lists quizzes (title, passing score) with an Edit workflow:
+  - Edit modal with Page Title, Passing Score
+  - Items editor with Type, Q.Type, Content, Order, Points
+  - Options editor (list UI) and correct-answer pickers
+  - Duplicate Order detection and auto-resequence dialog
+  - Preview modal mirroring end-user layout
 
 ### Roadmap
-- Wire Submissions UI to `/api/admin/quizzes/submissions` with pagination and filters.
-- Build Quizzes manager and Questions editor using the Options utility; add validations and rescoring workflow.
 - Add analytics (pass rate, average score, item difficulty) and CSV export.
+- Pagination for submissions and quizzes.
 
+### API contracts (editor)
+- GET `/api/admin/quizzes` → `{ quizzes: [{ id, title, passingScore, pageTitle }] }`
+- GET `/api/admin/quizzes/:quizId/items` → `{ items: [{ id, type, qType, content, options, correctAnswer, order, points }] }`
+- PUT `/api/admin/quizzes/:quizId` body: `{ pageTitle?, passingScore? }`
+- PUT `/api/admin/quizzes/items/:itemId` body: `{ type?, qType?, content?, options: string[]|string, correctAnswer?, order?, points? }`
+- POST `/api/admin/quizzes/items/batch` body: `{ items: [{ id, order }, ...] }` (resequence)
 

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
-import { joinOptionsArray, splitOptionsString } from "@/src/lib/quiz/options"
+import { joinOptionsArray, splitOptionsString } from "@/lib/quiz/options"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 

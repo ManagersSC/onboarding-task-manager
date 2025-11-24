@@ -16,6 +16,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from "@components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import useSWRImmutable from "swr/immutable"
+import PreviewRenderer from "@components/quiz/preview-renderer"
+import { splitOptionsString, joinOptionsArray } from "@/lib/quiz/options"
+import { validateAll } from "@/lib/quiz/validation"
+import { RadioGroup, RadioGroupItem } from "@components/ui/radio-group"
+import { Checkbox } from "@components/ui/checkbox"
+import { Label } from "@components/ui/label"
 
 export default function AdminQuizzesPage() {
   const params = useSearchParams()
@@ -119,6 +125,8 @@ export default function AdminQuizzesPage() {
   const [editItems, setEditItems] = useState([])
   const [editOriginal, setEditOriginal] = useState({ quiz: null, items: [] })
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const [autoResApplied, setAutoResApplied] = useState(false)
 
   const openEdit = async (quiz) => {
     setEditQuiz({ id: quiz.id, title: quiz.title, pageTitle: quiz.pageTitle || "", passingScore: quiz.passingScore ?? "" })
@@ -130,7 +138,12 @@ export default function AdminQuizzesPage() {
       const r = await fetch(`/api/admin/quizzes/${quiz.id}/items`)
       if (!r.ok) throw new Error("Failed to load items")
       const j = await r.json()
-      const items = (j.items || []).map((it) => ({ ...it, _dirty: false }))
+      const items = (j.items || []).map((it) => ({
+        ...it,
+        optionsArray: splitOptionsString(it.options || it.Options || ""),
+        correctAnswerArray: String(it.correctAnswer || "").split("<br>").filter(Boolean),
+        _dirty: false
+      }))
       setEditItems(items)
       setEditOriginal({ quiz, items: j.items || [] })
     } catch {}
@@ -146,7 +159,31 @@ export default function AdminQuizzesPage() {
 
   const saveQuizEdits = async () => {
     if (!editQuiz) return
+    // validate before save
+    const validation = validateAll(editItems.map((it) => ({
+      ...it,
+      optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")
+    })))
+    if (validation.hasAnyErrors) {
+      // if only duplicate orders -> open dialog
+      const onlyDups = validation.perItem.every((r) => r.errors.length === 0) && validation.duplicateOrders.size > 0
+      if (onlyDups) { setConflictOpen(true); return }
+      // otherwise, focus by just staying open; Save disabled in UI as well
+      return
+    }
     try {
+      // If auto resequence was applied, persist via batch update first
+      if (autoResApplied) {
+        const payload = {
+          items: editItems.map((it) => ({ id: it.id, order: Number(it.order || 0) }))
+        }
+        await fetch(`/api/admin/quizzes/items/batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        setAutoResApplied(false)
+      }
       // Save quiz fields if changed
       const changedQuiz =
         (editQuiz.pageTitle !== (editOriginal.quiz?.pageTitle || "")) ||
@@ -168,8 +205,10 @@ export default function AdminQuizzesPage() {
             type: it.type,
             qType: it.qType,
             content: it.content,
-            options: it.options,
-            correctAnswer: it.correctAnswer,
+            options: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""),
+            correctAnswer: Array.isArray(it.correctAnswerArray) && (it.qType || "").toLowerCase() === "checkbox"
+              ? it.correctAnswerArray.join("<br>")
+              : (Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")),
             order: it.order,
             points: it.points
           })
@@ -588,7 +627,15 @@ export default function AdminQuizzesPage() {
                     <Badge variant="outline" className="text-muted-foreground">No changes</Badge>
                   )}
                   <Button size="sm" variant="secondary" className="h-8" onClick={() => setPreviewOpen(true)}>Preview</Button>
-                  <Button size="sm" className="h-8" onClick={saveQuizEdits}>Save</Button>
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={saveQuizEdits}
+                    disabled={validateAll(editItems.map((it) => ({ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }))).hasAnyErrors}
+                    title={validateAll(editItems.map((it) => ({ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }))).hasAnyErrors ? "Resolve validation errors or duplicate orders" : ""}
+                  >
+                    Save
+                  </Button>
                 </div>
               </div>
 
@@ -600,8 +647,12 @@ export default function AdminQuizzesPage() {
                     editItems
                       .slice()
                       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                      .map((it, idx) => (
-                        <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""}`}>
+                      .map((it, idx) => {
+                        const v = validateAll([{ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }]).perItem[0]
+                        const hasDup = v.hasDuplicateOrder
+                        const hasErrs = v.errors.length > 0
+                        return (
+                        <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""} ${hasDup || hasErrs ? "border-red-500/40" : ""}`}>
                           <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
                             <div>
                               <div className="text-[11px] text-muted-foreground mb-1">Type</div>
@@ -631,13 +682,14 @@ export default function AdminQuizzesPage() {
                                 className="h-8"
                               />
                             </div>
-                            <div>
+                            <div className={`${hasDup ? "relative" : ""}`}>
                               <div className="text-[11px] text-muted-foreground mb-1">Order</div>
                               <Input
                                 value={String(it.order ?? "")}
                                 onChange={(e) => markItemChange(idx, { order: e.target.value })}
                                 className="h-8"
                               />
+                              {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
                             </div>
                             <div>
                               <div className="text-[11px] text-muted-foreground mb-1">Points</div>
@@ -649,25 +701,79 @@ export default function AdminQuizzesPage() {
                             </div>
                             <div className="md:col-span-3">
                               <div className="text-[11px] text-muted-foreground mb-1">Options (separate with new lines)</div>
-                              <Input
-                                value={it.options}
-                                onChange={(e) => markItemChange(idx, { options: e.target.value })}
-                                placeholder="Option A<br>Option B"
-                                className="h-8"
-                              />
+                              <div className="space-y-2">
+                                {Array.isArray(it.optionsArray) && it.optionsArray.length > 0 ? it.optionsArray.map((opt, oi) => (
+                                  <div key={oi} className="flex items-center gap-2">
+                                    <Input
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const arr = [...it.optionsArray]; arr[oi] = e.target.value
+                                        markItemChange(idx, { optionsArray: arr })
+                                      }}
+                                      className="h-8"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-2"
+                                      onClick={() => {
+                                        const arr = it.optionsArray.filter((_, k) => k !== oi)
+                                        markItemChange(idx, { optionsArray: arr })
+                                      }}
+                                      title="Remove option"
+                                    >
+                                      Remove
+                                    </Button>
+                                  </div>
+                                )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8"
+                                  onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}
+                                >
+                                  + Add option
+                                </Button>
+                              </div>
                             </div>
                             <div className="md:col-span-3">
                               <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
-                              <Input
-                                value={it.correctAnswer}
-                                onChange={(e) => markItemChange(idx, { correctAnswer: e.target.value })}
-                                placeholder="For checkbox, join with <br>"
-                                className="h-8"
-                              />
+                              {String(it.qType || "").toLowerCase() === "checkbox" ? (
+                                <div className="space-y-2">
+                                  {(it.optionsArray || []).map((opt, oi) => {
+                                    const checked = Array.isArray(it.correctAnswerArray) && it.correctAnswerArray.includes(opt)
+                                    return (
+                                      <Label key={oi} className="flex items-center gap-2 text-sm">
+                                        <Checkbox
+                                          checked={!!checked}
+                                          onCheckedChange={(c) => {
+                                            const cur = Array.isArray(it.correctAnswerArray) ? [...it.correctAnswerArray] : []
+                                            if (c) { if (!cur.includes(opt)) cur.push(opt) } else { const i = cur.indexOf(opt); if (i >= 0) cur.splice(i,1) }
+                                            markItemChange(idx, { correctAnswerArray: cur })
+                                          }}
+                                        />
+                                        <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                      </Label>
+                                    )
+                                  })}
+                                </div>
+                              ) : (
+                                <RadioGroup
+                                  value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
+                                  onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
+                                >
+                                  {(it.optionsArray || []).map((opt, oi) => (
+                                    <Label key={oi} className="flex items-center gap-2 text-sm">
+                                      <RadioGroupItem value={opt} />
+                                      <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                    </Label>
+                                  ))}
+                                </RadioGroup>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      ))
+                        </div>)
+                      })
                   )}
                 </div>
               </ScrollArea>
@@ -684,26 +790,40 @@ export default function AdminQuizzesPage() {
             <DialogDescription>This is how the quiz will look to users.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[60vh]">
-            <div className="space-y-3 pr-2">
-              {(editItems || []).slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0)).map((it) => (
-                <div key={it.id} className="rounded-md border p-3">
-                  <div className="text-sm font-medium">{it.content || "—"}</div>
-                  {it.type === "Information" ? (
-                    <div className="text-xs text-muted-foreground mt-1">Information</div>
-                  ) : (
-                    <div className="mt-2 text-sm">
-                      {(String(it.options || "").split("<br>").filter(Boolean)).map((opt, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <span className="inline-block h-3 w-3 rounded-full border" />
-                          <span>{opt}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="pr-2">
+              <PreviewRenderer items={(editItems || []).map((it) => ({ ...it, options: it.optionsArray }))} />
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate order dialog */}
+      <Dialog open={conflictOpen} onOpenChange={setConflictOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Duplicate orders detected</DialogTitle>
+            <DialogDescription>Some items share the same Order. Choose how to resolve:</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <div>- Fix manually: You adjust the Order values yourself.</div>
+            <div>- Auto-resequence: We will renumber items 1..N in current sort order.</div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConflictOpen(false)}>Fix manually</Button>
+            <Button
+              onClick={() => {
+                // auto resequence on client
+                setEditItems((prev) => {
+                  const sorted = [...prev].sort((a,b) => (Number(a.order||0)) - (Number(b.order||0)))
+                  return sorted.map((it, i) => ({ ...it, order: i + 1, _dirty: true }))
+                })
+                setAutoResApplied(true)
+                setConflictOpen(false)
+              }}
+            >
+              Auto-resequence
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
