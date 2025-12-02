@@ -804,8 +804,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         )
                       })()}
 
-                      {/* D3 - Appraisals (visible when Hired OR history exists) */}
-                      {(isHiredStage || hasAppraisalHistory) && (
+                      {/* D3 - Appraisals (visible only when Hired) */}
+                      {isHiredStage && (
                         <div className="rounded-lg border p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">Appraisals</h4>
