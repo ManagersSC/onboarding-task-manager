@@ -126,17 +126,47 @@ export default function AdminQuizzesPage() {
   const [editQuizDirty, setEditQuizDirty] = useState(false)
   const [editItems, setEditItems] = useState([])
   const [editOriginal, setEditOriginal] = useState({ quiz: null, items: [] })
+  const [itemsLoading, setItemsLoading] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [conflictOpen, setConflictOpen] = useState(false)
   const [autoResApplied, setAutoResApplied] = useState(false)
 
+  // Helpers to convert between fraction (0-1) and percent (0-100) displays
+  const toPercentDisplay = (value) => {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return ""
+    // Airtable percent fields often come as 0..1; display as 0..100
+    const pct = n <= 1 ? n * 100 : n
+    return String(Math.round(pct))
+  }
+  const fromPercentInput = (value) => {
+    const clean = String(value ?? "").replace(/[^\d.]/g, "")
+    const n = Number(clean)
+    if (!Number.isFinite(n)) return null
+    // Convert 0..100 to 0..1 for storage; if already 0..1, keep it
+    return n > 1 ? n / 100 : n
+  }
+  const formatPassingScoreLabel = (value) => {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return "—"
+    const pct = n <= 1 ? Math.round(n * 100) : Math.round(n)
+    return `${pct}%`
+  }
+
   const openEdit = async (quiz) => {
-    setEditQuiz({ id: quiz.id, title: quiz.title, pageTitle: quiz.pageTitle || "", passingScore: quiz.passingScore ?? "" })
+    setEditQuiz({
+      id: quiz.id,
+      title: quiz.title,
+      pageTitle: quiz.pageTitle || "",
+      // Normalize to percent number string for editing (e.g., 60 instead of 0.6)
+      passingScore: toPercentDisplay(quiz.passingScore)
+    })
     setEditQuizDirty(false)
     setEditItems([])
     setEditOriginal({ quiz, items: [] })
     setEditOpen(true)
     try {
+      setItemsLoading(true)
       const r = await fetch(`/api/admin/quizzes/${quiz.id}/items`)
       if (!r.ok) throw new Error("Failed to load items")
       const j = await r.json()
@@ -149,6 +179,9 @@ export default function AdminQuizzesPage() {
       setEditItems(items)
       setEditOriginal({ quiz, items: j.items || [] })
     } catch {}
+    finally {
+      setItemsLoading(false)
+    }
   }
 
   const markItemChange = (index, patch) => {
@@ -199,14 +232,16 @@ export default function AdminQuizzesPage() {
         setAutoResApplied(false)
       }
       // Save quiz fields if changed
+      const originalPassingDisplay = toPercentDisplay(editOriginal.quiz?.passingScore)
       const changedQuiz =
         (editQuiz.pageTitle !== (editOriginal.quiz?.pageTitle || "")) ||
-        (String(editQuiz.passingScore ?? "") !== String(editOriginal.quiz?.passingScore ?? ""))
+        (String(editQuiz.passingScore ?? "") !== String(originalPassingDisplay))
       if (changedQuiz) {
+        const normalizedPassing = fromPercentInput(editQuiz.passingScore)
         await fetch(`/api/admin/quizzes/${editQuiz.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: editQuiz.passingScore })
+          body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: normalizedPassing })
         })
       }
       // Save dirty items
@@ -498,6 +533,24 @@ export default function AdminQuizzesPage() {
                   <div className="mt-1 text-sm font-medium">{Object.keys(viewerSubmission?.answers || {}).length}</div>
                 </motion.div>
               </div>
+          {(() => {
+            const qaReady = !!viewerSubmission && Object.entries(viewerSubmission?.answers || {}).every(([qid]) => !!questionsById?.[qid])
+            if (!qaReady) {
+              return (
+                <div className="h-[58vh] flex items-center justify-center">
+                  <motion.div
+                    className="flex flex-col items-center gap-3"
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="text-xs text-muted-foreground">Loading questions and answers…</div>
+                  </motion.div>
+                </div>
+              )
+            }
+            return (
               <ScrollArea className="h-[58vh]">
                 <div className="space-y-2 pr-2">
                   {Object.entries(viewerSubmission?.answers || {}).map(([qid, ans], i) => {
@@ -526,6 +579,8 @@ export default function AdminQuizzesPage() {
                   })}
                 </div>
               </ScrollArea>
+            )
+          })()}
             </DialogContent>
           </Dialog>
         </TabsContent>
@@ -537,7 +592,7 @@ export default function AdminQuizzesPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate">{q.title || "Untitled Quiz"}</div>
-                    <div className="text-xs text-muted-foreground">Passing Score: {q.passingScore ?? "—"}</div>
+                    <div className="text-xs text-muted-foreground">Passing Score: {formatPassingScoreLabel(q.passingScore)}</div>
                   </div>
                   <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
                 </div>
@@ -620,15 +675,27 @@ export default function AdminQuizzesPage() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Passing Score</div>
-                  <Input
-                    value={String(editQuiz.passingScore ?? "")}
-                    onChange={(e) => {
-                      setEditQuiz((q) => ({ ...q, passingScore: e.target.value }))
-                      setEditQuizDirty(true)
-                    }}
-                    placeholder="e.g., 70"
-                    className="h-9"
-                  />
+                  <div className="relative">
+                    <Input
+                      value={String(editQuiz.passingScore ?? "")}
+                      onChange={(e) => {
+                        // keep numeric value within 0..100 and strip invalid chars
+                        const raw = e.target.value.replace(/[^\d.]/g, "")
+                        let next = raw
+                        const num = Number(raw)
+                        if (Number.isFinite(num)) {
+                          if (num > 100) next = "100"
+                          if (num < 0) next = "0"
+                        }
+                        setEditQuiz((q) => ({ ...q, passingScore: next }))
+                        setEditQuizDirty(true)
+                      }}
+                      placeholder="e.g., 70"
+                      className="h-9 pr-7"
+                      inputMode="decimal"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-muted-foreground text-sm">%</span>
+                  </div>
                 </div>
               </div>
 
@@ -655,160 +722,176 @@ export default function AdminQuizzesPage() {
 
               <ScrollArea className="h-[55vh]">
                 <div className="space-y-3 pr-2">
-                  {editItems.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No items found.</div>
+                  {itemsLoading ? (
+                    <div className="h-[45vh] flex items-center justify-center">
+                      <motion.div
+                        className="flex flex-col items-center gap-3"
+                        initial={{ opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <div className="text-xs text-muted-foreground">Loading quiz items…</div>
+                      </motion.div>
+                    </div>
                   ) : (
-                    editItems
-                      .slice()
-                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                      .map((it, idx) => {
-                        const v = validateAll([{ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }]).perItem[0]
-                        const hasDup = v.hasDuplicateOrder
-                        const hasErrs = v.errors.length > 0
-                        return (
-                        <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""} ${hasDup || hasErrs ? "border-red-500/40" : ""}`}>
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex flex-wrap items-start gap-3">
-                                <div>
-                                  <div className="text-[11px] text-muted-foreground mb-1">Type</div>
-                                  <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Question">Question</SelectItem>
-                                      <SelectItem value="Information">Information</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                {String(it.type || "").toLowerCase() !== "information" && (
-                                  <div>
-                                    <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
-                                    <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
-                                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Radio">Radio</SelectItem>
-                                        <SelectItem value="Checkbox">Checkbox</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="w-44 shrink-0">
-                                <div className={`${hasDup ? "relative" : ""}`}>
-                                  <div className="text-[11px] text-muted-foreground mb-1">Order</div>
-                                  <Input value={String(it.order ?? "")} onChange={(e) => markItemChange(idx, { order: e.target.value })} className="h-8" />
-                                  {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
-                                </div>
-                                {String(it.type || "").toLowerCase() !== "information" && (
-                                  <div className="mt-2">
-                                    <div className="text-[11px] text-muted-foreground mb-1">Points</div>
-                                    <Input value={String(it.points ?? "")} onChange={(e) => markItemChange(idx, { points: e.target.value })} className="h-8" />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-[11px] text-muted-foreground mb-1">Content</div>
-                              <RichTextEditor value={it.content || ""} onChange={(html) => markItemChange(idx, { content: html })} />
-                            </div>
-                            {String(it.type || "").toLowerCase() !== "information" && (
-                              <>
-                                <div>
-                                  <div className="text-[11px] text-muted-foreground mb-1">Options</div>
-                                  <div className="space-y-2">
-                                    {Array.isArray(it.optionsArray) && it.optionsArray.length > 0 ? it.optionsArray.map((opt, oi) => (
-                                      <div key={oi} className="flex items-center gap-2">
-                                        <Input
-                                          value={opt}
-                                          onChange={(e) => {
-                                            const arr = [...it.optionsArray]; arr[oi] = e.target.value
-                                            markItemChange(idx, { optionsArray: arr })
-                                          }}
-                                          className="h-8 flex-1"
-                                          aria-label={`Option ${oi + 1}`}
-                                        />
-                                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
-                                          const arr = it.optionsArray.filter((_, k) => k !== oi)
-                                          markItemChange(idx, { optionsArray: arr })
-                                        }} title="Remove option" aria-label={`Remove option ${oi + 1}`}>Remove</Button>
-                                        <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
-                                          const arr = [...it.optionsArray]; arr.splice(oi + 1, 0, opt)
-                                          markItemChange(idx, { optionsArray: arr })
-                                        }} title="Duplicate option" aria-label={`Duplicate option ${oi + 1}`}>Duplicate</Button>
+                    <>
+                      {editItems.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">No items found.</div>
+                      ) : (
+                        editItems
+                          .slice()
+                          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                          .map((it, idx) => {
+                            const v = validateAll([{ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }]).perItem[0]
+                            const hasDup = v.hasDuplicateOrder
+                            const hasErrs = v.errors.length > 0
+                            return (
+                            <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""} ${hasDup || hasErrs ? "border-red-500/40" : ""}`}>
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex flex-wrap items-start gap-3">
+                                    <div>
+                                      <div className="text-[11px] text-muted-foreground mb-1">Type</div>
+                                      <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
+                                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Question">Question</SelectItem>
+                                          <SelectItem value="Information">Information</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    {String(it.type || "").toLowerCase() !== "information" && (
+                                      <div>
+                                        <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
+                                        <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
+                                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Radio">Radio</SelectItem>
+                                            <SelectItem value="Checkbox">Checkbox</SelectItem>
+                                          </SelectContent>
+                                        </Select>
                                       </div>
-                                    )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
-                                    <div className="flex items-center gap-2">
-                                      <Button size="sm" variant="secondary" className="h-8" onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}>+ Add option</Button>
-                                      <Popover>
-                                        <PopoverTrigger asChild><Button size="sm" variant="outline" className="h-8">Bulk paste</Button></PopoverTrigger>
-                                        <PopoverContent className="w-72 p-3">
-                                          <div className="text-xs text-muted-foreground mb-1">Paste one option per line</div>
-                                          <Textarea className="h-24" onKeyDown={(e) => {
-                                            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                                              const lines = String(e.currentTarget.value || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
-                                              if (lines.length) markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ...lines] })
-                                            }
-                                          }} placeholder="Option 1\nOption 2" />
-                                          <div className="mt-2 text-[11px] text-muted-foreground">Press Ctrl/Cmd+Enter to add</div>
-                                        </PopoverContent>
-                                      </Popover>
+                                    )}
+                                  </div>
+                                  <div className="w-44 shrink-0">
+                                    <div className={`${hasDup ? "relative" : ""}`}>
+                                      <div className="text-[11px] text-muted-foreground mb-1">Order</div>
+                                      <Input value={String(it.order ?? "")} onChange={(e) => markItemChange(idx, { order: e.target.value })} className="h-8" />
+                                      {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
                                     </div>
+                                    {String(it.type || "").toLowerCase() !== "information" && (
+                                      <div className="mt-2">
+                                        <div className="text-[11px] text-muted-foreground mb-1">Points</div>
+                                        <Input value={String(it.points ?? "")} onChange={(e) => markItemChange(idx, { points: e.target.value })} className="h-8" />
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
-                                  {String(it.qType || "").toLowerCase() === "checkbox" ? (
-                                    <div className="space-y-2">
-                                      {(it.optionsArray || []).map((opt, oi) => {
-                                        const id = `cb-${idx}-${oi}`
-                                        const checked = Array.isArray(it.correctAnswerArray) && it.correctAnswerArray.includes(opt)
-                                        return (
-                                          <div key={id} className="flex items-center gap-2 text-sm">
-                                            <Checkbox
-                                              id={id}
-                                              checked={!!checked}
-                                              onCheckedChange={(c) => {
-                                                const isChecked = !!c
-                                                const cur = Array.isArray(it.correctAnswerArray) ? [...it.correctAnswerArray] : []
-                                                if (isChecked) {
-                                                  if (!cur.includes(opt)) cur.push(opt)
-                                                } else {
-                                                  const i = cur.indexOf(opt); if (i >= 0) cur.splice(i, 1)
-                                                }
-                                                markItemChange(idx, { correctAnswerArray: cur })
-                                              }}
-                                            />
-                                            <Label htmlFor={id} className="cursor-pointer">
-                                              <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
-                                            </Label>
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  ) : (
-                                    <RadioGroup
-                                      value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
-                                      onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
-                                    >
-                                      {(it.optionsArray || []).map((opt, oi) => {
-                                        const id = `ra-${idx}-${oi}`
-                                        return (
-                                          <div key={id} className="flex items-center gap-2 text-sm">
-                                            <RadioGroupItem value={opt} id={id} />
-                                            <Label htmlFor={id} className="cursor-pointer">
-                                              <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
-                                            </Label>
-                                          </div>
-                                        )
-                                      })}
-                                    </RadioGroup>
-                                  )}
+                                  <div className="text-[11px] text-muted-foreground mb-1">Content</div>
+                                  <RichTextEditor value={it.content || ""} onChange={(html) => markItemChange(idx, { content: html })} />
                                 </div>
-                              </>
-                            )}
-                          </div>
-                        </div>)
-                      })
+                                {String(it.type || "").toLowerCase() !== "information" && (
+                                  <>
+                                    <div>
+                                      <div className="text-[11px] text-muted-foreground mb-1">Options</div>
+                                      <div className="space-y-2">
+                                        {Array.isArray(it.optionsArray) && it.optionsArray.length > 0 ? it.optionsArray.map((opt, oi) => (
+                                          <div key={oi} className="flex items-center gap-2">
+                                            <Input
+                                              value={opt}
+                                              onChange={(e) => {
+                                                const arr = [...it.optionsArray]; arr[oi] = e.target.value
+                                                markItemChange(idx, { optionsArray: arr })
+                                              }}
+                                              className="h-8 flex-1"
+                                              aria-label={`Option ${oi + 1}`}
+                                            />
+                                            <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                              const arr = it.optionsArray.filter((_, k) => k !== oi)
+                                              markItemChange(idx, { optionsArray: arr })
+                                            }} title="Remove option" aria-label={`Remove option ${oi + 1}`}>Remove</Button>
+                                            <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                              const arr = [...it.optionsArray]; arr.splice(oi + 1, 0, opt)
+                                              markItemChange(idx, { optionsArray: arr })
+                                            }} title="Duplicate option" aria-label={`Duplicate option ${oi + 1}`}>Duplicate</Button>
+                                          </div>
+                                        )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
+                                        <div className="flex items-center gap-2">
+                                          <Button size="sm" variant="secondary" className="h-8" onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}>+ Add option</Button>
+                                          <Popover>
+                                            <PopoverTrigger asChild><Button size="sm" variant="outline" className="h-8">Bulk paste</Button></PopoverTrigger>
+                                            <PopoverContent className="w-72 p-3">
+                                              <div className="text-xs text-muted-foreground mb-1">Paste one option per line</div>
+                                              <Textarea className="h-24" onKeyDown={(e) => {
+                                                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                                                  const lines = String(e.currentTarget.value || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+                                                  if (lines.length) markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ...lines] })
+                                                }
+                                              }} placeholder="Option 1\nOption 2" />
+                                              <div className="mt-2 text-[11px] text-muted-foreground">Press Ctrl/Cmd+Enter to add</div>
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
+                                      {String(it.qType || "").toLowerCase() === "checkbox" ? (
+                                        <div className="space-y-2">
+                                          {(it.optionsArray || []).map((opt, oi) => {
+                                            const id = `cb-${idx}-${oi}`
+                                            const checked = Array.isArray(it.correctAnswerArray) && it.correctAnswerArray.includes(opt)
+                                            return (
+                                              <div key={id} className="flex items-center gap-2 text-sm">
+                                                <Checkbox
+                                                  id={id}
+                                                  checked={!!checked}
+                                                  onCheckedChange={(c) => {
+                                                    const isChecked = !!c
+                                                    const cur = Array.isArray(it.correctAnswerArray) ? [...it.correctAnswerArray] : []
+                                                    if (isChecked) {
+                                                      if (!cur.includes(opt)) cur.push(opt)
+                                                    } else {
+                                                      const i = cur.indexOf(opt); if (i >= 0) cur.splice(i, 1)
+                                                    }
+                                                    markItemChange(idx, { correctAnswerArray: cur })
+                                                  }}
+                                                />
+                                                <Label htmlFor={id} className="cursor-pointer">
+                                                  <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                                </Label>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <RadioGroup
+                                          value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
+                                          onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
+                                        >
+                                          {(it.optionsArray || []).map((opt, oi) => {
+                                            const id = `ra-${idx}-${oi}`
+                                            return (
+                                              <div key={id} className="flex items-center gap-2 text-sm">
+                                                <RadioGroupItem value={opt} id={id} />
+                                                <Label htmlFor={id} className="cursor-pointer">
+                                                  <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                                </Label>
+                                              </div>
+                                            )
+                                          })}
+                                        </RadioGroup>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>)
+                          })
+                      )}
+                    </>
                   )}
                 </div>
               </ScrollArea>
