@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs"
 import { Separator } from "@components/ui/separator"
@@ -26,7 +26,7 @@ import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
 import { toast } from "sonner"
 
-export default function AdminQuizzesPage() {
+function AdminQuizzesPageContent() {
   const params = useSearchParams()
   const router = useRouter()
   const tab = params.get("tab") || "submissions"
@@ -1114,3 +1114,19 @@ export default function AdminQuizzesPage() {
 }
 
 
+export default function AdminQuizzesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-5 md:p-6">
+          <div className="rounded-md border p-6 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading...
+          </div>
+        </div>
+      }
+    >
+      <AdminQuizzesPageContent />
+    </Suspense>
+  )
+}
