@@ -24,6 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@components/ui/radio-group"
 import { Checkbox } from "@components/ui/checkbox"
 import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
+import { toast } from "sonner"
 
 export default function AdminQuizzesPage() {
   const params = useSearchParams()
@@ -130,6 +131,8 @@ export default function AdminQuizzesPage() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [conflictOpen, setConflictOpen] = useState(false)
   const [autoResApplied, setAutoResApplied] = useState(false)
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // Helpers to convert between fraction (0-1) and percent (0-100) displays
   const toPercentDisplay = (value) => {
@@ -239,7 +242,7 @@ export default function AdminQuizzesPage() {
   }
 
   const saveQuizEdits = async () => {
-    if (!editQuiz) return
+    if (!editQuiz) return false
     // validate before save
     const dirtyItems = editItems.filter((it) => it._dirty)
     const normalizedDirty = dirtyItems.map((it) => {
@@ -258,9 +261,9 @@ export default function AdminQuizzesPage() {
     if (validation.hasAnyErrors) {
       // if only duplicate orders -> open dialog
       const onlyDups = validation.perItem.every((r) => r.errors.length === 0) && validation.duplicateOrders.size > 0
-      if (onlyDups) { setConflictOpen(true); return }
+      if (onlyDups) { setConflictOpen(true); return false }
       // otherwise, focus by just staying open; Save disabled in UI as well
-      return
+      return false
     }
     try {
       // If auto resequence was applied, persist via batch update first
@@ -318,7 +321,10 @@ export default function AdminQuizzesPage() {
       }
       await refreshQuizzes?.()
       setEditOpen(false)
-    } catch {}
+      return true
+    } catch {
+      return false
+    }
   }
 
   const activeChips = useMemo(() => {
@@ -764,7 +770,7 @@ export default function AdminQuizzesPage() {
                   <Button
                     size="sm"
                     className="h-8"
-                    onClick={saveQuizEdits}
+                    onClick={() => setConfirmSaveOpen(true)}
                     disabled={(() => {
                       const normalized = editItems.filter((i) => i._dirty).map((it) => {
                         const isInfo = String(it.type || "").toLowerCase() === "information"
@@ -1042,6 +1048,35 @@ export default function AdminQuizzesPage() {
               <PreviewRenderer items={(editItems || []).map((it) => ({ ...it, options: it.optionsArray }))} />
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Save Modal */}
+      <Dialog open={confirmSaveOpen} onOpenChange={setConfirmSaveOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Save changes?</DialogTitle>
+            <DialogDescription>This will update your quiz settings and modified items.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmSaveOpen(false)} disabled={saving}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                setSaving(true)
+                const ok = await saveQuizEdits()
+                setSaving(false)
+                if (ok) {
+                  setConfirmSaveOpen(false)
+                  toast.success("Changes saved successfully")
+                } else {
+                  toast.error("Failed to save changes. Please review inputs and try again.")
+                }
+              }}
+              disabled={saving}
+            >
+              {saving ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</>) : "Save"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
