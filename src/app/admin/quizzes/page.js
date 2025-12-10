@@ -241,10 +241,20 @@ export default function AdminQuizzesPage() {
   const saveQuizEdits = async () => {
     if (!editQuiz) return
     // validate before save
-    const validation = validateAll(editItems.map((it) => ({
-      ...it,
-      optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")
-    })))
+    const dirtyItems = editItems.filter((it) => it._dirty)
+    const normalizedDirty = dirtyItems.map((it) => {
+      const isInfo = String(it.type || "").toLowerCase() === "information"
+      const options = isInfo
+        ? []
+        : (Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")))
+      const correct = isInfo
+        ? []
+        : (String(it.qType || "").toLowerCase() === "checkbox"
+            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""])
+      return { ...it, optionsArray: options, correctAnswerArray: correct }
+    })
+    const validation = validateAll(normalizedDirty)
     if (validation.hasAnyErrors) {
       // if only duplicate orders -> open dialog
       const onlyDups = validation.perItem.every((r) => r.errors.length === 0) && validation.duplicateOrders.size > 0
@@ -281,11 +291,15 @@ export default function AdminQuizzesPage() {
       // Save dirty items
       for (const it of editItems) {
         if (!it._dirty) continue
-        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
-        const correct =
-          String(it.qType || "").toLowerCase() === "checkbox"
-            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
-            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
+        const isInfo = String(it.type || "").toLowerCase() === "information"
+        const options = isInfo
+          ? []
+          : (Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")))
+        const correct = isInfo
+          ? []
+          : (String(it.qType || "").toLowerCase() === "checkbox"
+              ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+              : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""])
         await fetch(`/api/admin/quizzes/items/${it.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -752,12 +766,16 @@ export default function AdminQuizzesPage() {
                     className="h-8"
                     onClick={saveQuizEdits}
                     disabled={(() => {
-                      const normalized = editItems.map((it) => {
-                        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
-                        const correct =
-                          String(it.qType || "").toLowerCase() === "checkbox"
-                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
-                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
+                      const normalized = editItems.filter((i) => i._dirty).map((it) => {
+                        const isInfo = String(it.type || "").toLowerCase() === "information"
+                        const options = isInfo
+                          ? []
+                          : (Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")))
+                        const correct = isInfo
+                          ? []
+                          : (String(it.qType || "").toLowerCase() === "checkbox"
+                              ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+                              : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""])
                         return { ...it, optionsArray: options, correctAnswerArray: correct }
                       })
                       const hasErrors = validateAll(normalized).hasAnyErrors
@@ -765,12 +783,16 @@ export default function AdminQuizzesPage() {
                       return hasErrors || !hasChanges
                     })()}
                     title={(() => {
-                      const normalized = editItems.map((it) => {
-                        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
-                        const correct =
-                          String(it.qType || "").toLowerCase() === "checkbox"
-                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
-                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
+                      const normalized = editItems.filter((i) => i._dirty).map((it) => {
+                        const isInfo = String(it.type || "").toLowerCase() === "information"
+                        const options = isInfo
+                          ? []
+                          : (Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")))
+                        const correct = isInfo
+                          ? []
+                          : (String(it.qType || "").toLowerCase() === "checkbox"
+                              ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+                              : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""])
                         return { ...it, optionsArray: options, correctAnswerArray: correct }
                       })
                       const hasErrors = validateAll(normalized).hasAnyErrors
@@ -808,11 +830,15 @@ export default function AdminQuizzesPage() {
                           .slice()
                           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                           .map((it, idx) => {
-                        const normalizedOptions = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
-                        const normalizedCorrect =
-                          String(it.qType || "").toLowerCase() === "checkbox"
-                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => normalizedOptions[i]).filter((s) => typeof s === "string") : [])
-                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? normalizedOptions[it.uiCorrectIndices[0]] : ""]
+                        const isInfo = String(it.type || "").toLowerCase() === "information"
+                        const normalizedOptions = isInfo
+                          ? []
+                          : (Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "")))
+                        const normalizedCorrect = isInfo
+                          ? []
+                          : (String(it.qType || "").toLowerCase() === "checkbox"
+                              ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => normalizedOptions[i]).filter((s) => typeof s === "string") : [])
+                              : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? normalizedOptions[it.uiCorrectIndices[0]] : ""])
                         const v = validateAll([{ ...it, optionsArray: normalizedOptions, correctAnswerArray: normalizedCorrect }]).perItem[0]
                             const hasDup = v.hasDuplicateOrder
                             const hasErrs = v.errors.length > 0
