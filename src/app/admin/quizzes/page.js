@@ -170,12 +170,27 @@ export default function AdminQuizzesPage() {
       const r = await fetch(`/api/admin/quizzes/${quiz.id}/items`)
       if (!r.ok) throw new Error("Failed to load items")
       const j = await r.json()
-      const items = (j.items || []).map((it) => ({
-        ...it,
-        optionsArray: splitOptionsString(it.options || it.Options || ""),
-        correctAnswerArray: String(it.correctAnswer || "").split("<br>").filter(Boolean),
-        _dirty: false
-      }))
+      const items = (j.items || []).map((it) => {
+        const optionsArray = splitOptionsString(it.options || it.Options || "")
+        const correctAnswerArray = String(it.correctAnswer || "").split("<br>").filter(Boolean)
+        // Build UI model: options by value, correct by indices
+        const uiOptions = Array.isArray(optionsArray) ? [...optionsArray] : []
+        const uiCorrectIndices = []
+        if (String(it.type || "").toLowerCase() !== "information") {
+          for (const ans of correctAnswerArray) {
+            const idx = uiOptions.findIndex((o) => o === ans)
+            if (idx >= 0) uiCorrectIndices.push(idx)
+          }
+        }
+        return {
+          ...it,
+          optionsArray, // keep for compatibility
+          correctAnswerArray,
+          uiOptions,
+          uiCorrectIndices,
+          _dirty: false
+        }
+      })
       setEditItems(items)
       setEditOriginal({ quiz, items: j.items || [] })
     } catch {}
@@ -193,14 +208,33 @@ export default function AdminQuizzesPage() {
         type: it?.type || "",
         qType: it?.qType || "",
         content: it?.content || "",
-        optionsArray: Array.isArray(it?.optionsArray) ? it.optionsArray : [],
-        correctAnswerArray: Array.isArray(it?.correctAnswerArray) ? it.correctAnswerArray : [],
+        uiOptions: Array.isArray(it?.uiOptions) ? it.uiOptions : [],
+        uiCorrectIndices: Array.isArray(it?.uiCorrectIndices) ? it.uiCorrectIndices : [],
         order: String(it?.order ?? ""),
         points: String(it?.points ?? ""),
       })
       const changed = JSON.stringify(pick(prevItem)) !== JSON.stringify(pick(updated))
       next[index] = { ...updated, _dirty: changed ? true : prevItem._dirty }
       return next
+    })
+  }
+  const markItemChangeById = (id, patch) => {
+    setEditItems((prev) => {
+      return prev.map((prevItem) => {
+        if (prevItem.id !== id) return prevItem
+        const updated = { ...prevItem, ...patch }
+        const pick = (it) => ({
+          type: it?.type || "",
+          qType: it?.qType || "",
+          content: it?.content || "",
+          uiOptions: Array.isArray(it?.uiOptions) ? it.uiOptions : [],
+          uiCorrectIndices: Array.isArray(it?.uiCorrectIndices) ? it.uiCorrectIndices : [],
+          order: String(it?.order ?? ""),
+          points: String(it?.points ?? ""),
+        })
+        const changed = JSON.stringify(pick(prevItem)) !== JSON.stringify(pick(updated))
+        return { ...updated, _dirty: changed ? true : prevItem._dirty }
+      })
     })
   }
 
@@ -247,6 +281,11 @@ export default function AdminQuizzesPage() {
       // Save dirty items
       for (const it of editItems) {
         if (!it._dirty) continue
+        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
+        const correct =
+          String(it.qType || "").toLowerCase() === "checkbox"
+            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
         await fetch(`/api/admin/quizzes/items/${it.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -254,10 +293,10 @@ export default function AdminQuizzesPage() {
             type: it.type,
             qType: it.qType,
             content: it.content,
-            options: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""),
-            correctAnswer: Array.isArray(it.correctAnswerArray) && (it.qType || "").toLowerCase() === "checkbox"
-              ? it.correctAnswerArray.join("<br>")
-              : (Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")),
+            options,
+            correctAnswer: String(it.qType || "").toLowerCase() === "checkbox"
+              ? correct.join("<br>")
+              : (correct[0] || ""),
             order: it.order,
             points: it.points
           })
@@ -712,8 +751,34 @@ export default function AdminQuizzesPage() {
                     size="sm"
                     className="h-8"
                     onClick={saveQuizEdits}
-                    disabled={validateAll(editItems.map((it) => ({ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }))).hasAnyErrors}
-                    title={validateAll(editItems.map((it) => ({ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }))).hasAnyErrors ? "Resolve validation errors or duplicate orders" : ""}
+                    disabled={(() => {
+                      const normalized = editItems.map((it) => {
+                        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
+                        const correct =
+                          String(it.qType || "").toLowerCase() === "checkbox"
+                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
+                        return { ...it, optionsArray: options, correctAnswerArray: correct }
+                      })
+                      const hasErrors = validateAll(normalized).hasAnyErrors
+                      const hasChanges = editQuizDirty || editItems.some((i) => i._dirty)
+                      return hasErrors || !hasChanges
+                    })()}
+                    title={(() => {
+                      const normalized = editItems.map((it) => {
+                        const options = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
+                        const correct =
+                          String(it.qType || "").toLowerCase() === "checkbox"
+                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
+                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""]
+                        return { ...it, optionsArray: options, correctAnswerArray: correct }
+                      })
+                      const hasErrors = validateAll(normalized).hasAnyErrors
+                      const hasChanges = editQuizDirty || editItems.some((i) => i._dirty)
+                      if (hasErrors) return "Resolve validation errors or duplicate orders"
+                      if (!hasChanges) return "No changes to save"
+                      return ""
+                    })()}
                   >
                     Save
                   </Button>
@@ -743,7 +808,12 @@ export default function AdminQuizzesPage() {
                           .slice()
                           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                           .map((it, idx) => {
-                            const v = validateAll([{ ...it, optionsArray: Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || "") }]).perItem[0]
+                        const normalizedOptions = Array.isArray(it.uiOptions) ? it.uiOptions : (Array.isArray(it.optionsArray) ? it.optionsArray : splitOptionsString(it.options || ""))
+                        const normalizedCorrect =
+                          String(it.qType || "").toLowerCase() === "checkbox"
+                            ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => normalizedOptions[i]).filter((s) => typeof s === "string") : [])
+                            : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? normalizedOptions[it.uiCorrectIndices[0]] : ""]
+                        const v = validateAll([{ ...it, optionsArray: normalizedOptions, correctAnswerArray: normalizedCorrect }]).perItem[0]
                             const hasDup = v.hasDuplicateOrder
                             const hasErrs = v.errors.length > 0
                             return (
@@ -753,7 +823,7 @@ export default function AdminQuizzesPage() {
                                   <div className="flex flex-wrap items-start gap-3">
                                     <div>
                                       <div className="text-[11px] text-muted-foreground mb-1">Type</div>
-                                      <Select value={it.type || "Question"} onValueChange={(v) => markItemChange(idx, { type: v })}>
+                                  <Select value={it.type || "Question"} onValueChange={(v) => markItemChangeById(it.id, { type: v })}>
                                         <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                           <SelectItem value="Question">Question</SelectItem>
@@ -764,7 +834,7 @@ export default function AdminQuizzesPage() {
                                     {String(it.type || "").toLowerCase() !== "information" && (
                                       <div>
                                         <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
-                                        <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChange(idx, { qType: v })}>
+                                    <Select value={it.qType || "Radio"} onValueChange={(v) => markItemChangeById(it.id, { qType: v })}>
                                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="Radio">Radio</SelectItem>
@@ -777,49 +847,70 @@ export default function AdminQuizzesPage() {
                                   <div className="w-44 shrink-0">
                                     <div className={`${hasDup ? "relative" : ""}`}>
                                       <div className="text-[11px] text-muted-foreground mb-1">Order</div>
-                                      <Input value={String(it.order ?? "")} onChange={(e) => markItemChange(idx, { order: e.target.value })} className="h-8" />
+                                  <Input value={String(it.order ?? "")} onChange={(e) => markItemChangeById(it.id, { order: e.target.value })} className="h-8" />
                                       {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
                                     </div>
                                     {String(it.type || "").toLowerCase() !== "information" && (
                                       <div className="mt-2">
                                         <div className="text-[11px] text-muted-foreground mb-1">Points</div>
-                                        <Input value={String(it.points ?? "")} onChange={(e) => markItemChange(idx, { points: e.target.value })} className="h-8" />
+                                    <Input value={String(it.points ?? "")} onChange={(e) => markItemChangeById(it.id, { points: e.target.value })} className="h-8" />
                                       </div>
                                     )}
                                   </div>
                                 </div>
                                 <div>
                                   <div className="text-[11px] text-muted-foreground mb-1">Content</div>
-                                  <RichTextEditor value={it.content || ""} onChange={(html) => markItemChange(idx, { content: html })} />
+                                <RichTextEditor
+                                  value={it.content || ""}
+                                  onChange={(html) => {
+                                    if (String(it.content || "") === String(html || "")) return
+                                    markItemChangeById(it.id, { content: html })
+                                  }}
+                                />
                                 </div>
                                 {String(it.type || "").toLowerCase() !== "information" && (
                                   <>
                                     <div>
                                       <div className="text-[11px] text-muted-foreground mb-1">Options</div>
                                       <div className="space-y-2">
-                                        {Array.isArray(it.optionsArray) && it.optionsArray.length > 0 ? it.optionsArray.map((opt, oi) => (
+                                    {Array.isArray(it.uiOptions) && it.uiOptions.length > 0 ? it.uiOptions.map((opt, oi) => (
                                           <div key={oi} className="flex items-center gap-2">
                                             <Input
                                               value={opt}
                                               onChange={(e) => {
-                                                const arr = [...it.optionsArray]; arr[oi] = e.target.value
-                                                markItemChange(idx, { optionsArray: arr })
+                                            const next = [...(it.uiOptions || [])]
+                                            if (next[oi] === e.target.value) return
+                                            next[oi] = e.target.value
+                                            markItemChangeById(it.id, { uiOptions: next })
                                               }}
                                               className="h-8 flex-1"
                                               aria-label={`Option ${oi + 1}`}
                                             />
                                             <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
-                                              const arr = it.optionsArray.filter((_, k) => k !== oi)
-                                              markItemChange(idx, { optionsArray: arr })
+                                          const cur = it.uiOptions || []
+                                          const arr = cur.filter((_, k) => k !== oi)
+                                          // shift down indices after removal
+                                          const oldSel = Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices : []
+                                          const newSel = oldSel
+                                            .filter((v) => v !== oi)
+                                            .map((v) => (v > oi ? v - 1 : v))
+                                          markItemChangeById(it.id, { uiOptions: arr, uiCorrectIndices: newSel })
                                             }} title="Remove option" aria-label={`Remove option ${oi + 1}`}>Remove</Button>
                                             <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
-                                              const arr = [...it.optionsArray]; arr.splice(oi + 1, 0, opt)
-                                              markItemChange(idx, { optionsArray: arr })
+                                          const arr = [...(it.uiOptions || [])]
+                                          arr.splice(oi + 1, 0, opt)
+                                          // shift up indices after insertion
+                                          const oldSel = Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices : []
+                                          const newSel = oldSel.map((v) => (v > oi ? v + 1 : v))
+                                          markItemChangeById(it.id, { uiOptions: arr, uiCorrectIndices: newSel })
                                             }} title="Duplicate option" aria-label={`Duplicate option ${oi + 1}`}>Duplicate</Button>
                                           </div>
-                                        )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
+                                    )) : <div className="text-xs text-muted-foreground">No options. Add some.</div>}
                                         <div className="flex items-center gap-2">
-                                          <Button size="sm" variant="secondary" className="h-8" onClick={() => markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ""] })}>+ Add option</Button>
+                                      <Button size="sm" variant="secondary" className="h-8" onClick={() => {
+                                        const next = [...(it.uiOptions || []), ""]
+                                        markItemChangeById(it.id, { uiOptions: next })
+                                      }}>+ Add option</Button>
                                           <Popover>
                                             <PopoverTrigger asChild><Button size="sm" variant="outline" className="h-8">Bulk paste</Button></PopoverTrigger>
                                             <PopoverContent className="w-72 p-3">
@@ -827,7 +918,10 @@ export default function AdminQuizzesPage() {
                                               <Textarea className="h-24" onKeyDown={(e) => {
                                                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                                                   const lines = String(e.currentTarget.value || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
-                                                  if (lines.length) markItemChange(idx, { optionsArray: [...(it.optionsArray || []), ...lines] })
+                                              if (lines.length) {
+                                                const next = [...(it.uiOptions || []), ...lines]
+                                                markItemChangeById(it.id, { uiOptions: next })
+                                              }
                                                 }
                                               }} placeholder="Option 1\nOption 2" />
                                               <div className="mt-2 text-[11px] text-muted-foreground">Press Ctrl/Cmd+Enter to add</div>
@@ -840,9 +934,9 @@ export default function AdminQuizzesPage() {
                                       <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
                                       {String(it.qType || "").toLowerCase() === "checkbox" ? (
                                         <div className="space-y-2">
-                                          {(it.optionsArray || []).map((opt, oi) => {
+                                      {(it.uiOptions || []).map((opt, oi) => {
                                             const id = `cb-${idx}-${oi}`
-                                            const checked = Array.isArray(it.correctAnswerArray) && it.correctAnswerArray.includes(opt)
+                                        const checked = Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.includes(oi)
                                             return (
                                               <div key={id} className="flex items-center gap-2 text-sm">
                                                 <Checkbox
@@ -850,13 +944,18 @@ export default function AdminQuizzesPage() {
                                                   checked={!!checked}
                                                   onCheckedChange={(c) => {
                                                     const isChecked = !!c
-                                                    const cur = Array.isArray(it.correctAnswerArray) ? [...it.correctAnswerArray] : []
-                                                    if (isChecked) {
-                                                      if (!cur.includes(opt)) cur.push(opt)
-                                                    } else {
-                                                      const i = cur.indexOf(opt); if (i >= 0) cur.splice(i, 1)
-                                                    }
-                                                    markItemChange(idx, { correctAnswerArray: cur })
+                                                const cur = Array.isArray(it.uiCorrectIndices) ? [...it.uiCorrectIndices] : []
+                                                const has = cur.includes(oi)
+                                                if (isChecked && !has) cur.push(oi)
+                                                if (!isChecked && has) {
+                                                  const pos = cur.indexOf(oi)
+                                                  if (pos >= 0) cur.splice(pos, 1)
+                                                }
+                                                // avoid no-op
+                                                cur.sort((a,b)=>a-b)
+                                                const before = (it.uiCorrectIndices || []).slice().sort((a,b)=>a-b)
+                                                if (JSON.stringify(cur) === JSON.stringify(before)) return
+                                                markItemChangeById(it.id, { uiCorrectIndices: cur })
                                                   }}
                                                 />
                                                 <Label htmlFor={id} className="cursor-pointer">
@@ -868,14 +967,19 @@ export default function AdminQuizzesPage() {
                                         </div>
                                       ) : (
                                         <RadioGroup
-                                          value={(Array.isArray(it.correctAnswerArray) ? (it.correctAnswerArray[0] || "") : (it.correctAnswer || "")) || ""}
-                                          onValueChange={(v) => markItemChange(idx, { correctAnswerArray: [v] })}
+                                      value={Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? String(it.uiCorrectIndices[0]) : ""}
+                                          onValueChange={(v) => {
+                                        const nextIdx = Number(v)
+                                        const current = Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? it.uiCorrectIndices[0] : -1
+                                        if (current === nextIdx) return
+                                        markItemChangeById(it.id, { uiCorrectIndices: Number.isFinite(nextIdx) ? [nextIdx] : [] })
+                                          }}
                                         >
-                                          {(it.optionsArray || []).map((opt, oi) => {
-                                            const id = `ra-${idx}-${oi}`
+                                      {(it.uiOptions || []).map((opt, oi) => {
+                                        const id = `ra-${idx}-${oi}`
                                             return (
                                               <div key={id} className="flex items-center gap-2 text-sm">
-                                                <RadioGroupItem value={opt} id={id} />
+                                            <RadioGroupItem value={String(oi)} id={id} />
                                                 <Label htmlFor={id} className="cursor-pointer">
                                                   <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
                                                 </Label>
