@@ -19,8 +19,8 @@ function formatValue(val, isPercent = false, isCompletionRate = false, isTasksDu
   return val;
 }
 
-export function QuickMetrics() {
-  const { metrics, isLoading, isError } = useQuickMetrics();
+export function QuickMetrics({ initialData }) {
+  const { metrics, isLoading, isError } = useQuickMetrics(initialData);
 
   if (isLoading) {
     return <div className="h-24">Loading...</div>;

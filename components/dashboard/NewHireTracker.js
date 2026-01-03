@@ -60,9 +60,9 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 
-export function NewHireTracker() {
-  const [newHires, setNewHires] = useState([])
-  const [loading, setLoading] = useState(true)
+export function NewHireTracker({ initialNewHires = [] }) {
+  const [newHires, setNewHires] = useState(initialNewHires || [])
+  const [loading, setLoading] = useState(!(initialNewHires && initialNewHires.length > 0))
   const [selectedHire, setSelectedHire] = useState(null)
   const [startDateModalOpen, setStartDateModalOpen] = useState(false)
   const [selectedHireForStartDate, setSelectedHireForStartDate] = useState(null)
@@ -453,10 +453,16 @@ export function NewHireTracker() {
       try {
         const response = await fetch("/api/admin/dashboard/new-hires")
         if (!response.ok) {
-          throw new Error("Failed to fetch new hires")
+          let details = ""
+          try {
+            details = await response.text()
+          } catch {}
+          console.error("Failed to fetch new hires:", response.status, details)
+          toast.error("Failed to load new hires")
+          return
         }
         const data = await response.json()
-        setNewHires(data.newHires || [])
+        setNewHires(Array.isArray(data.newHires) ? data.newHires : [])
       } catch (error) {
         console.error("Error fetching new hires:", error)
         toast.error("Failed to load new hire data")
@@ -465,7 +471,11 @@ export function NewHireTracker() {
       }
     }
 
-    fetchNewHires()
+    if (!initialNewHires || initialNewHires.length === 0) {
+      fetchNewHires()
+    } else {
+      setLoading(false)
+    }
     fetchCurrentUser()
   }, [])
 

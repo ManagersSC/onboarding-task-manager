@@ -1,6 +1,7 @@
 import { getTasksWithCreator } from '@/lib/utils/dashboard/tasks';
 import Airtable from 'airtable';
 import { logAuditEvent } from '@/lib/auditLogger';
+import { revalidateTag } from 'next/cache';
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
 
@@ -8,6 +9,11 @@ import { unsealData } from "iron-session";
 
 export async function GET(req) {
   try {
+    const url = new URL(req.url)
+    const pageSizeParam = parseInt(url.searchParams.get("pageSize") || "50", 10)
+    const offsetParam = url.searchParams.get("cursor") || null
+    const pageSize = Math.min(Math.max(pageSizeParam, 1), 50)
+
     // Get userName from session
     let userName = null;
     try {
@@ -49,11 +55,42 @@ export async function GET(req) {
     console.log("userName:", userName);
     console.log("filterByFormula:", filterFormula);
 
+    // TTL cache: per user + cursor
+    const CACHE_TTL = 60 * 1000
+    const cacheKey = `tasks:${userName}:${pageSize}:${offsetParam || "first"}`
+    if (!global._dashboardTasksCache) global._dashboardTasksCache = {}
+    const cached = global._dashboardTasksCache[cacheKey]
+    const now = Date.now()
+    if (cached && now - cached.time < CACHE_TTL) {
+      return new Response(JSON.stringify(cached.data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     let tasks = [];
     try {
-      tasks = await base('Tasks')
-        .select({ filterByFormula: filterFormula })
-        .all();
+      const selectOptions = {
+        filterByFormula: filterFormula,
+        fields: [
+          "📌 Task",
+          "📖 Task Detail",
+          "📆 Due Date",
+          "🚨 Urgency",
+          "🚀 Status",
+          "👩 Created By",
+          "👨 Assigned Staff",
+          "Assigned Staff Name",
+          "👤 Assigned Applicant",
+          "Flagged Reason",
+          "Resolution Note",
+          "Task Type"
+        ],
+        pageSize
+      }
+      if (offsetParam) selectOptions.offset = offsetParam
+      const page = await base('Tasks').select(selectOptions).firstPage()
+      tasks = page
     } catch (airtableErr) {
       console.error("Airtable fetch error:", airtableErr);
       return new Response(
@@ -86,8 +123,9 @@ export async function GET(req) {
           .select({
             filterByFormula: `OR(${formula})`,
             fields: ['Name'],
+            pageSize: ids.length
           })
-          .all();
+          .firstPage();
         applicantNameById = Object.fromEntries(
           applicants.map(a => [a.id, a.fields['Name'] || 'Unknown'])
         );
@@ -140,7 +178,10 @@ export async function GET(req) {
       }
     }
 
-    return new Response(JSON.stringify({ tasks: grouped }), {
+    const responsePayload = { tasks: grouped }
+    global._dashboardTasksCache[cacheKey] = { data: responsePayload, time: now }
+
+    return new Response(JSON.stringify(responsePayload), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -220,6 +261,11 @@ export async function POST(req) {
       detailedMessage: `Task '${title}' created and assigned to staff ID ${assignTo}.`,
       request: req,
     });
+
+    try {
+      revalidateTag('dashboard:tasks')
+      revalidateTag('admin:overview')
+    } catch {}
 
     return new Response(
       JSON.stringify({ task: createdRecord }),

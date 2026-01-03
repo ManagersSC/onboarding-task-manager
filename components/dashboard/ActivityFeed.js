@@ -8,9 +8,9 @@ import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { Clock, FileText, UserPlus, CheckCircle, Calendar, MessageSquare } from 'lucide-react'
 import { Skeleton } from "@components/ui/skeleton"
 
-export function ActivityFeed() {
-  const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
+export function ActivityFeed({ initialActivities = [] }) {
+  const [activities, setActivities] = useState(initialActivities || [])
+  const [loading, setLoading] = useState(!initialActivities || initialActivities.length === 0)
 
   // Fetch activities
   const fetchActivities = useCallback(async () => {
@@ -30,8 +30,10 @@ export function ActivityFeed() {
 
   // Initial fetch
   useEffect(() => {
-    fetchActivities()
-  }, [fetchActivities])
+    if (!initialActivities || initialActivities.length === 0) {
+      fetchActivities()
+    }
+  }, [fetchActivities, initialActivities])
 
   // Get icon based on activity type
   const getActivityIcon = (type) => {

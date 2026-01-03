@@ -171,9 +171,9 @@ function isTaskChanged(original, edited, staff) {
   return false
 }
 
-export function TaskManagement() {
-  const [tasks, setTasks] = useState({ upcoming: [], overdue: [], flagged: [] })
-  const [loading, setLoading] = useState(true)
+export function TaskManagement({ initialTasks }) {
+  const [tasks, setTasks] = useState(initialTasks || { upcoming: [], overdue: [], flagged: [] })
+  const [loading, setLoading] = useState(!initialTasks)
   const [error, setError] = useState(null)
   const [newTaskModalOpen, setNewTaskModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState("John Doe")
@@ -446,6 +446,12 @@ function isAppraisalActionPlanTask(task) {
         setLoading(false)
       })
   }
+
+  useEffect(() => {
+    if (!initialTasks) {
+      fetchTasks()
+    }
+  }, []) 
 
   const openMonthlyReviewsModal = async (task) => {
     try {

@@ -3,6 +3,7 @@ import logger from "@/lib/utils/logger"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { revalidateTag } from "next/cache"
 
 // Date validation helper
 const validateStartDate = (dateString) => {
@@ -113,6 +114,11 @@ export async function POST(request, { params }) {
         fields: fieldsToUpdate
       }
     ])
+
+    try {
+      revalidateTag("dashboard:new-hires")
+      revalidateTag("admin:overview")
+    } catch {}
 
     // 8. Send webhook(s)
     // - Task assignment: only when the start date is today

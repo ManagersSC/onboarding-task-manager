@@ -2,31 +2,68 @@ import { NextResponse } from 'next/server'
 import Airtable from 'airtable'
 import { replaceVariables } from '@/lib/utils/email-variables'
 
+export const runtime = 'nodejs'
+
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+
+// Simple TTL cache for 60s
+let cacheData = null
+let cacheTime = 0
+const CACHE_TTL = 60 * 1000
 
 export async function GET() {
   try {
-    // Fetch applicants with "Hired" stage and expand linked records
-    const records = await base('Applicants').select({
-      filterByFormula: "{Stage} = 'Hired'",
-      sort: [{ field: 'Onboarding Start Date', direction: 'desc' }]
-    }).all()
+    const now = Date.now()
+    if (cacheData && now - cacheTime < CACHE_TTL) {
+      return NextResponse.json(cacheData)
+    }
+
+    // Fetch applicants with "Hired" stage, minimal fields, limited page
+    const fields = [
+      'Name',
+      'Email',
+      'Job Name',
+      'Onboarding Location',
+      'Onboarding Start Date',
+      'Onboarding Started',
+      'Onboarding Status',
+      'Onboarding Paused',
+      'Onboarding Paused At',
+      'Onboarding Paused Reason',
+      'Onboarding Resumed At',
+      'Onboarding Resumed On'
+    ]
+    let records = []
+    try {
+      records = await base('Applicants').select({
+        filterByFormula: "{Stage} = 'Hired'",
+        sort: [{ field: 'Onboarding Start Date', direction: 'desc' }],
+        fields,
+        pageSize: 25
+      }).firstPage()
+    } catch (airtableErr) {
+      return NextResponse.json(
+        { error: 'Airtable error fetching new hires', details: airtableErr.message },
+        { status: 502 }
+      )
+    }
 
     console.log('Fetched records:', records.length)
 
     const newHires = records.map(record => {
       // Use the "Job Name" field directly instead of linked records
-      const jobRole = record.get('Job Name') || 'Role TBD'
-      const location = record.get('Location') || record.fields?.fldITAJcvyysx3Gxr
+      const rawJobName = record.get('Job Name')
+      const jobRole = Array.isArray(rawJobName) ? (rawJobName[0] || 'Role TBD') : (rawJobName || 'Role TBD')
+      const location = record.get('Onboarding Location') || null
       
       console.log('Job Name field:', record.get('Job Name'))
-      console.log('Location field:', record.get('Location'))
+      console.log('Onboarding Location field:', record.get('Onboarding Location'))
       
       console.log('Record data:', {
         id: record.id,
         name: record.get('Name'),
         jobRole: jobRole,
-        location: location,
+        location,
         allFields: Object.keys(record.fields)
       })
       
@@ -52,18 +89,21 @@ export async function GET() {
         onboardingResumedOn: record.get('Onboarding Resumed On') || null,
         progress: calculateProgress(record),
         tasks: getTaskStats(record),
-        avatar: record.get('Profile Photo')?.[0]?.url
+        avatar: null
       }
 
       return applicantData
     })
 
     console.log('Processed new hires:', newHires.length)
-    return NextResponse.json({ newHires })
+    const response = { newHires }
+    cacheData = response
+    cacheTime = now
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching new hires:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch new hire data' },
+      { error: 'Failed to fetch new hire data', details: error.message },
       { status: 500 }
     )
   }

@@ -13,10 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Skeleton } from "@components/ui/skeleton"
 import { FileViewerModal } from "@components/dashboard/subComponents/file-viewer-modal"
 
-export function ResourceHub() {
-  const [resources, setResources] = useState([])
-  const [recentResources, setRecentResources] = useState([])
-  const [loading, setLoading] = useState(true)
+export function ResourceHub({ initialResources = [], initialTotal = 0 }) {
+  const [resources, setResources] = useState(
+    (initialResources || []).map((r) => ({ ...r, formattedDate: formatRelativeTime(r.updatedAt) }))
+  )
+  const [recentResources, setRecentResources] = useState(
+    (initialResources || []).map((r) => ({ ...r, formattedDate: formatRelativeTime(r.updatedAt) }))
+  )
+  const [loading, setLoading] = useState(!(initialResources && initialResources.length > 0))
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -24,7 +28,7 @@ export function ResourceHub() {
   const [fileModalOpen, setFileModalOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(5)
-  const [totalCount, setTotalCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(initialTotal || 0)
 
   const fetchResources = useCallback(async (query = "", pageNum = 1) => {
     setLoading(true)
@@ -61,7 +65,9 @@ export function ResourceHub() {
 
   // Fetch resources on component mount and when search query changes
   useEffect(() => {
-    fetchResources()
+    if (!initialResources || initialResources.length === 0) {
+      fetchResources()
+    }
   }, [pageSize])
 
   // Fetch when page or search changes

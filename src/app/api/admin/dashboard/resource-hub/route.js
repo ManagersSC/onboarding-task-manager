@@ -16,9 +16,10 @@ export async function GET(req){
     const searchQuery = req.nextUrl.searchParams.get('query');
     const page = parseInt(req.nextUrl.searchParams.get('page') || '1', 10);
     const pageSize = parseInt(req.nextUrl.searchParams.get('pageSize') || '5', 10);
+    const cursor = req.nextUrl.searchParams.get('cursor');
 
     // Cache key based on query, page, and pageSize
-    const cacheKey = JSON.stringify({ searchQuery, page, pageSize });
+    const cacheKey = JSON.stringify({ searchQuery, page, pageSize, cursor });
     const now = Date.now();
     if (
         resourceHubCache[cacheKey] &&
@@ -28,74 +29,107 @@ export async function GET(req){
     }
 
     try {
-        let allRecords = [];
-        await base("Onboarding Tasks")
-            .select({})
-            .eachPage((records, fetchNextPage) => {
-                allRecords = allRecords.concat(records);
-                fetchNextPage();
-            });
+        let resources = [];
+        let totalCount = null;
+        let nextCursor = null;
 
-        let filteredResources = allRecords;
+        // Default options: select only required fields, sort by Created Time desc
+        const selectOptions = {
+            fields: ['File(s)', 'Created Time'],
+            sort: [{ field: 'Created Time', direction: 'desc' }],
+            pageSize: Math.min(Math.max(pageSize, 1), 50)
+        };
+        if (cursor) selectOptions.offset = cursor;
 
-        if (searchQuery) {
-            const lowerCaseSearchQuery = searchQuery.toLowerCase();
-            filteredResources = allRecords.filter(record => {
-                const files = record.fields['File(s)'];
-                if (!files || !Array.isArray(files)) {
-                    return false; // No files attached or not in expected format
-                }
-                // Check if any file's filename contains the search query (case-insensitive)
-                return files.some(file => 
-                    file.filename && file.filename.toLowerCase().includes(lowerCaseSearchQuery)
-                );
-            });
-        }
+        if (!searchQuery) {
+            // Fast path: no search, just return one Airtable page
+            const pageRecords = await base("Onboarding Tasks").select(selectOptions).firstPage();
+            const lastResponse = base("Onboarding Tasks")._lastResponse;
+            nextCursor = lastResponse && lastResponse.offset ? lastResponse.offset : null;
 
-        // Flatten all files from all records into individual resources
-        let allFiles = [];
-        filteredResources.forEach(record => {
-            const files = record.fields['File(s)'];
-            if (files && Array.isArray(files) && files.length > 0) {
-                files.forEach(file => {
-                    allFiles.push({
-                        id: file.id || `${record.id}_${file.filename}`,
-                        title: file.filename || `Untitled Resource ${record.id}`,
-                        url: file.url,
-                        mimeType: file.type,
-                        size: file.size,
-                        type: "document",
-                        updatedAt: file.createdTime || file.lastModifiedTime || record.fields['Created Time'] || null
+            const files = [];
+            pageRecords.forEach(record => {
+                const attachments = record.fields['File(s)'];
+                if (attachments && Array.isArray(attachments)) {
+                    attachments.forEach(file => {
+                        files.push({
+                            id: file.id || `${record.id}_${file.filename}`,
+                            title: file.filename || `Untitled Resource ${record.id}`,
+                            url: file.url,
+                            mimeType: file.type,
+                            size: file.size,
+                            type: "document",
+                            updatedAt: file.createdTime || file.lastModifiedTime || record.fields['Created Time'] || null
+                        });
                     });
+                }
+            });
+            // Sort by updatedAt desc and slice to pageSize (already limited but ensure file-level limit)
+            files.sort((a, b) => {
+                const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                return dateB - dateA;
+            });
+            resources = files.slice(0, pageSize);
+        } else {
+            // Search path: iterate a limited number of pages to find matches by filename
+            const lower = searchQuery.toLowerCase();
+            const maxPages = 4; // cap pages scanned for search
+            let scannedPages = 0;
+            let offset = cursor || undefined;
+            const matches = [];
+
+            while (scannedPages < maxPages) {
+                const opts = { ...selectOptions };
+                if (offset) opts.offset = offset;
+                const recs = await base("Onboarding Tasks").select(opts).firstPage();
+                const lr = base("Onboarding Tasks")._lastResponse;
+                offset = lr && lr.offset ? lr.offset : null;
+                scannedPages++;
+
+                recs.forEach(record => {
+                    const attachments = record.fields['File(s)'];
+                    if (attachments && Array.isArray(attachments)) {
+                        attachments.forEach(file => {
+                            const title = file.filename || "";
+                            if (title.toLowerCase().includes(lower)) {
+                                matches.push({
+                                    id: file.id || `${record.id}_${file.filename}`,
+                                    title,
+                                    url: file.url,
+                                    mimeType: file.type,
+                                    size: file.size,
+                                    type: "document",
+                                    updatedAt: file.createdTime || file.lastModifiedTime || record.fields['Created Time'] || null
+                                });
+                            }
+                        });
+                    }
                 });
+
+                if (!offset) break;
+                if (matches.length >= pageSize * page) break; // enough to serve requested page
             }
-        });
-        // Sort by updatedAt descending (most recent first)
-        allFiles.sort((a, b) => {
-            const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-            const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-            return dateB - dateA;
-        });
-        // Filter by search query on file title
-        let filteredFiles = allFiles;
-        if (searchQuery) {
-            const lowerCaseSearchQuery = searchQuery.toLowerCase();
-            filteredFiles = allFiles.filter(file =>
-                file.title && file.title.toLowerCase().includes(lowerCaseSearchQuery)
-            );
+
+            matches.sort((a, b) => {
+                const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            totalCount = matches.length; // approximate within scanned window
+            const start = (page - 1) * pageSize;
+            const end = start + pageSize;
+            resources = matches.slice(start, end);
+            nextCursor = offset; // where to continue scanning from
         }
-        // Limit to 5 files
-        // Pagination logic
-        const totalCount = filteredFiles.length;
-        const startIdx = (page - 1) * pageSize;
-        const endIdx = startIdx + pageSize;
-        const resources = filteredFiles.slice(startIdx, endIdx);
 
         const responseData = {
             resources,
             totalCount,
             page,
-            pageSize
+            pageSize,
+            nextCursor
         };
 
         // Update cache
