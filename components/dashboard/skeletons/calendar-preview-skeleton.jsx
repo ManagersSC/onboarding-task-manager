@@ -17,7 +17,7 @@ export function SkeletonBase({ children }) {
 
 export function CalendarPreviewSkeleton() {
   return (
-    <Card className="border-none shadow-lg bg-black text-white overflow-hidden">
+    <Card className="border-none shadow-lg bg-background text-white overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
