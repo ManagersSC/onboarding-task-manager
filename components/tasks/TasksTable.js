@@ -390,8 +390,8 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         if (searchTerm) params.append("search", searchTerm)
         if (weekFilter !== "all") params.append("week", weekFilter)
         if (dayFilter !== "all") params.append("day", dayFilter)
-        if (jobFilter !== "all") params.append("jobTitle", jobFilter)
-        if (folderFilter !== "all") params.append("folderName", folderFilter)
+        if (jobFilter !== "all") params.append("jobTitle", jobFilter.trim())
+        if (folderFilter !== "all") params.append("folderName", folderFilter.trim())
 
         // Add sorting parameters if a column is selected
         if (sortColumn) {
