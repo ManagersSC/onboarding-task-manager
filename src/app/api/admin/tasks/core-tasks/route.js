@@ -50,6 +50,7 @@ export async function GET(request) {
     const sortDirection = searchParams.get("sortDirection") === "desc" ? "desc" : "asc"
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10)
     const clientCursor = searchParams.get("cursor")
+  // debug disabled
 
     // Treat "all" as no-filter
     const rawWeek = searchParams.get("week") || ""
@@ -68,12 +69,13 @@ export async function GET(request) {
     .base(process.env.AIRTABLE_BASE_ID)
 
   // 4. Build filter conditions (assemble formula later after enriching with Job/Folder filters)
+  const escapeForAirtableString = (value) => (value || "").replace(/'/g, "''")
   const conditions = [
       "NOT({Week Number} = '0')",
       "NOT({Day Number} = '0')",
       "NOT({Type} = 'Managers')"
     ]
-    const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
+    const safeSearch = escapeForAirtableString(search).replace(/\n/g, ' ')
     if (search) {
       conditions.push(`OR(
           FIND(LOWER("${safeSearch}"), LOWER({Task})) > 0,
@@ -83,63 +85,34 @@ export async function GET(request) {
     }
     if (week)    conditions.push(`{Week Number} = '${week}'`)
     if (day)     conditions.push(`{Day Number} = '${day}'`)
-    if (jobRole) conditions.push(`{Job} = '${jobRole}'`)
+    if (jobRole) conditions.push(`FIND('${jobRole}', ARRAYJOIN({Job})) > 0`)
 
-  // Resolve Job Title to Job record IDs (if provided) and add to conditions
+  // Match Job by primary field value (Title) present in the linked field {Job}
   if (jobTitle) {
     try {
-      const safeJobTitle = jobTitle.replace(/'/g, "\\'")
-      const jobRecords = await base('Jobs')
-        .select({
-          fields: ['Title'],
-          // Case-insensitive exact title match
-          filterByFormula: `LOWER({Title}) = LOWER('${safeJobTitle}')`
-        })
-        .all()
-      const jobIds = jobRecords.map(j => j.id)
-
-      if (jobIds.length === 0) {
-        // Force no results if the requested title doesn't exist
-        conditions.push('FALSE()')
-      } else if (jobIds.length === 1) {
-        conditions.push(`{Job} = '${jobIds[0]}'`)
-      } else {
-        conditions.push(`OR(${jobIds.map(id => `{Job} = '${id}'`).join(',')})`)
-      }
+      const safeJobTitle = escapeForAirtableString(jobTitle)
+      // Compare against primary values exposed by ARRAYJOIN of the linked field
+      conditions.push(`FIND(LOWER(TRIM('${safeJobTitle}')), LOWER(ARRAYJOIN({Job}))) > 0`)
     } catch (e) {
-      logger.error('Error resolving job title filter:', e)
-      // Defensive: avoid broad results if resolution fails unexpectedly
+      logger.error('Error building job title filter:', e)
       conditions.push('FALSE()')
     }
   }
 
-  // Resolve Folder Name to Folder record IDs (if provided) and add to conditions
+  // Match Folder by primary field value (Name) present in the linked field {Folder Name}
   if (folderNameFilter) {
     try {
-      const safeFolderName = folderNameFilter.replace(/'/g, "\\'")
-      const folderRecords = await base('Onboarding Folders')
-        .select({
-          fields: ['Name'],
-          // Case-insensitive exact name match
-          filterByFormula: `LOWER({Name}) = LOWER('${safeFolderName}')`
-        })
-        .all()
-      const folderIdsForFilter = folderRecords.map(f => f.id)
-
-      if (folderIdsForFilter.length === 0) {
-        conditions.push('FALSE()')
-      } else if (folderIdsForFilter.length === 1) {
-        conditions.push(`{Folder Name} = '${folderIdsForFilter[0]}'`)
-      } else {
-        conditions.push(`OR(${folderIdsForFilter.map(id => `{Folder Name} = '${id}'`).join(',')})`)
-      }
+      const safeFolderName = escapeForAirtableString(folderNameFilter)
+      // Compare against primary values exposed by ARRAYJOIN of the linked field
+      conditions.push(`FIND(LOWER(TRIM('${safeFolderName}')), LOWER(ARRAYJOIN({Folder Name}))) > 0`)
     } catch (e) {
-      logger.error('Error resolving folder name filter:', e)
+      logger.error('Error building folder name filter:', e)
       conditions.push('FALSE()')
     }
   }
 
   const filterByFormula = `AND(${conditions.join(",")})`
+  // debug disabled
 
     // 5. Sort field mapping (unchanged)
     const sortFieldMap = { createdTime: 'Created Time' }
@@ -155,7 +128,6 @@ export async function GET(request) {
     if (filterByFormula) params.set('filterByFormula', filterByFormula)
     params.set('sort[0][field]', sortField)
     params.set('sort[0][direction]', sortDirection)
-
     logger.debug(`Filter Formula: ${filterByFormula}`)
     // logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
 
