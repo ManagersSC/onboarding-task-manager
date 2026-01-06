@@ -50,14 +50,7 @@ export async function GET(request) {
     const sortDirection = searchParams.get("sortDirection") === "desc" ? "desc" : "asc"
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10)
     const clientCursor = searchParams.get("cursor")
-  const debugMode = (searchParams.get("debug") || "").toLowerCase() === "true"
-
-  const debugInfo = {
-    params: { search, jobRole, jobTitle, folderNameFilter, sortBy, sortDirection, pageSize, clientCursor },
-    resolved: { jobIds: [], folderIds: [] },
-    formula: "",
-    restUrl: "",
-  }
+  // debug disabled
 
     // Treat "all" as no-filter
     const rawWeek = searchParams.get("week") || ""
@@ -98,16 +91,6 @@ export async function GET(request) {
   if (jobTitle) {
     try {
       const safeJobTitle = escapeForAirtableString(jobTitle)
-      // Attempt resolution (for debug visibility only)
-      try {
-        const jobRecords = await base('Jobs')
-          .select({
-            fields: ['Title'],
-            filterByFormula: `LOWER(TRIM({Title})) = LOWER(TRIM('${safeJobTitle}'))`
-          })
-          .all()
-        debugInfo.resolved.jobIds = jobRecords.map(j => j.id)
-      } catch {}
       // Compare against primary values exposed by ARRAYJOIN of the linked field
       conditions.push(`FIND(LOWER(TRIM('${safeJobTitle}')), LOWER(ARRAYJOIN({Job}))) > 0`)
     } catch (e) {
@@ -120,16 +103,6 @@ export async function GET(request) {
   if (folderNameFilter) {
     try {
       const safeFolderName = escapeForAirtableString(folderNameFilter)
-      // Attempt resolution (for debug visibility only)
-      try {
-        const folderRecords = await base('Onboarding Folders')
-          .select({
-            fields: ['Name'],
-            filterByFormula: `LOWER(TRIM({Name})) = LOWER(TRIM('${safeFolderName}'))`
-          })
-          .all()
-        debugInfo.resolved.folderIds = folderRecords.map(f => f.id)
-      } catch {}
       // Compare against primary values exposed by ARRAYJOIN of the linked field
       conditions.push(`FIND(LOWER(TRIM('${safeFolderName}')), LOWER(ARRAYJOIN({Folder Name}))) > 0`)
     } catch (e) {
@@ -139,7 +112,7 @@ export async function GET(request) {
   }
 
   const filterByFormula = `AND(${conditions.join(",")})`
-  debugInfo.formula = filterByFormula
+  // debug disabled
 
     // 5. Sort field mapping (unchanged)
     const sortFieldMap = { createdTime: 'Created Time' }
@@ -155,11 +128,7 @@ export async function GET(request) {
     if (filterByFormula) params.set('filterByFormula', filterByFormula)
     params.set('sort[0][field]', sortField)
     params.set('sort[0][direction]', sortDirection)
-  debugInfo.restUrl = apiUrl.toString()
-
     logger.debug(`Filter Formula: ${filterByFormula}`)
-  logger.debug(`Resolved Job IDs: ${JSON.stringify(debugInfo.resolved.jobIds)}`)
-  logger.debug(`Resolved Folder IDs: ${JSON.stringify(debugInfo.resolved.folderIds)}`)
     // logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
 
     const airtableRes = await fetch(apiUrl.toString(), {
@@ -283,17 +252,14 @@ export async function GET(request) {
     })
 
     // 11. Return JSON with pagination info
-    return Response.json(Object.assign(
-      {
-        tasks,
-        pagination: {
-          pageSize,
-          hasNextPage: Boolean(nextCursor),
-          nextCursor,
-        }
-      },
-      debugMode ? { debug: debugInfo } : {}
-    ))
+    return Response.json({
+      tasks,
+      pagination: {
+        pageSize,
+        hasNextPage: Boolean(nextCursor),
+        nextCursor,
+      }
+    })
 
   } catch (error) {
     // Error handling (unchanged)
