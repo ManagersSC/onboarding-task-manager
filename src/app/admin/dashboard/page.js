@@ -17,7 +17,7 @@ const ResourceHubLazy = dynamic(() => import("@components/dashboard/ResourceHub"
 export default async function DashboardPage() {
   let overview = null
   try {
-    const hdrs = headers()
+    const hdrs = await headers()
     const host = hdrs.get("host")
     const proto = hdrs.get("x-forwarded-proto") || "http"
     const baseUrl = `${proto}://${host}`
