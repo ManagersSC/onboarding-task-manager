@@ -22,6 +22,14 @@ export function CustomCalendar({ selected, onSelect, className }) {
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const startWeekday = monthStart.getDay() // 0 (Sun) .. 6 (Sat)
+
+  // Build a 7xN grid with leading/trailing placeholders so weekdays line up
+  const leadingPlaceholders = Array.from({ length: startWeekday }, () => null)
+  const totalCells = Math.ceil((startWeekday + daysInMonth.length) / 7) * 7
+  const trailingCount = totalCells - (startWeekday + daysInMonth.length)
+  const trailingPlaceholders = Array.from({ length: trailingCount }, () => null)
+  const calendarCells = [...leadingPlaceholders, ...daysInMonth, ...trailingPlaceholders]
 
   // Get day names
   const dayNames = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
@@ -52,7 +60,11 @@ export function CustomCalendar({ selected, onSelect, className }) {
         ))}
 
         {/* Calendar days */}
-        {daysInMonth.map((day) => {
+        {calendarCells.map((day, i) => {
+          if (!day) {
+            // Placeholder cell (prev/next month)
+            return <div key={`ph-${i}`} className="h-9 w-9" />
+          }
           const isSelected = selected && isSameDay(day, selected)
           const isToday = isSameDay(day, new Date())
 

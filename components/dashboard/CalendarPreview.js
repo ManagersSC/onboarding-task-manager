@@ -758,7 +758,7 @@ export function CalendarPreview() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Card className="border-none shadow-lg bg-black text-white overflow-hidden">
+      <Card className="border-none shadow-lg bg-background text-white overflow-hidden">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -962,7 +962,7 @@ export function CalendarPreview() {
                 animate="visible"
                 exit="exit"
                 variants={modalVariants}
-                className="bg-black text-white rounded-xl overflow-hidden border border-gray-800"
+                className="bg-background text-white rounded-xl overflow-hidden border border-gray-800"
               >
                 {/* Modal Header */}
                 <div className="p-4 border-b border-gray-800 flex items-center justify-between">
