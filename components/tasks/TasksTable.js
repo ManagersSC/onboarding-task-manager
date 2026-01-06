@@ -23,9 +23,73 @@ import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
 import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 
 // All table filters
-function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, onDayChange, taskCount, selectedTasks, onDeleteSelected, onRefresh }) {
+function TableFilters({
+  onSearch,
+  onSubmit,
+  isLoading,
+  week,
+  day,
+  onWeekChange,
+  onDayChange,
+  job,
+  folder,
+  onJobChange,
+  onFolderChange,
+  taskCount,
+  selectedTasks,
+  onDeleteSelected,
+  onRefresh
+}) {
   const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
+
+  // Lazy options
+  const [jobOptions, setJobOptions] = useState([])
+  const [folderOptions, setFolderOptions] = useState([])
+  const [jobsLoading, setJobsLoading] = useState(false)
+  const [foldersLoading, setFoldersLoading] = useState(false)
+  const [jobsFetched, setJobsFetched] = useState(false)
+  const [foldersFetched, setFoldersFetched] = useState(false)
+
+  const fetchJobs = async () => {
+    if (jobsFetched || jobsLoading) return
+    setJobsLoading(true)
+    try {
+      const res = await fetch("/api/admin/jobs?includeClosed=true")
+      if (!res.ok) throw new Error("Failed to fetch jobs")
+      const data = await res.json()
+      const titles = (data.jobs || [])
+        .map((j) => j.title)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setJobOptions(Array.from(new Set(titles)))
+      setJobsFetched(true)
+    } catch (e) {
+      // swallow - UI will just show empty list
+    } finally {
+      setJobsLoading(false)
+    }
+  }
+
+  const fetchFolders = async () => {
+    if (foldersFetched || foldersLoading) return
+    setFoldersLoading(true)
+    try {
+      const res = await fetch("/api/admin/folders?includeInactive=true")
+      if (!res.ok) throw new Error("Failed to fetch folders")
+      const data = await res.json()
+      const names = (data.folders || [])
+        .map((f) => f.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setFolderOptions(Array.from(new Set(names)))
+      setFoldersFetched(true)
+    } catch (e) {
+      // swallow - UI will just show empty list
+    } finally {
+      setFoldersLoading(false)
+    }
+  }
 
   // Emit debounced value when it changes
   useEffect(() => {
@@ -88,6 +152,48 @@ function TableFilters({ onSearch, onSubmit, isLoading, week, day, onWeekChange, 
                   Day {d}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* Job Filter (by Title) */}
+          <Select value={job} onValueChange={onJobChange} onOpenChange={(open) => { if (open) fetchJobs() }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Job" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Jobs</SelectItem>
+              {jobsLoading ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading jobs...</div>
+              ) : jobOptions.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">No jobs found</div>
+              ) : (
+                jobOptions.map((title) => (
+                  <SelectItem key={title} value={title}>
+                    {title}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+
+          {/* Folder Filter (by Name) */}
+          <Select value={folder} onValueChange={onFolderChange} onOpenChange={(open) => { if (open) fetchFolders() }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Folder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Folders</SelectItem>
+              {foldersLoading ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading folders...</div>
+              ) : folderOptions.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">No folders found</div>
+              ) : (
+                folderOptions.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -168,6 +274,9 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [weekFilter, setWeekFilter] = useState("all")
   const [dayFilter, setDayFilter] = useState("all")
+  const [jobFilter, setJobFilter] = useState("all")
+  const [folderFilter, setFolderFilter] = useState("all")
+
 
   // Task Editing
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -281,6 +390,8 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         if (searchTerm) params.append("search", searchTerm)
         if (weekFilter !== "all") params.append("week", weekFilter)
         if (dayFilter !== "all") params.append("day", dayFilter)
+        if (jobFilter !== "all") params.append("jobTitle", jobFilter)
+        if (folderFilter !== "all") params.append("folderName", folderFilter)
 
         // Add sorting parameters if a column is selected
         if (sortColumn) {
@@ -323,7 +434,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         setLoading(false)
       }
     },
-    [pagination.pageSize, searchTerm, weekFilter, dayFilter, sortColumn, sortDirection],
+    [pagination.pageSize, searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, sortColumn, sortDirection],
   )
 
   // Refetch on filters or pageSize change
@@ -335,7 +446,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
       cursorHistory: [],
     }))
     fetchTasks(null)
-  }, [searchTerm, weekFilter, dayFilter, pagination.pageSize, fetchTasks])
+  }, [searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, pagination.pageSize, fetchTasks])
 
   // Pagination
   const handleNextPage = useCallback(() => {
@@ -360,6 +471,8 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const handleSubmit = useCallback((term) => setSearchTerm(term), [])
   const handleWeekChange = useCallback((value) => setWeekFilter(value), [])
   const handleDayChange = useCallback((value) => setDayFilter(value), [])
+  const handleJobChange = useCallback((value) => setJobFilter(value), [])
+  const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
 
   // Open edit sheet
   const handleOpenEditSheet = (taskId) => {
@@ -511,6 +624,10 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
           day={dayFilter}
           onWeekChange={handleWeekChange}
           onDayChange={handleDayChange}
+          job={jobFilter}
+          folder={folderFilter}
+          onJobChange={handleJobChange}
+          onFolderChange={handleFolderChange}
           taskCount={tasks.length}
           selectedTasks={selectedTasks}
           onDeleteSelected={handleDeleteSelected}
@@ -539,6 +656,20 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
                 label="Search" 
                 value={searchTerm} 
                 onRemove={() => setSearchTerm("")} 
+              />
+            )}
+            {jobFilter !== "all" && (
+              <AnimatedFilterPill 
+                label="Job" 
+                value={jobFilter} 
+                onRemove={() => setJobFilter("all")} 
+              />
+            )}
+            {folderFilter !== "all" && (
+              <AnimatedFilterPill 
+                label="Folder" 
+                value={folderFilter} 
+                onRemove={() => setFolderFilter("all")} 
               />
             )}
           </div>

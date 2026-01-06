@@ -40,10 +40,12 @@ export async function GET(request) {
     userEmail = session.userEmail
     userName = session.userName
 
-    // 2. Parse Query Parameters (unchanged)
+  // 2. Parse Query Parameters (extended)
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search") || ""
     const jobRole = searchParams.get("jobRole") || ""
+  const jobTitle = searchParams.get("jobTitle") || "" // New: filter by Job Title (not record id)
+  const folderNameFilter = searchParams.get("folderName") || "" // New: filter by Folder Name
     const sortBy = searchParams.get("sortBy") || "Task"
     const sortDirection = searchParams.get("sortDirection") === "desc" ? "desc" : "asc"
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10)
@@ -61,8 +63,12 @@ export async function GET(request) {
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    // 4. Build filter formula
-    const conditions = [
+  // Initialize Airtable base (used for resolving Job/Folder titles to record IDs and later lookups)
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
+    .base(process.env.AIRTABLE_BASE_ID)
+
+  // 4. Build filter conditions (assemble formula later after enriching with Job/Folder filters)
+  const conditions = [
       "NOT({Week Number} = '0')",
       "NOT({Day Number} = '0')",
       "NOT({Type} = 'Managers')"
@@ -78,7 +84,62 @@ export async function GET(request) {
     if (week)    conditions.push(`{Week Number} = '${week}'`)
     if (day)     conditions.push(`{Day Number} = '${day}'`)
     if (jobRole) conditions.push(`{Job} = '${jobRole}'`)
-    const filterByFormula = `AND(${conditions.join(",")})`
+
+  // Resolve Job Title to Job record IDs (if provided) and add to conditions
+  if (jobTitle) {
+    try {
+      const safeJobTitle = jobTitle.replace(/'/g, "\\'")
+      const jobRecords = await base('Jobs')
+        .select({
+          fields: ['Title'],
+          // Case-insensitive exact title match
+          filterByFormula: `LOWER({Title}) = LOWER('${safeJobTitle}')`
+        })
+        .all()
+      const jobIds = jobRecords.map(j => j.id)
+
+      if (jobIds.length === 0) {
+        // Force no results if the requested title doesn't exist
+        conditions.push('FALSE()')
+      } else if (jobIds.length === 1) {
+        conditions.push(`{Job} = '${jobIds[0]}'`)
+      } else {
+        conditions.push(`OR(${jobIds.map(id => `{Job} = '${id}'`).join(',')})`)
+      }
+    } catch (e) {
+      logger.error('Error resolving job title filter:', e)
+      // Defensive: avoid broad results if resolution fails unexpectedly
+      conditions.push('FALSE()')
+    }
+  }
+
+  // Resolve Folder Name to Folder record IDs (if provided) and add to conditions
+  if (folderNameFilter) {
+    try {
+      const safeFolderName = folderNameFilter.replace(/'/g, "\\'")
+      const folderRecords = await base('Onboarding Folders')
+        .select({
+          fields: ['Name'],
+          // Case-insensitive exact name match
+          filterByFormula: `LOWER({Name}) = LOWER('${safeFolderName}')`
+        })
+        .all()
+      const folderIdsForFilter = folderRecords.map(f => f.id)
+
+      if (folderIdsForFilter.length === 0) {
+        conditions.push('FALSE()')
+      } else if (folderIdsForFilter.length === 1) {
+        conditions.push(`{Folder Name} = '${folderIdsForFilter[0]}'`)
+      } else {
+        conditions.push(`OR(${folderIdsForFilter.map(id => `{Folder Name} = '${id}'`).join(',')})`)
+      }
+    } catch (e) {
+      logger.error('Error resolving folder name filter:', e)
+      conditions.push('FALSE()')
+    }
+  }
+
+  const filterByFormula = `AND(${conditions.join(",")})`
 
     // 5. Sort field mapping (unchanged)
     const sortFieldMap = { createdTime: 'Created Time' }
@@ -109,9 +170,7 @@ export async function GET(request) {
     const records = rawRecords || []
     const nextCursor = offset || null
 
-    // 7. Initialize Airtable base for folder fetching
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
-      .base(process.env.AIRTABLE_BASE_ID)
+  // 7. Use Airtable base for folder fetching (already initialized above)
 
     // 8. Get folder names for linked records
     const folderIds = new Set()
