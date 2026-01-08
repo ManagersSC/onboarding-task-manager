@@ -107,13 +107,13 @@ export async function updateApplicant(payload) {
   return existing
 }
 
-export async function addApplicantsByEmail(emails = [], jobType = "") {
+export async function addApplicantsByEmail(emails = [], jobId = "") {
   if (!Array.isArray(emails) || emails.length === 0) {
     throw new Error("No valid emails provided")
   }
   
-  if (!jobType) {
-    throw new Error("Job type is required")
+  if (!jobId) {
+    throw new Error("Job id is required")
   }
 
   try {
@@ -125,13 +125,13 @@ export async function addApplicantsByEmail(emails = [], jobType = "") {
     // Prepare payload for webhook
     const webhookPayload = {
       emails,
-      jobType,
+      jobId,
       timestamp: new Date().toISOString(),
       source: 'Admin Panel',
       requestId: `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     }
 
-    console.log(`Calling webhook for ${emails.length} applicants, job type: ${jobType}`)
+    console.log(`Calling webhook for ${emails.length} applicants, job id: ${jobId}`)
 
     // Call the webhook directly from server action
     // This is secure because the webhook URL is only stored in environment variables on the server
@@ -210,20 +210,69 @@ export async function addApplicantsByEmail(emails = [], jobType = "") {
     }
 
     // Success - automation has actually completed processing
-    console.log(`Successfully processed ${emails.length} applicants for ${jobType} position`)
+    console.log(`Successfully processed ${emails.length} applicants for jobId=${jobId}`)
     
     // For now, return mock data to maintain compatibility with existing UI
     // In the future, you can return the actual response from your automation
     const created = await addApplicantsFromEmails(emails)
     
-    // Update the mock data with the selected job type
+    // Update the mock data with the selected job id
     created.forEach(applicant => {
-      applicant.job = jobType
+      applicant.job = jobId
     })
-    
+
+    // Audit log success
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "Applicant Invites Submitted",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Invites submitted for ${emails.length} applicant(s); jobId=${jobId}; webhookStatus=${webhookResult.status}; requestId=${webhookPayload.requestId}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for addApplicantsByEmail success", err)
+    }
+
     return created
   } catch (error) {
     console.error('Error calling webhook:', error)
+    // Audit log failure
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "Applicant Invites Submitted",
+        eventStatus: "Failure",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Invites failed for ${emails.length} applicant(s); jobId=${jobId}; error=${error?.message || "Unknown"}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for addApplicantsByEmail failure", err)
+    }
     throw new Error(`Failed to add applicants: ${error.message}`)
   }
 }
@@ -344,8 +393,26 @@ export async function createHiredApplicant({ name = "", email = "", jobId = "", 
 
     // Check for existing applicant by email
     const existing = await base("Applicants")
-      .select({ filterByFormula: `{Email}='${normalisedEmail}'`, maxRecords: 1 })
+      .select({
+        filterByFormula: `LOWER({Email})='${normalisedEmail.replace(/'/g, "\\'")}'`,
+        maxRecords: 1
+      })
       .firstPage()
+
+    // Build stage history with appended Hired stage
+    const nowIso = new Date().toISOString()
+    let stageHistoryArr = []
+    if (existing && existing.length > 0) {
+      try {
+        const prevHistory = existing[0].get("Stage History")
+        if (Array.isArray(prevHistory)) {
+          stageHistoryArr = [...prevHistory]
+        } else if (typeof prevHistory === "string" && prevHistory.trim()) {
+          stageHistoryArr = JSON.parse(prevHistory)
+        }
+      } catch {}
+    }
+    stageHistoryArr.push({ stage: "Hired", at: nowIso })
 
     const commonFields = {
       Name: name,
@@ -353,6 +420,7 @@ export async function createHiredApplicant({ name = "", email = "", jobId = "", 
       Stage: "Hired",
       "Onboarding Manual Import": true,
       "Job Board": "Manual",
+      "Stage History": JSON.stringify(stageHistoryArr),
     }
 
     // Link to Jobs via Applying For (linked record field)
@@ -404,7 +472,10 @@ export async function createHiredApplicant({ name = "", email = "", jobId = "", 
 
       // Notify the acting admin if a Staff record is found
       try {
-        const staffRecs = await base("Staff").select({ filterByFormula: `{Email}='${String(userEmail).toLowerCase()}'`, maxRecords: 1 }).firstPage()
+        const staffRecs = await base("Staff").select({
+          filterByFormula: `LOWER({Email})='${String(userEmail).toLowerCase().replace(/'/g, "\\'")}'`,
+          maxRecords: 1
+        }).firstPage()
         const staff = staffRecs?.[0]
         if (staff) {
           await createNotification({
@@ -427,6 +498,141 @@ export async function createHiredApplicant({ name = "", email = "", jobId = "", 
     return result
   } catch (error) {
     logger?.error?.("createHiredApplicant error", error)
+    // Audit log failure
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "New Hire Added",
+        eventStatus: "Failure",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Create hired candidate failed for ${name} <${normalisedEmail}> (jobId: ${jobId || jobName || "n/a"}); error=${error?.message || "Unknown"}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for createHiredApplicant failure", err)
+    }
     throw new Error(error?.message || "Failed to create hired candidate")
+  }
+}
+
+// Lookup an applicant by email (case-insensitive). Returns null if not found.
+export async function findApplicantByEmail(email = "") {
+  if (!email) return null
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Server configuration error. Missing Airtable credentials.")
+  }
+  const normalisedEmail = String(email).trim().toLowerCase()
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+  const recs = await base("Applicants")
+    .select({
+      filterByFormula: `LOWER({Email})='${normalisedEmail.replace(/'/g, "\\'")}'`,
+      maxRecords: 1
+    })
+    .firstPage()
+  const rec = recs?.[0]
+  if (!rec) return null
+  const applying = rec.get("Applying For")
+  let jobTitle = ""
+  try {
+    const jobId = Array.isArray(applying) && applying.length > 0 ? applying[0] : ""
+    if (jobId) {
+      const job = await base("Jobs").find(jobId)
+      jobTitle = job?.get("Title") || ""
+    }
+  } catch {}
+  return {
+    id: rec.id,
+    name: rec.get("Name") || "",
+    email: rec.get("Email") || normalisedEmail,
+    jobTitle,
+    jobId: (Array.isArray(applying) && applying.length > 0) ? applying[0] : "",
+    stage: rec.get("Stage") || ""
+  }
+}
+
+// Set an existing applicant's Stage to Hired, appending stage history.
+export async function hireExistingApplicant({ id = "" } = {}) {
+  if (!id) throw new Error("Missing applicant id")
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    throw new Error("Server configuration error. Missing Airtable credentials.")
+  }
+  try {
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+    const existing = await base("Applicants").find(id)
+    if (!existing) throw new Error("Applicant not found")
+    const nowIso = new Date().toISOString()
+    let stageHistoryArr = []
+    try {
+      const prevHistory = existing.get("Stage History")
+      if (Array.isArray(prevHistory)) stageHistoryArr = [...prevHistory]
+      else if (typeof prevHistory === "string" && prevHistory.trim()) stageHistoryArr = JSON.parse(prevHistory)
+    } catch {}
+    stageHistoryArr.push({ stage: "Hired", at: nowIso })
+    const updated = await base("Applicants").update([
+      { id, fields: { Stage: "Hired", "Stage History": JSON.stringify(stageHistoryArr) } }
+    ])
+    // Audit log
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "New Hire Added",
+        eventStatus: "Success",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Existing applicant ${existing.get("Name") || id} marked as Hired.`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for hireExistingApplicant", err)
+    }
+    return { id: updated[0].id, fields: updated[0].fields, mode: "updated" }
+  } catch (error) {
+    logger?.error?.("hireExistingApplicant error", error)
+    // Audit log failure
+    try {
+      const cookieStore = await cookies()
+      const sealedSession = cookieStore.get("session")?.value
+      let session = null
+      if (sealedSession) {
+        session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+      }
+      const userEmail = session?.userEmail || "Unknown"
+      const userRole = session?.userRole || "admin"
+      const userName = session?.userName || userEmail
+      const fakeRequest = { headers: new Headers({ "user-agent": "server-action", host: process.env.VERCEL_URL || "localhost" }) }
+      await logAuditEvent({
+        eventType: "New Hire Added",
+        eventStatus: "Failure",
+        userRole,
+        userName,
+        userIdentifier: userEmail,
+        detailedMessage: `Mark existing applicant as Hired failed for id=${id}; error=${error?.message || "Unknown"}`,
+        request: fakeRequest,
+      })
+    } catch (err) {
+      logger?.error?.("audit log failed for hireExistingApplicant failure", err)
+    }
+    throw new Error(error?.message || "Failed to update applicant status")
   }
 }
