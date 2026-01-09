@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
 import Airtable from "airtable"
 
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
-
 // GET /api/admin/jobs - Fetch all open jobs
 export async function GET(request) {
   try {
+    if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+      return NextResponse.json(
+        { error: "Server configuration error. Missing Airtable credentials." },
+        { status: 500 }
+      )
+    }
+    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
     const { searchParams } = new URL(request.url)
     const includeClosed = searchParams.get('includeClosed') === 'true'
 

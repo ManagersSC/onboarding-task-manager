@@ -129,13 +129,29 @@ export async function GET(request) {
     params.set('sort[0][field]', sortField)
     params.set('sort[0][direction]', sortDirection)
     logger.debug(`Filter Formula: ${filterByFormula}`)
-    // logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
+    logger.debug(`Airtable REST URL: ${apiUrl.toString()}`)
 
     const airtableRes = await fetch(apiUrl.toString(), {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
     })
     if (!airtableRes.ok) {
-      throw new Error(`Airtable REST error: ${airtableRes.statusText}`)
+      const errorBody = await airtableRes.text().catch(() => '')
+      const ctx = {
+        url: apiUrl.toString(),
+        filterByFormula,
+        sortField,
+        sortDirection,
+        pageSize,
+        offset: clientCursor,
+      }
+      logger.error(
+        `Airtable REST error (core-tasks): ${airtableRes.status} ${airtableRes.statusText}; body=${errorBody}; context=${JSON.stringify(
+          ctx
+        )}`
+      )
+      throw new Error(
+        `Airtable REST error: ${airtableRes.status} ${airtableRes.statusText}${errorBody ? ` - ${errorBody}` : ''}`
+      )
     }
 
     const { records: rawRecords, offset } = await airtableRes.json()
