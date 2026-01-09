@@ -1,0 +1,75 @@
+.driver-popover {
+  border-radius: 12px !important;
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  overflow: hidden;
+  animation: otm-fade-in 240ms ease-out both, otm-slide-up 240ms ease-out both;
+  max-width: 360px !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+.driver-popover-title {
+  font-size: 15px !important;
+  font-weight: 650 !important;
+  margin-bottom: 8px !important;
+}
+.driver-popover-description {
+  font-size: 13.5px !important;
+  opacity: .85;
+  line-height: 1.45;
+}
+.driver-popover-progress-text {
+  font-size: 11px !important;
+  opacity: .6;
+}
+.driver-popover-navigation-btns {
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+.driver-popover-btn {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  border: 1px solid hsl(var(--border)) !important;
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+  cursor: pointer !important;
+}
+.driver-popover-btn:hover {
+  transform: translateY(-1px);
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-color: transparent !important;
+  font-weight: 600 !important;
+}
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  filter: brightness(1.05);
+}
+
+.driver-overlay,
+.driver-page-overlay {
+  background: rgba(0,0,0,0.35) !important; /* lighter page dim */
+}
+
+.driver-popover-arrow {
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));
+}
+
+@keyframes otm-fade-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+@keyframes otm-slide-up {
+  from { transform: translateY(6px) }
+  to { transform: translateY(0) }
+}
+
+

@@ -1,51 +1,43 @@
 "use client"
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { driver as createDriver } from "driver.js"
-import "driver.js/dist/driver.css"
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import AnchoredTour from "@components/onboarding/anchored-tour"
 
 const TourContext = createContext({ start: () => {}, stop: () => {}, isRunning: false })
 export const useTour = () => useContext(TourContext)
 
 export default function TourProvider({ children, steps = [], autoStart = false, onFinish }) {
-  const driverRef = useRef(null)
   const [isRunning, setIsRunning] = useState(false)
 
-  const handleDestroyed = useCallback(() => {
+  const start = useCallback(() => setIsRunning(true), [])
+  const stop = useCallback(() => {
     setIsRunning(false)
     onFinish?.()
   }, [onFinish])
 
-  const start = useCallback(() => {
-    const drv = createDriver({
-      allowClose: true,
-      showProgress: true,
-      smoothScroll: true,
-      animate: true,
-      overlayOpacity: 0.6,
-      popoverClass: "otm-tour-popover",
-      onDestroyed: handleDestroyed,
-    })
-    driverRef.current = drv
-    setIsRunning(true)
-    drv.setSteps(steps || [])
-    drv.drive()
-  }, [steps, handleDestroyed])
-
-  const stop = useCallback(() => {
-    try { driverRef.current?.destroy() } catch {}
-    handleDestroyed()
-  }, [handleDestroyed])
-
   useEffect(() => {
     if (autoStart) {
-      const t = setTimeout(() => start(), 200)
+      const t = setTimeout(() => setIsRunning(true), 200)
       return () => clearTimeout(t)
     }
-  }, [autoStart, start])
+  }, [autoStart])
 
   const value = useMemo(() => ({ start, stop, isRunning }), [start, stop, isRunning])
-  return <TourContext.Provider value={value}>{children}</TourContext.Provider>
+
+  return (
+    <TourContext.Provider value={value}>
+      {children}
+      {isRunning && (
+        <AnchoredTour
+          steps={steps}
+          onClose={stop}
+          onFinish={() => {
+            stop()
+          }}
+        />
+      )}
+    </TourContext.Provider>
+  )
 }
 
 

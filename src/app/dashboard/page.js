@@ -588,7 +588,7 @@ export default function DashboardPage() {
       <main className="container mx-auto px-4 py-8">
         {/* ... rest of your JSX remains the same ... */}
         <div className="mb-8 flex justify-between items-center">
-          <div>
+          <div data-tour="user.header">
             <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
             <p className="text-muted-foreground">Manage and track your onboarding tasks</p>
           </div>
