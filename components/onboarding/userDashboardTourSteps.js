@@ -1,11 +1,12 @@
 export const userDashboardTourSteps = [
   {
-    element: '[data-tour="user.header"]',
+    element: '[data-tour="user.welcome"]',
     popover: {
       title: "Welcome to your Task Dashboard",
       description:
         "This quick tour shows where everything is. You can replay it anytime from Help (?).",
-      side: "bottom",
+      side: "center",
+      align: "center",
     },
   },
   {
@@ -74,3 +75,6 @@ export const userDashboardTourSteps = [
     },
   },
 ]
+
+
+

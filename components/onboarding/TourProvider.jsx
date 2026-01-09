@@ -1,43 +1,81 @@
 "use client"
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
-import AnchoredTour from "@components/onboarding/anchored-tour"
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { driver as createDriver } from "driver.js"
+import "driver.js/dist/driver.css"
 
-const TourContext = createContext({ start: () => {}, stop: () => {}, isRunning: false })
+const TourContext = createContext({
+  start: () => {},
+  stop: () => {},
+  isRunning: false,
+})
+
 export const useTour = () => useContext(TourContext)
 
-export default function TourProvider({ children, steps = [], autoStart = false, onFinish }) {
+/**
+ * Generic Tour provider backed by driver.js
+ * - Accepts `steps` in driver.js format
+ * - Persists completion via /api/user/preferences/tours
+ * - Can autoStart when `autoStart` is true
+ * - `flagKey` controls which preference flag is updated (e.g., "user_dashboard_v1")
+ */
+export default function TourProvider({ children, steps = [], autoStart = false, flagKey = "dashboard_v1" }) {
+  const driverRef = useRef(null)
   const [isRunning, setIsRunning] = useState(false)
 
-  const start = useCallback(() => setIsRunning(true), [])
-  const stop = useCallback(() => {
+  const persistCompleted = useCallback(async () => {
+    try {
+      await fetch("/api/user/preferences/tours", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [flagKey]: true }),
+      })
+    } catch {}
+  }, [flagKey])
+
+  const handleDestroyed = useCallback(() => {
     setIsRunning(false)
-    onFinish?.()
-  }, [onFinish])
+    persistCompleted()
+  }, [persistCompleted])
+
+  const start = useCallback(() => {
+    const drv = createDriver({
+      allowClose: true,
+      showProgress: true,
+      smoothScroll: true,
+      animate: true,
+      overlayOpacity: 0.6,
+      popoverClass: "otm-tour-popover",
+      onDestroyed: handleDestroyed,
+    })
+    driverRef.current = drv
+    setIsRunning(true)
+    drv.setSteps(steps || [])
+    drv.drive()
+  }, [steps, handleDestroyed])
+
+  const stop = useCallback(() => {
+    try {
+      driverRef.current?.destroy()
+    } catch {}
+    handleDestroyed()
+  }, [handleDestroyed])
 
   useEffect(() => {
     if (autoStart) {
-      const t = setTimeout(() => setIsRunning(true), 200)
+      const t = setTimeout(() => start(), 150)
       return () => clearTimeout(t)
     }
-  }, [autoStart])
+  }, [autoStart, start])
 
   const value = useMemo(() => ({ start, stop, isRunning }), [start, stop, isRunning])
 
   return (
     <TourContext.Provider value={value}>
       {children}
-      {isRunning && (
-        <AnchoredTour
-          steps={steps}
-          onClose={stop}
-          onFinish={() => {
-            stop()
-          }}
-        />
-      )}
     </TourContext.Provider>
   )
 }
+
 
 

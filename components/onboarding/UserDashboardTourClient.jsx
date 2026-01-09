@@ -1,48 +1,42 @@
 "use client"
 
-import React, { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import TourProvider from "@components/onboarding/TourProvider"
 import { userDashboardTourSteps } from "@components/onboarding/userDashboardTourSteps"
-import { useSearchParams } from "next/navigation"
 
 export default function UserDashboardTourClient({ children }) {
-  const search = useSearchParams()
   const [autoStart, setAutoStart] = useState(false)
+  const search = useSearchParams()
 
-  const syncFromServer = useCallback(async () => {
-    try {
-      const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" })
-      const data = res.ok ? await res.json() : {}
-      // introTooltip true => already completed, so do NOT auto-start
-      const force = search?.get("tour") === "dashboard"
-      setAutoStart(force || !Boolean(data?.introTooltip))
-      return Boolean(data?.introTooltip)
-    } catch {
-      setAutoStart(search?.get("tour") === "dashboard")
-      return false
+  useEffect(() => {
+    let cancelled = false
+    async function init() {
+      try {
+        const res = await fetch("/api/user/preferences/tours", { cache: "no-store" })
+        const data = res.ok ? await res.json() : {}
+        const force = search?.get("tour") === "dashboard"
+        const shouldStart = force || !data?.user_dashboard_v1
+        if (!cancelled) setAutoStart(shouldStart)
+      } catch {
+        const force = search?.get("tour") === "dashboard"
+        if (!cancelled) setAutoStart(Boolean(force))
+      }
+    }
+    init()
+    return () => {
+      cancelled = true
     }
   }, [search])
 
-  useEffect(() => {
-    syncFromServer()
-  }, [syncFromServer])
-
-  const markCompleted = useCallback(async () => {
-    try {
-      await fetch("/api/user/intro-tooltip", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ introTooltip: true }),
-      })
-    } catch {}
-  }, [])
-
   return (
-    <TourProvider steps={userDashboardTourSteps} autoStart={autoStart} onFinish={markCompleted}>
-      {/* anchor for the first centered step */}
-      <div className="sr-only" data-tour="user.welcome" aria-hidden="true" />
+    <TourProvider steps={userDashboardTourSteps} autoStart={autoStart} flagKey="user_dashboard_v1">
+      {/* hidden anchor for centered welcome step */}
+      <div data-tour="user.welcome" className="sr-only" aria-hidden="true" />
       {children}
     </TourProvider>
   )
 }
+
+
 
