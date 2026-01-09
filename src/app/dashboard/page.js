@@ -643,7 +643,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="mb-6 flex flex-col space-y-4" data-tour="user.taskCards">
+        <div className="mb-6 flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div className="relative w-full md:w-80" data-tour="user.search">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -923,6 +923,7 @@ export default function DashboardPage() {
         ) : (
           <AnimatePresence mode="wait">
             <motion.div key={`${section}-${activeView}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            <div data-tour="user.taskCards">
             {section === "active" && activeView === "kanban" ? (
               (filters.status === "assigned" || filters.status === "overdue") ? (
                 // Single status selected → show only that column; items displayed in a 3xN grid
@@ -1115,6 +1116,7 @@ export default function DashboardPage() {
                 </div>
               </>
             )}
+            </div>
             </motion.div>
           </AnimatePresence>
         )}
