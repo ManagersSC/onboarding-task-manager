@@ -3,40 +3,19 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { driver as createDriver } from "driver.js"
 import "driver.js/dist/driver.css"
+import "./tour.css"
 
-const TourContext = createContext({
-  start: () => {},
-  stop: () => {},
-  isRunning: false,
-})
-
+const TourContext = createContext({ start: () => {}, stop: () => {}, isRunning: false })
 export const useTour = () => useContext(TourContext)
 
-/**
- * Generic Tour provider backed by driver.js
- * - Accepts `steps` in driver.js format
- * - Persists completion via /api/user/preferences/tours
- * - Can autoStart when `autoStart` is true
- * - `flagKey` controls which preference flag is updated (e.g., "user_dashboard_v1")
- */
-export default function TourProvider({ children, steps = [], autoStart = false, flagKey = "dashboard_v1" }) {
-  const driverRef = useRef(null)
+export default function TourProvider({ children, steps = [], autoStart = false, onFinish }) {
   const [isRunning, setIsRunning] = useState(false)
-
-  const persistCompleted = useCallback(async () => {
-    try {
-      await fetch("/api/user/preferences/tours", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [flagKey]: true }),
-      })
-    } catch {}
-  }, [flagKey])
+  const driverRef = useRef(null)
 
   const handleDestroyed = useCallback(() => {
     setIsRunning(false)
-    persistCompleted()
-  }, [persistCompleted])
+    onFinish?.()
+  }, [onFinish])
 
   const start = useCallback(() => {
     const drv = createDriver({
@@ -44,7 +23,10 @@ export default function TourProvider({ children, steps = [], autoStart = false, 
       showProgress: true,
       smoothScroll: true,
       animate: true,
-      overlayOpacity: 0.6,
+      overlayOpacity: 0.2,
+      overlayColor: "rgba(0,0,0,0.35)",
+      stagePadding: 8,
+      stageRadius: 8,
       popoverClass: "otm-tour-popover",
       onDestroyed: handleDestroyed,
     })
@@ -55,15 +37,13 @@ export default function TourProvider({ children, steps = [], autoStart = false, 
   }, [steps, handleDestroyed])
 
   const stop = useCallback(() => {
-    try {
-      driverRef.current?.destroy()
-    } catch {}
+    try { driverRef.current?.destroy() } catch {}
     handleDestroyed()
   }, [handleDestroyed])
 
   useEffect(() => {
     if (autoStart) {
-      const t = setTimeout(() => start(), 150)
+      const t = setTimeout(() => start(), 200)
       return () => clearTimeout(t)
     }
   }, [autoStart, start])
@@ -76,6 +56,3 @@ export default function TourProvider({ children, steps = [], autoStart = false, 
     </TourContext.Provider>
   )
 }
-
-
-

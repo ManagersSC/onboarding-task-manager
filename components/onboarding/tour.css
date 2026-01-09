@@ -63,6 +63,17 @@
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));
 }
 
+/* Stronger spotlight ring on the focused element */
+.driver-stage,
+.driver-highlighted-element {
+  border-radius: 12px !important;
+  /* inner bright ring + soft primary glow + subtle depth */
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,0.9),
+    0 0 0 8px rgba(59,130,246,0.35),
+    0 10px 30px rgba(0,0,0,0.35) !important;
+}
+
 @keyframes otm-fade-in {
   from { opacity: 0 }
   to { opacity: 1 }
