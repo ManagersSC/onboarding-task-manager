@@ -5,6 +5,8 @@ import { useState, useEffect, useMemo } from "react"
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
 import { ProfileActions } from "@components/ProfileActions"
+import UserDashboardTourClient from "@components/onboarding/UserDashboardTourClient"
+import { useTour } from "@components/onboarding/TourProvider"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Skeleton } from "@components/ui/skeleton"
@@ -12,6 +14,7 @@ import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card, CardContent, CardTitle } from "@components/ui/card"
+import { Checkbox } from "@components/ui/checkbox"
 import {
   Clock,
   CheckCircle,
@@ -25,6 +28,7 @@ import {
   Flag,
   Loader2,
   RefreshCw,
+  CircleHelp,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@components/ui/tabs"
@@ -529,19 +533,72 @@ export default function DashboardPage() {
     }))
   }
 
+  function HelpControls() {
+    const { start } = useTour();
+    const [autoShow, setAutoShow] = useState(true);
+
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" });
+          const d = res.ok ? await res.json() : {};
+          // introTooltip true => tour already completed => do NOT auto show
+          if (!cancelled) setAutoShow(!Boolean(d?.introTooltip));
+        } catch {}
+      })();
+      return () => { cancelled = true };
+    }, []);
+
+    const onToggle = async (checked) => {
+      setAutoShow(checked);
+      try {
+        // store inverse: autoShow=true means not completed
+        await fetch("/api/user/intro-tooltip", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ introTooltip: !checked })
+        });
+      } catch {}
+    };
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Help" data-tour="user.help">
+            <CircleHelp className="h-5 w-5" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-64">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Show tips automatically</div>
+              <Checkbox checked={autoShow} onCheckedChange={onToggle} aria-label="Show tips automatically" />
+            </div>
+            <Button size="sm" className="w-full" onClick={() => start()}>Start tour</Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
+    <UserDashboardTourClient>
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
         {/* ... rest of your JSX remains the same ... */}
         <div className="mb-8 flex justify-between items-center">
-          <div>
+          <div data-tour="user.header">
             <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
             <p className="text-muted-foreground">Manage and track your onboarding tasks</p>
           </div>
-          <ProfileActions />
+          <div className="flex items-center gap-2">
+            <HelpControls />
+            <ProfileActions />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-tour="user.metrics">
           <Card>
             <CardContent className="p-6 flex items-center justify-between">
               <div>
@@ -588,7 +645,7 @@ export default function DashboardPage() {
 
         <div className="mb-6 flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="relative w-full md:w-80">
+            <div className="relative w-full md:w-80" data-tour="user.search">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search tasks..."
@@ -600,6 +657,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
               {section === "active" && (
                 <Tabs
+                  data-tour="user.statusTabs"
                   value={filters.status === "completed" ? "all" : filters.status}
                   onValueChange={(value) => setFilters({ ...filters, status: value })}
                   className="w-full md:w-auto"
@@ -628,7 +686,7 @@ export default function DashboardPage() {
               )}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 bg-card text-card-foreground">
+                  <Button variant="outline" size="sm" className="h-9 bg-card text-card-foreground" data-tour="user.filters">
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
                     Filters
                     {getActiveFiltersCount() > 0 && (
@@ -736,6 +794,7 @@ export default function DashboardPage() {
                   size="sm"
                   onClick={() => switchSection("active")}
                   className="h-9"
+                  data-tour="user.sectionToggle"
                 >
                   Active
                 </Button>
@@ -744,27 +803,30 @@ export default function DashboardPage() {
                   size="sm"
                   onClick={() => switchSection("completed")}
                   className="h-9"
+                  data-tour="user.sectionToggle"
                 >
                   Completed
                 </Button>
-                <Button
-                  variant={activeView === "kanban" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveView("kanban")}
-                  className="h-9"
-                >
-                  <LayoutDashboard className="h-4 w-4 mr-2" />
-                  Kanban
-                </Button>
-                <Button
-                  variant={activeView === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveView("list")}
-                  className="h-9"
-                >
-                  <ListFilter className="h-4 w-4 mr-2" />
-                  List
-                </Button>
+                <span data-tour="user.viewToggle" className="inline-flex gap-2">
+                  <Button
+                    variant={activeView === "kanban" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveView("kanban")}
+                    className="h-9"
+                  >
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Kanban
+                  </Button>
+                  <Button
+                    variant={activeView === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveView("list")}
+                    className="h-9"
+                  >
+                    <ListFilter className="h-4 w-4 mr-2" />
+                    List
+                  </Button>
+                </span>
               </div>
             </div>
           </div>
@@ -861,6 +923,7 @@ export default function DashboardPage() {
         ) : (
           <AnimatePresence mode="wait">
             <motion.div key={`${section}-${activeView}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            <div data-tour="user.taskCards">
             {section === "active" && activeView === "kanban" ? (
               (filters.status === "assigned" || filters.status === "overdue") ? (
                 // Single status selected → show only that column; items displayed in a 3xN grid
@@ -1053,10 +1116,12 @@ export default function DashboardPage() {
                 </div>
               </>
             )}
+            </div>
             </motion.div>
           </AnimatePresence>
         )}
       </main>
     </div>
+    </UserDashboardTourClient>
   )
 }
