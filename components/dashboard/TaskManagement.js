@@ -218,6 +218,38 @@ export function TaskManagement({ initialTasks }) {
   const [claimingTaskId, setClaimingTaskId] = useState(null)
   const pendingTimersRef = useRef(new Map())
 
+  // Selection state for bulk actions
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set())
+
+  // Simple admin gate – this component is used on admin dashboard
+  const isAdmin = true
+  const canDeleteTask = (task) => {
+    if (!task) return false
+    return isAdmin || (task.createdBy && task.createdBy === currentUser)
+  }
+
+  // Normalize status strings for consistent comparisons and display
+  const normalizeStatus = (status) => {
+    if (!status) return ""
+    return String(status).trim().toLowerCase()
+  }
+
+  const addSelection = (taskId) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev)
+      next.add(taskId)
+      return next
+    })
+  }
+  const removeSelection = (taskId) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev)
+      next.delete(taskId)
+      return next
+    })
+  }
+  const clearSelection = () => setSelectedTaskIds(new Set())
+
   // Helper: global task when no assigned staff
   function isGlobalTask(task) {
     return !task?.for || task.for === "" || (Array.isArray(task.for) && task.for.length === 0)
@@ -808,12 +840,23 @@ function isAppraisalActionPlanTask(task) {
 
   const filteredTasks = (taskList, tabId) => {
     if (!searchQuery) return taskList
-    return taskList.filter(
-      (task) =>
-        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getStaffName(task.for).toLowerCase().includes(searchQuery.toLowerCase()),
-    )
+    const q = searchQuery.toLowerCase()
+    return taskList.filter((task) => {
+      const title = (task.title || "").toLowerCase()
+      const desc = (task.description || "").toLowerCase()
+      const staffName = getStaffName(task.for).toLowerCase()
+      const applicant = (task.applicantName || "").toLowerCase()
+      const flagged = (task.flaggedReason || "").toLowerCase()
+      const due = (task.rawDueDate || task.dueDate || "").toString().toLowerCase()
+      return (
+        title.includes(q) ||
+        desc.includes(q) ||
+        staffName.includes(q) ||
+        applicant.includes(q) ||
+        flagged.includes(q) ||
+        due.includes(q)
+      )
+    })
   }
 
   // Time options for Appraisal modal
@@ -864,6 +907,7 @@ function isAppraisalActionPlanTask(task) {
 
   const TaskItem = ({ task, index, tabId }) => {
     const PriorityIcon = priorityIcons[task.priority.toLowerCase().trim()] || Clock
+    const normalizedStatusValue = normalizeStatus(task.status)
 
     return (
       <motion.div
@@ -885,6 +929,16 @@ function isAppraisalActionPlanTask(task) {
             }
           }}
         >
+          {/* Row selection checkbox */}
+          <Checkbox
+            checked={selectedTaskIds.has(task.id)}
+            onCheckedChange={(val) => {
+              if (val) addSelection(task.id)
+              else removeSelection(task.id)
+            }}
+            aria-label="Select task"
+            className="mr-1"
+          />
           {/* Priority Indicator */}
           <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
             <PriorityIcon
@@ -955,11 +1009,11 @@ function isAppraisalActionPlanTask(task) {
           <div className="ml-auto flex items-center flex-shrink-0">
             <Badge
               className={`text-[10px] px-2 py-0.5 font-medium border-0 rounded-md ${
-                task.status === " Overdue" || task.status === "overdue"
+                normalizedStatusValue === "overdue"
                   ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
-                  : task.status === "In-progress" || task.status === "in-progress" || task.status === "today"
+                  : normalizedStatusValue === "in-progress" || normalizedStatusValue === "today"
                     ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                    : task.status === "Flagged" || task.status === "flagged"
+                    : normalizedStatusValue === "flagged"
                       ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                       : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
               }`}
@@ -989,6 +1043,8 @@ function isAppraisalActionPlanTask(task) {
                         }
                       }}
                       disabled={claimingTaskId === task.id}
+                      aria-label="Claim task"
+                      title="Claim task"
                     >
                       {claimingTaskId === task.id ? (
                         <motion.div
@@ -1019,6 +1075,8 @@ function isAppraisalActionPlanTask(task) {
                         setSelectedTask(task)
                         setShowTaskDetails(true)
                       }}
+                      aria-label="View details"
+                      title="View details"
                     >
                       <Eye className="h-3 w-3" />
                     </Button>
@@ -1028,6 +1086,43 @@ function isAppraisalActionPlanTask(task) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              {/* Consistent overflow menu for unclaimed */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                    aria-label="More actions"
+                    title="More actions"
+                  >
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedTask(task)
+                      setShowTaskDetails(true)
+                    }}
+                  >
+                    <Eye className="h-3 w-3 mr-2" />
+                    View Details
+                  </DropdownMenuItem>
+                  {canDeleteTask(task) && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setDeleteTaskDialogOpen(true)
+                        setTaskToDelete(task)
+                      }}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash className="h-3 w-3 mr-2" />
+                      Delete Task
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               </>
             ) : (
               <>
@@ -1042,6 +1137,8 @@ function isAppraisalActionPlanTask(task) {
                           e.stopPropagation()
                           completeTask(task.id)
                         }}
+                        aria-label="Mark complete"
+                        title="Mark complete"
                       >
                         <CheckCircle2 className="h-3 w-3" />
                       </Button>
@@ -1142,6 +1239,8 @@ function isAppraisalActionPlanTask(task) {
                           e.stopPropagation()
                           openFlagDialog(task)
                         }}
+                        aria-label="Flag"
+                        title="Flag"
                       >
                         <Flag className="h-3 w-3" />
                       </Button>
@@ -1165,6 +1264,8 @@ function isAppraisalActionPlanTask(task) {
                         e.stopPropagation()
                         openFlagDialog(task)
                       }}
+                      aria-label="Flag"
+                      title="Flag"
                     >
                       <Flag className="h-3 w-3" />
                     </Button>
@@ -1222,8 +1323,75 @@ function isAppraisalActionPlanTask(task) {
       return aPriority - bPriority
     })
 
+    const visibleIds = sortedTasks.map((t) => t.id)
+    const visibleSelected = visibleIds.filter((id) => selectedTaskIds.has(id))
+
+    const handleSelectAll = () => {
+      const allSelected = visibleSelected.length === visibleIds.length
+      if (allSelected) {
+        // Clear only visible ids
+        setSelectedTaskIds((prev) => {
+          const next = new Set(prev)
+          visibleIds.forEach((id) => next.delete(id))
+          return next
+        })
+      } else {
+        setSelectedTaskIds((prev) => {
+          const next = new Set(prev)
+          visibleIds.forEach((id) => next.add(id))
+          return next
+        })
+      }
+    }
+
+    const bulkClaim = async () => {
+      for (const t of sortedTasks) {
+        if (selectedTaskIds.has(t.id) && isGlobalTask(t)) {
+          // Fire and forget; UI already indicates busy per-item if needed
+          handleClaimTask(t.id)
+        }
+      }
+      clearSelection()
+    }
+
+    const bulkDelete = async () => {
+      const toDelete = sortedTasks.filter((t) => selectedTaskIds.has(t.id) && canDeleteTask(t))
+      for (const t of toDelete) {
+        await deleteTask(t.id)
+      }
+      clearSelection()
+    }
+
     return (
       <div className="space-y-2">
+        {visibleSelected.length > 0 && (
+          <div className="sticky top-0 z-10 -mt-1 mb-1 rounded-md border bg-card px-2 py-1.5 flex items-center gap-2 text-xs shadow-sm">
+            <Checkbox
+              checked={visibleSelected.length === visibleIds.length}
+              onCheckedChange={handleSelectAll}
+              aria-label="Select all visible"
+            />
+            <span className="text-muted-foreground">{visibleSelected.length} selected</span>
+            <div className="ml-auto flex items-center gap-1">
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={bulkClaim}>
+                Claim
+              </Button>
+              <Button size="sm" variant="destructive" className="h-7 px-2" onClick={bulkDelete}>
+                Delete
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={clearSelection}
+                aria-label="Clear selection"
+                title="Clear selection"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
         <AnimatePresence mode="popLayout">
           {sortedTasks.map((task, index) => (
             <TaskItem key={task.id} task={task} index={index} tabId={tabId} />
