@@ -1109,18 +1109,6 @@ function isAppraisalActionPlanTask(task) {
                     <Eye className="h-3 w-3 mr-2" />
                     View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (isAppraisalTask(task)) {
-                        handleClaimAppraisalTask(task)
-                      } else {
-                        handleClaimTask(task.id)
-                      }
-                    }}
-                  >
-                    <Plus className="h-3 w-3 mr-2" />
-                    Claim Task
-                  </DropdownMenuItem>
                   {canDeleteTask(task) && (
                     <DropdownMenuItem
                       onClick={() => {
@@ -1391,8 +1379,15 @@ function isAppraisalActionPlanTask(task) {
               <Button size="sm" variant="destructive" className="h-7 px-2" onClick={bulkDelete}>
                 Delete
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={clearSelection}>
-                Clear
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={clearSelection}
+                aria-label="Clear selection"
+                title="Clear selection"
+              >
+                <X className="h-3 w-3" />
               </Button>
             </div>
           </div>
