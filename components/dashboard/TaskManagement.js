@@ -396,6 +396,43 @@ function isAppraisalActionPlanTask(task) {
   const [monthlyPeople, setMonthlyPeople] = useState([])
   const [monthlySelected, setMonthlySelected] = useState({})
   const [monthlyReviewsTaskId, setMonthlyReviewsTaskId] = useState(null)
+  // Hire completion history state
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyItems, setHistoryItems] = useState([])
+
+  const fetchHireCompletionHistory = async ({ applicantId, limit = 30 } = {}) => {
+    setHistoryLoading(true)
+    try {
+      const qs = new URLSearchParams({ limit: String(limit) })
+      if (applicantId) qs.set("applicantId", applicantId)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-1',location:'TaskManagement:fetchHireCompletionHistory:before',message:'Fetching history',data:{url:`/api/admin/reports/hire-completions?${qs.toString()}`,applicantId,limit},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const res = await fetch(`/api/admin/reports/hire-completions?${qs.toString()}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setHistoryItems(Array.isArray(data.items) ? data.items : [])
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-2',location:'TaskManagement:fetchHireCompletionHistory:success',message:'History loaded',data:{count:Array.isArray(data.items)?data.items.length:0,sample:(data.items||[]).slice(0,3)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      } else {
+        setHistoryItems([])
+        toast.error(data?.error || "Failed to load history")
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-ERR',location:'TaskManagement:fetchHireCompletionHistory:httpError',message:'History API error',data:{status:res.status,body:data},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }
+    } catch (e) {
+      setHistoryItems([])
+      toast.error(e.message || "Failed to load history")
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-EXC',location:'TaskManagement:fetchHireCompletionHistory:exception',message:'Exception while loading history',data:{error:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   const openResolveDialog = (task) => {
     setResolveDialogTask(task)
@@ -786,6 +823,12 @@ function isAppraisalActionPlanTask(task) {
       }
     } catch {}
   }, [])
+
+  // When history is visible, refetch on applicant change
+  useEffect(() => {
+    if (!showHistory) return
+    fetchHireCompletionHistory({ applicantId: selectedApplicantId })
+  }, [showHistory, selectedApplicantId])
 
   const handleNewTaskCreated = async (taskData) => {
     try {
@@ -1839,9 +1882,25 @@ function isAppraisalActionPlanTask(task) {
                     </div>
                     <h2 className="text-lg font-semibold text-foreground">Hire Completions</h2>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
-                    <X className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={showHistory ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        const next = !showHistory
+                        setShowHistory(next)
+                        if (next && historyItems.length === 0) {
+                          fetchHireCompletionHistory({ applicantId: selectedApplicantId })
+                        }
+                      }}
+                      className="h-8"
+                    >
+                      {showHistory ? "Back to Tasks" : "History"}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
 
                 {applicantGroups.length === 0 ? (
@@ -1868,9 +1927,49 @@ function isAppraisalActionPlanTask(task) {
                       </div>
                     </div>
 
-                    {/* Right: Tasks for selected applicant */}
+                    {/* Right: Tasks for selected applicant OR History */}
                     <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
-                      {(() => {
+                      {showHistory ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-3 gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-base font-semibold">Recent Verifications</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8"
+                                onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-2" /> Refresh
+                              </Button>
+                            </div>
+                          </div>
+                          {historyLoading ? (
+                            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+                          ) : historyItems.length === 0 ? (
+                            <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {historyItems.map((it) => (
+                                <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">{it.title}</div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {it.applicantName} • Verified by {it.completedByName || "—"} •{" "}
+                                      {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (() => {
                         const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
                         const tasksForRaw = selected ? selected.tasks : []
                         const tasksFor = groupSearch

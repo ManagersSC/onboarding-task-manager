@@ -30,8 +30,41 @@ export async function PATCH(req, { params }){
 
   switch (action){
     case "complete":
-      await completeStaffTask(id);
-      break;
+      try {
+        const cookieStore = await cookies();
+        const sealedSession = cookieStore.get("session")?.value;
+        let userStaffId = null, userEmail = "Unknown", userName = "Unknown", userRole = "Unknown";
+        if (sealedSession) {
+          const session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET });
+          userStaffId = session.userStaffId || null;
+          userEmail = session.userEmail || "Unknown";
+          userName = session.userName || "Unknown";
+          userRole = session.userRole || "Unknown";
+        }
+        await completeStaffTask(id, userStaffId || undefined);
+        await logAuditEvent({
+          eventType: 'Task Completed',
+          eventStatus: 'Success',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task '${id}' completed by ${userName}.`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      } catch (e) {
+        await logAuditEvent({
+          eventType: 'Task Completed',
+          eventStatus: 'Error',
+          userRole,
+          userName,
+          userIdentifier: userEmail,
+          detailedMessage: `Task completion failed for task ID ${id}. Error: ${e.message}`,
+          request: req,
+        });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
+
     case "block":
       break;
     case "delete":
@@ -172,6 +205,8 @@ export async function PATCH(req, { params }){
           resolutionNote: (fields && fields.resolutionNote) || '',
           for: [],
           claimedDate: null,
+          completedById: userStaffId,
+          completedAt: new Date().toISOString(),
         });
         await logAuditEvent({
           eventType: 'Task Flag Resolved & Completed',

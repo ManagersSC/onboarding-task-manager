@@ -142,7 +142,7 @@ export async function getTasksWithCreator() {
 }
 
 
-export async function completeStaffTask(taskId){
+export async function completeStaffTask(taskId, completedById){
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
     throw new Error("Airtable environment variables are missing")
   }
@@ -160,9 +160,15 @@ export async function completeStaffTask(taskId){
     {
       id: taskId,
       fields: {
-        "🚀 Status": "Completed",
-        "👨 Assigned Staff": [],
-        "Claimed Date": null,
+        // Use field IDs from ATS schema
+        "fldcOYboUu2vDASCl": "Completed",     // 🚀 Status
+        "fld15xSpsrFIO0ONh": [],              // 👨 Assigned Staff
+        "fldExdpb2dPzlR8zV": null,            // Claimed Date
+        // Best-effort attribution using existing schema fields
+        // Use Flagged Resolved By as a generic "action by" for completion
+        ...(completedById ? { "fldS28s9A4cJoq3mH": [completedById] } : {}),
+        // Use date-only field present in schema
+        "flddxTSDbSiHOD0a2": new Date().toISOString().slice(0, 10), // Completed Date (YYYY-MM-DD)
       }
     }
   ]);
@@ -205,6 +211,17 @@ export async function editStaffTask(taskId, fields) {
   }
   if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
   if (fields.claimedDate !== undefined) airtableFields["Claimed Date"] = fields.claimedDate;
+  // Completion attribution (optional) mapped onto existing fields
+  if (fields.completedById !== undefined) {
+    airtableFields["fldS28s9A4cJoq3mH"] = Array.isArray(fields.completedById)
+      ? fields.completedById
+      : (fields.completedById ? [fields.completedById] : []);
+  }
+  if (fields.completedAt !== undefined) {
+    // Expect ISO date or datetime; coerce to YYYY-MM-DD for the date field
+    const d = fields.completedAt ? String(fields.completedAt) : "";
+    airtableFields["flddxTSDbSiHOD0a2"] = d ? d.slice(0, 10) : null;
+  }
   // Flagging metadata (using field IDs from ATS schema)
   if (fields.flaggedById !== undefined) {
     airtableFields["fldtmqhschTQG0BLw"] = Array.isArray(fields.flaggedById)
