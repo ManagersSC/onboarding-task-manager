@@ -38,14 +38,6 @@ export async function GET(req) {
 
     const fields = [F_TASK, F_TASK_TYPE, F_APPLICANT, F_COMPLETED_BY, F_COMPLETED_DATE];
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H1',location:'reports/hire-completions:GET:params',message:'Incoming query params',data:{applicantId,from,to,limit,filterByFormula,fields},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A-B-C',location:'reports/hire-completions:GET:beforeQuery',message:'Building Airtable query',data:{applicantId,from,to,limit,filterByFormula,fields},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     // Fetch a larger window than `limit` so we can filter by applicant in code without returning empty results.
     const scanLimit = applicantId ? Math.min(Math.max(limit * 10, 50), 200) : limit;
 
@@ -62,60 +54,6 @@ export async function GET(req) {
     const records = applicantId
       ? recordsRaw.filter((r) => Array.isArray(r?.fields?.[F_APPLICANT]) && r.fields[F_APPLICANT].includes(applicantId))
       : recordsRaw;
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H2',location:'reports/hire-completions:GET:afterQuery',message:'Airtable query returned',data:{count:records.length,sample:records.slice(0,2).map(r=>({id:r.id,task:(r.fields&&r.fields[F_TASK])||'',applicantFieldRaw:r.fields&&r.fields[F_APPLICANT],completedByRaw:r.fields&&r.fields[F_COMPLETED_BY],completedDate:r.fields&&r.fields[F_COMPLETED_DATE]}))},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H2',location:'reports/hire-completions:GET:afterFilter',message:'Filtered by applicant in code',data:{applicantId,recordsRawCount:recordsRaw.length,recordsFilteredCount:records.length,scanLimit},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A-B',location:'reports/hire-completions:GET:afterQuery',message:'Airtable result',data:{count:records.length,sample:records.slice(0,3).map(r=>({id:r.id,task:r.fields["📌 Task"]||"",type:r.fields["Task Type"]||"",applicant:(r.fields["👤 Assigned Applicant"]||[])[0]||"",completedDate:r.fields["Completed Date"]||null}))},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // If nothing returned, run relaxed diagnostics to pinpoint where the filter fails
-    if (records.length === 0) {
-      const diagA = await base("Tasks").select({
-        filterByFormula: applicantId ? `{${F_STATUS}} = 'Completed'` : "{Id}",
-        fields: [F_TASK,F_TASK_TYPE,F_STATUS,F_APPLICANT,F_COMPLETED_DATE],
-        pageSize: 10,
-        sort: [{ field: F_COMPLETED_DATE, direction: "desc" }],
-        returnFieldsByFieldId: true,
-      }).all().catch(() => []);
-      const diagB = await base("Tasks").select({
-        filterByFormula: applicantId
-          ? `{${F_STATUS}} = 'Completed'`
-          : `{${F_STATUS}} = 'Completed'`,
-        fields: [F_TASK,F_TASK_TYPE,F_STATUS,F_APPLICANT,F_COMPLETED_DATE],
-        pageSize: 10,
-        sort: [{ field: F_COMPLETED_DATE, direction: "desc" }],
-        returnFieldsByFieldId: true,
-      }).all().catch(() => []);
-      const diagC = await base("Tasks").select({
-        filterByFormula: `{${F_STATUS}} = 'Completed'`,
-        fields: [F_TASK,F_TASK_TYPE,F_STATUS,F_APPLICANT,F_COMPLETED_DATE],
-        pageSize: 10,
-        sort: [{ field: F_COMPLETED_DATE, direction: "desc" }],
-        returnFieldsByFieldId: true,
-      }).all().catch(() => []);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        sessionId:'debug-session',runId:'pre-fix',hypothesisId:'DREL',
-        location:'reports/hire-completions:GET:diagnostics',
-        message:'Relaxed query diagnostics',
-        data:{
-          diagA_count:Array.isArray(diagA)?diagA.length:0,
-          diagA_sample:(diagA||[]).slice(0,3).map(r=>({id:r.id,title:r.fields[F_TASK]||"",status:r.fields[F_STATUS]||"",completedDate:r.fields[F_COMPLETED_DATE]||null})),
-          diagB_count:Array.isArray(diagB)?diagB.length:0,
-          diagB_sample:(diagB||[]).slice(0,3).map(r=>({id:r.id,title:r.fields[F_TASK]||"",status:r.fields[F_STATUS]||"",completedDate:r.fields[F_COMPLETED_DATE]||null})),
-          diagC_count:Array.isArray(diagC)?diagC.length:0,
-          diagC_sample:(diagC||[]).slice(0,3).map(r=>({id:r.id,title:r.fields[F_TASK]||"",status:r.fields[F_STATUS]||"",completedDate:r.fields[F_COMPLETED_DATE]||null}))
-        },timestamp:Date.now()
-      })}).catch(()=>{});
-      // #endregion
-    }
 
     // Resolve names
     const applicantIds = new Set();
@@ -138,7 +76,7 @@ export async function GET(req) {
     const applicantNameById = await getNames("Applicants", applicantIds);
     const staffNameById = await getNames("Staff", staffIds);
 
-    const items = records.map((r) => {
+    const items = records.slice(0, limit).map((r) => {
       const aId = (r.fields[F_APPLICANT] || [])[0] || "";
       const sId = (r.fields[F_COMPLETED_BY] || [])[0] || "";
       const title = r.fields[F_TASK] || "";
@@ -168,22 +106,8 @@ export async function GET(req) {
       };
     });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H3',location:'reports/hire-completions:GET:mapped',message:'Mapped response items',data:{count:items.length,sample:items.slice(0,2).map(it=>({id:it.id,applicantId:it.applicantId,completedByName:it.completedByName,completedAt:it.completedAt,message:it.message}))},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C-D',location:'reports/hire-completions:GET:mapped',message:'Mapped items',data:{count:items.length,sample:items.slice(0,3)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     return new Response(JSON.stringify({ items }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'HERR',location:'reports/hire-completions:GET:catch',message:'Endpoint threw',data:{error:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'E',location:'reports/hire-completions:GET:error',message:'Endpoint error',data:{error:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }

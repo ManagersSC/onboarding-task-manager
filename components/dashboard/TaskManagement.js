@@ -400,41 +400,24 @@ function isAppraisalActionPlanTask(task) {
   const [showHistory, setShowHistory] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyItems, setHistoryItems] = useState([])
+  const [historySearch, setHistorySearch] = useState("")
 
   const fetchHireCompletionHistory = async ({ applicantId, limit = 30 } = {}) => {
     setHistoryLoading(true)
     try {
       const qs = new URLSearchParams({ limit: String(limit) })
       if (applicantId) qs.set("applicantId", applicantId)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H4',location:'TaskManagement:fetchHireCompletionHistory:beforeFetch',message:'Fetching hire completion history',data:{applicantId,limit,url:`/api/admin/reports/hire-completions?${qs.toString()}`},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-1',location:'TaskManagement:fetchHireCompletionHistory:before',message:'Fetching history',data:{url:`/api/admin/reports/hire-completions?${qs.toString()}`,applicantId,limit},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const res = await fetch(`/api/admin/reports/hire-completions?${qs.toString()}`)
       const data = await res.json().catch(() => ({}))
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H5',location:'TaskManagement:fetchHireCompletionHistory:afterFetch',message:'History fetch completed',data:{status:res.status,ok:res.ok,itemsCount:Array.isArray(data.items)?data.items.length:0,hasError:!!data?.error,sample:(data.items||[]).slice(0,2)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (res.ok) {
         setHistoryItems(Array.isArray(data.items) ? data.items : [])
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-2',location:'TaskManagement:fetchHireCompletionHistory:success',message:'History loaded',data:{count:Array.isArray(data.items)?data.items.length:0,sample:(data.items||[]).slice(0,3)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       } else {
         setHistoryItems([])
         toast.error(data?.error || "Failed to load history")
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-ERR',location:'TaskManagement:fetchHireCompletionHistory:httpError',message:'History API error',data:{status:res.status,body:data},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
       }
     } catch (e) {
       setHistoryItems([])
       toast.error(e.message || "Failed to load history")
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-EXC',location:'TaskManagement:fetchHireCompletionHistory:exception',message:'Exception while loading history',data:{error:String(e&&e.message||e)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     } finally {
       setHistoryLoading(false)
     }
@@ -1953,6 +1936,15 @@ function isAppraisalActionPlanTask(task) {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <Input
+                                    value={historySearch}
+                                    onChange={(e) => setHistorySearch(e.target.value)}
+                                    placeholder="Search verifications..."
+                                    className="pl-7 h-8 w-56"
+                                  />
+                                </div>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1969,7 +1961,23 @@ function isAppraisalActionPlanTask(task) {
                             <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
                           ) : (
                             <div className="space-y-2">
-                              {historyItems.map((it) => (
+                              {historyItems
+                                .filter((it) => {
+                                  const q = (historySearch || "").trim().toLowerCase()
+                                  if (!q) return true
+                                  const hay = [
+                                    it.message,
+                                    it.title,
+                                    it.applicantName,
+                                    it.completedByName,
+                                    it.completedAt,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")
+                                    .toLowerCase()
+                                  return hay.includes(q)
+                                })
+                                .map((it) => (
                                 <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
                                   <div className="min-w-0">
                                     <div className="text-sm font-medium break-words whitespace-normal leading-5">
