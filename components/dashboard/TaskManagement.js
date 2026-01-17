@@ -407,10 +407,16 @@ function isAppraisalActionPlanTask(task) {
       const qs = new URLSearchParams({ limit: String(limit) })
       if (applicantId) qs.set("applicantId", applicantId)
       // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H4',location:'TaskManagement:fetchHireCompletionHistory:beforeFetch',message:'Fetching hire completion history',data:{applicantId,limit,url:`/api/admin/reports/hire-completions?${qs.toString()}`},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      // #region agent log
       fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'UI-1',location:'TaskManagement:fetchHireCompletionHistory:before',message:'Fetching history',data:{url:`/api/admin/reports/hire-completions?${qs.toString()}`,applicantId,limit},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
       const res = await fetch(`/api/admin/reports/hire-completions?${qs.toString()}`)
       const data = await res.json().catch(() => ({}))
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'hire-history-pre',hypothesisId:'H5',location:'TaskManagement:fetchHireCompletionHistory:afterFetch',message:'History fetch completed',data:{status:res.status,ok:res.ok,itemsCount:Array.isArray(data.items)?data.items.length:0,hasError:!!data?.error,sample:(data.items||[]).slice(0,2)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (res.ok) {
         setHistoryItems(Array.isArray(data.items) ? data.items : [])
         // #region agent log
@@ -1889,8 +1895,16 @@ function isAppraisalActionPlanTask(task) {
                       onClick={() => {
                         const next = !showHistory
                         setShowHistory(next)
-                        if (next && historyItems.length === 0) {
-                          fetchHireCompletionHistory({ applicantId: selectedApplicantId })
+                        if (next) {
+                          // Ensure History is scoped to the currently selected applicant.
+                          // If none selected yet, default to the first applicant in the list.
+                          const fallbackApplicantId =
+                            selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
+                          if (!selectedApplicantId && fallbackApplicantId) {
+                            setSelectedApplicantId(fallbackApplicantId)
+                          } else {
+                            fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
+                          }
                         }
                       }}
                       className="h-8"
@@ -1958,9 +1972,11 @@ function isAppraisalActionPlanTask(task) {
                               {historyItems.map((it) => (
                                 <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">{it.title}</div>
+                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">
+                                      {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
+                                    </div>
                                     <div className="text-xs text-muted-foreground truncate">
-                                      {it.applicantName} • Verified by {it.completedByName || "—"} •{" "}
+                                      {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
                                       {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
                                     </div>
                                   </div>

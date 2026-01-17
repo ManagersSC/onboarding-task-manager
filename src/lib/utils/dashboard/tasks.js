@@ -164,9 +164,9 @@ export async function completeStaffTask(taskId, completedById){
         "fldcOYboUu2vDASCl": "Completed",     // 🚀 Status
         "fld15xSpsrFIO0ONh": [],              // 👨 Assigned Staff
         "fldExdpb2dPzlR8zV": null,            // Claimed Date
-        // Best-effort attribution using existing schema fields
-        // Use Flagged Resolved By as a generic "action by" for completion
-        ...(completedById ? { "fldS28s9A4cJoq3mH": [completedById] } : {}),
+        // Best-effort attribution using dedicated field from ATS schema:
+        // Completed By (link to Staff): fld7fsKOvSDOQrgqn
+        ...(completedById ? { "fld7fsKOvSDOQrgqn": [completedById] } : {}),
         // Use date-only field present in schema
         "flddxTSDbSiHOD0a2": new Date().toISOString().slice(0, 10), // Completed Date (YYYY-MM-DD)
       }
@@ -211,9 +211,10 @@ export async function editStaffTask(taskId, fields) {
   }
   if (fields.for !== undefined) airtableFields["👨 Assigned Staff"] = fields.for;
   if (fields.claimedDate !== undefined) airtableFields["Claimed Date"] = fields.claimedDate;
-  // Completion attribution (optional) mapped onto existing fields
+  // Completion attribution (optional) mapped onto dedicated Tasks field:
+  // Completed By (link to Staff): fld7fsKOvSDOQrgqn
   if (fields.completedById !== undefined) {
-    airtableFields["fldS28s9A4cJoq3mH"] = Array.isArray(fields.completedById)
+    airtableFields["fld7fsKOvSDOQrgqn"] = Array.isArray(fields.completedById)
       ? fields.completedById
       : (fields.completedById ? [fields.completedById] : []);
   }
