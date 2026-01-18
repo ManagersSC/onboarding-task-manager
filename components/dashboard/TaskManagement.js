@@ -396,6 +396,32 @@ function isAppraisalActionPlanTask(task) {
   const [monthlyPeople, setMonthlyPeople] = useState([])
   const [monthlySelected, setMonthlySelected] = useState({})
   const [monthlyReviewsTaskId, setMonthlyReviewsTaskId] = useState(null)
+  // Hire completion history state
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyItems, setHistoryItems] = useState([])
+  const [historySearch, setHistorySearch] = useState("")
+
+  const fetchHireCompletionHistory = async ({ applicantId, limit = 30 } = {}) => {
+    setHistoryLoading(true)
+    try {
+      const qs = new URLSearchParams({ limit: String(limit) })
+      if (applicantId) qs.set("applicantId", applicantId)
+      const res = await fetch(`/api/admin/reports/hire-completions?${qs.toString()}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setHistoryItems(Array.isArray(data.items) ? data.items : [])
+      } else {
+        setHistoryItems([])
+        toast.error(data?.error || "Failed to load history")
+      }
+    } catch (e) {
+      setHistoryItems([])
+      toast.error(e.message || "Failed to load history")
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   const openResolveDialog = (task) => {
     setResolveDialogTask(task)
@@ -786,6 +812,12 @@ function isAppraisalActionPlanTask(task) {
       }
     } catch {}
   }, [])
+
+  // When history is visible, refetch on applicant change
+  useEffect(() => {
+    if (!showHistory) return
+    fetchHireCompletionHistory({ applicantId: selectedApplicantId })
+  }, [showHistory, selectedApplicantId])
 
   const handleNewTaskCreated = async (taskData) => {
     try {
@@ -1839,9 +1871,33 @@ function isAppraisalActionPlanTask(task) {
                     </div>
                     <h2 className="text-lg font-semibold text-foreground">Hire Completions</h2>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
-                    <X className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={showHistory ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        const next = !showHistory
+                        setShowHistory(next)
+                        if (next) {
+                          // Ensure History is scoped to the currently selected applicant.
+                          // If none selected yet, default to the first applicant in the list.
+                          const fallbackApplicantId =
+                            selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
+                          if (!selectedApplicantId && fallbackApplicantId) {
+                            setSelectedApplicantId(fallbackApplicantId)
+                          } else {
+                            fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
+                          }
+                        }
+                      }}
+                      className="h-8"
+                    >
+                      {showHistory ? "Back to Tasks" : "History"}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
 
                 {applicantGroups.length === 0 ? (
@@ -1868,9 +1924,76 @@ function isAppraisalActionPlanTask(task) {
                       </div>
                     </div>
 
-                    {/* Right: Tasks for selected applicant */}
+                    {/* Right: Tasks for selected applicant OR History */}
                     <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
-                      {(() => {
+                      {showHistory ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-3 gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-base font-semibold">Recent Verifications</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <Input
+                                    value={historySearch}
+                                    onChange={(e) => setHistorySearch(e.target.value)}
+                                    placeholder="Search verifications..."
+                                    className="pl-7 h-8 w-56"
+                                  />
+                                </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8"
+                                onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-2" /> Refresh
+                              </Button>
+                            </div>
+                          </div>
+                          {historyLoading ? (
+                            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+                          ) : historyItems.length === 0 ? (
+                            <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {historyItems
+                                .filter((it) => {
+                                  const q = (historySearch || "").trim().toLowerCase()
+                                  if (!q) return true
+                                  const hay = [
+                                    it.message,
+                                    it.title,
+                                    it.applicantName,
+                                    it.completedByName,
+                                    it.completedAt,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")
+                                    .toLowerCase()
+                                  return hay.includes(q)
+                                })
+                                .map((it) => (
+                                <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">
+                                      {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
+                                      {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (() => {
                         const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
                         const tasksForRaw = selected ? selected.tasks : []
                         const tasksFor = groupSearch

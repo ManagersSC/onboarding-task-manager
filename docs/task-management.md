@@ -10,6 +10,7 @@ This update streamlines actions across Unclaimed and My Queue, adds bulk actions
 - **Status normalization**: Internal comparisons use a normalized value so statuses are handled consistently regardless of spacing/case.
 - **Enhanced search**: Search now matches title, description, assignee name, applicant name, flagged reason, and due date string.
 - **Accessibility**: Icon buttons have `aria-label`/`title` attributes.
+- **Hire Completions History (new)**: Inside the Hire Completions modal, a History toggle shows recent verification actions with the manager’s name and timestamp. This uses `Completed By` and `Completed At` stored on the `Tasks` table.
 
 ### Permissions
 - Delete is allowed for:
@@ -25,9 +26,13 @@ This update streamlines actions across Unclaimed and My Queue, adds bulk actions
 - Selection state is tracked in-component (`selectedTaskIds: Set<string>`).
 - The bulk bar appears only when the current tab has selected items.
 - The existing delete API (`DELETE /api/dashboard/tasks/:id`) is reused.
+- Verification attribution is written by PATCH complete/resolve-and-complete. Reporting is exposed at `/api/admin/reports/hire-completions` (optional params: `applicantId`, `from`, `to`, `limit`). 
 
 ### File touched
 - `components/dashboard/TaskManagement.js`
+- `src/lib/utils/dashboard/tasks.js` (completion attribution fields)
+- `src/app/api/dashboard/tasks/[id]/route.js` (passes actor to completion)
+- `src/app/api/admin/reports/hire-completions/route.js` (history endpoint)
 
 If you need confirmations for bulk delete, consider integrating `components/tasks/BulkDeleteTasksModal.jsx` in a follow-up. 
 ## Task Management – streamlined UX
