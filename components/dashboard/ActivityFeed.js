@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
@@ -100,9 +101,11 @@ export function ActivityFeed({ initialActivities = [] }) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" className="gap-1">
-              <Clock className="h-4 w-4" />
-              View All
+            <Button asChild variant="ghost" size="sm" className="gap-1">
+              <Link href="/admin/audit-logs" aria-label="View all activity (Audit Logs)">
+                <Clock className="h-4 w-4" />
+                View All
+              </Link>
             </Button>
           </div>
         </CardHeader>

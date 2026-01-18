@@ -1861,7 +1861,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-5xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto"
+                className="bg-background border border-border rounded-xl w-full max-w-5xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto custom-scrollbar"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
