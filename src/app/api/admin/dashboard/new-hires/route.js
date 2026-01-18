@@ -6,6 +6,34 @@ export const runtime = 'nodejs'
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
+// Minimal concurrency limiter (avoid hammering Airtable with 25 parallel queries)
+function pLimit(concurrency = 4) {
+  let activeCount = 0
+  const queue = []
+  const next = () => {
+    if (queue.length === 0 || activeCount >= concurrency) return
+    const { fn, resolve, reject } = queue.shift()
+    activeCount++
+    Promise.resolve()
+      .then(fn)
+      .then((val) => {
+        activeCount--
+        resolve(val)
+        next()
+      })
+      .catch((err) => {
+        activeCount--
+        reject(err)
+        next()
+      })
+  }
+  return (fn) =>
+    new Promise((resolve, reject) => {
+      queue.push({ fn, resolve, reject })
+      next()
+    })
+}
+
 // Simple TTL cache for 60s
 let cacheData = null
 let cacheTime = 0
@@ -50,7 +78,9 @@ export async function GET() {
 
     console.log('Fetched records:', records.length)
 
-    const newHires = records.map(record => {
+    const limiter = pLimit(4)
+
+    const newHires = await Promise.all(records.map((record) => limiter(async () => {
       // Use the "Job Name" field directly instead of linked records
       const rawJobName = record.get('Job Name')
       const jobRole = Array.isArray(rawJobName) ? (rawJobName[0] || 'Role TBD') : (rawJobName || 'Role TBD')
@@ -72,10 +102,14 @@ export async function GET() {
       // Use the job role as the department as well, since there's no separate department field
       const department = jobRole || 'Department TBD'
 
+      const email = record.get('Email') || ''
+      const tasks = await getTaskStats(email)
+      const progress = calculateProgressFromTasks(tasks)
+
       const applicantData = {
         id: record.id,
         name: record.get('Name'),
-        email: record.get('Email'),
+        email,
         role: role,
         department: department,
         onboardingStartDate: record.get('Onboarding Start Date'),
@@ -87,13 +121,13 @@ export async function GET() {
         onboardingPausedReason: record.get('Onboarding Paused Reason') || null,
         onboardingResumedAt: record.get('Onboarding Resumed At') || null,
         onboardingResumedOn: record.get('Onboarding Resumed On') || null,
-        progress: calculateProgress(record),
-        tasks: getTaskStats(record),
+        progress,
+        tasks,
         avatar: null
       }
 
       return applicantData
-    })
+    })))
 
     console.log('Processed new hires:', newHires.length)
     const response = { newHires }
@@ -109,27 +143,35 @@ export async function GET() {
   }
 }
 
-// Calculate onboarding progress based on completed tasks
-function calculateProgress(record) {
-  const onboardingStatus = record.get('Onboarding Status')
-  const statusProgress = {
-    'Docs Pending': 10,
-    'Docs Signed': 25,
-    'Week 1 Quiz ✅': 40,
-    'Week 2 Quiz ✅': 55,
-    'Week 3 Quiz ✅': 70,
-    'Week 4 Quiz ✅': 85
-  }
-
-  return statusProgress[onboardingStatus] || 0
+function calculateProgressFromTasks(tasks) {
+  const completed = Number(tasks?.completed || 0)
+  const total = Number(tasks?.total || 0)
+  return total > 0 ? Math.round((completed / total) * 100) : 0
 }
 
 // Get task completion statistics
-function getTaskStats(record) {
-  // This would need to be implemented based on your task tracking system
-  // For now, returning placeholder data
-  return {
-    completed: 0,
-    total: 0
+async function getTaskStats(applicantEmail) {
+  if (!applicantEmail) {
+    return { completed: 0, total: 0 }
   }
-} 
+
+  // Old logic (restored): progress derived from Airtable "Onboarding Tasks Logs"
+  // - Filter records where applicantEmail is contained in {Assigned}
+  // - Count Status === "Completed"
+  try {
+    const taskLogs = await base("Onboarding Tasks Logs")
+      .select({
+        filterByFormula: `FIND("${String(applicantEmail).replace(/"/g, '\\"')}", ARRAYJOIN({Assigned}))`,
+        fields: ["Status", "Task"],
+        pageSize: 100,
+      })
+      .all()
+
+    const completed = taskLogs.filter((log) => log?.fields?.Status === "Completed").length
+    const total = taskLogs.length
+    return { completed, total }
+  } catch (err) {
+    console.error("Error fetching Onboarding Tasks Logs for", applicantEmail, err)
+    return { completed: 0, total: 0 }
+  }
+}
