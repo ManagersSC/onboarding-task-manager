@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil, CheckCircle2, Circle, AlertCircle, ChevronDown } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil, CheckCircle2, Circle, AlertCircle, ChevronDown, Settings } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -26,6 +26,8 @@ import { toast } from "sonner"
 import { useQuizSubmissions } from "@/hooks/useQuizSubmissions"
 import { QuizSubmissionAnswersModal } from "./quiz-submission-answers-modal"
 import { updateApplicant } from "@/app/admin/users/actions"
+import AppraisalQuestionEditor from "./AppraisalQuestionEditor"
+import AppraisalQuestionsViewer from "./AppraisalQuestionsViewer"
 import { generateColorFromString } from "@/lib/utils/colour-hash"
 import Link from "next/link"
 
@@ -108,6 +110,11 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   })
 
   const [appraisalOpen, setAppraisalOpen] = useState(false)
+  const [appraisalViewerOpen, setAppraisalViewerOpen] = useState(false)
+  const [appraisalViewerData, setAppraisalViewerData] = useState(null)
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false)
+  const [templateLoading, setTemplateLoading] = useState(false)
+  const [templateData, setTemplateData] = useState(null)
   const applicationTimelineItems = useMemo(() => {
     if (!applicant) return []
     // Parse history (array or JSON string)
@@ -819,7 +826,37 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         <div className="rounded-lg border p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">Appraisals</h4>
-                            <Button size="sm" className="h-8" onClick={() => setAppraisalOpen(true)}>Set Date</Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Edit template questions"
+                                onClick={async () => {
+                                  if (!applicant?.id) return
+                                  setTemplateLoading(true)
+                                  try {
+                                    const res = await fetch(`/api/admin/users/${applicant.id}/appraisal-template`)
+                                    if (!res.ok) throw new Error("Failed to fetch template")
+                                    const data = await res.json()
+                                    setTemplateData(data)
+                                    setTemplateEditorOpen(true)
+                                  } catch (err) {
+                                    toast.error(err?.message || "Failed to load template")
+                                  } finally {
+                                    setTemplateLoading(false)
+                                  }
+                                }}
+                                disabled={templateLoading}
+                              >
+                                {templateLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Settings className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button size="sm" className="h-8" onClick={() => setAppraisalOpen(true)}>Set Date</Button>
+                            </div>
                           </div>
                           {(() => {
                             let appraisals = []
@@ -874,7 +911,25 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                             {a?.updatedAt ? ` • Updated ${formatDate(a.updatedAt)}` : ''}
                                           </div>
                                         </div>
-                                        <div className="shrink-0">{renderStatusBadge(status)}</div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            title="View questions"
+                                            onClick={() => {
+                                              setAppraisalViewerData({
+                                                questions: a?.preappraisalQuestions,
+                                                appraisalDate: a?.appraisalDate,
+                                                year: a?.year
+                                              })
+                                              setAppraisalViewerOpen(true)
+                                            }}
+                                          >
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                          {renderStatusBadge(status)}
+                                        </div>
                                       </div>
 
                                       {isCurrent && currentStep && (
@@ -944,6 +999,36 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             applicantEmail={applicant?.email}
                             currentDate={applicant?.appraisalDate}
                             onUpdated={async () => { await mutate?.() }}
+                          />
+                          
+                          {/* Questions Viewer Modal */}
+                          <AppraisalQuestionsViewer
+                            open={appraisalViewerOpen}
+                            onOpenChange={setAppraisalViewerOpen}
+                            questions={appraisalViewerData?.questions}
+                            appraisalDate={appraisalViewerData?.appraisalDate}
+                            year={appraisalViewerData?.year}
+                          />
+                          
+                          {/* Template Editor Modal */}
+                          <AppraisalQuestionEditor
+                            open={templateEditorOpen}
+                            onOpenChange={setTemplateEditorOpen}
+                            questions={templateData?.template?.questions || []}
+                            roleKey={templateData?.template?.roleKey || templateData?.jobName || "unknown"}
+                            isTemplate={true}
+                            loading={templateLoading}
+                            onSave={async (questions) => {
+                              const res = await fetch(`/api/admin/users/${applicant?.id}/appraisal-template`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ questions })
+                              })
+                              if (!res.ok) {
+                                const err = await res.json().catch(() => ({}))
+                                throw new Error(err?.error || "Failed to save template")
+                              }
+                            }}
                           />
                         </div>
                       )}
@@ -1843,6 +1928,11 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
   const [saving, setSaving] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDate, setPendingDate] = useState("")
+  
+  // Question editor state
+  const [questionEditorOpen, setQuestionEditorOpen] = useState(false)
+  const [questionEditorData, setQuestionEditorData] = useState(null)
+  const [questionEditorLoading, setQuestionEditorLoading] = useState(false)
   const [calMonth, setCalMonth] = useState(() => new Date())
   const timeOptions = useMemo(() => {
     const opts = []
@@ -2014,9 +2104,42 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                     throw new Error(err?.error || 'Failed to create calendar appointment')
                   }
                   toast.success('Appraisal date updated')
-                  setConfirmOpen(false)
-                  onOpenChange?.(false)
-                  await onUpdated?.()
+                  
+                  // Fetch template and copy to override, then open question editor
+                  setQuestionEditorLoading(true)
+                  try {
+                    // Fetch template
+                    const templateRes = await fetch(`/api/admin/users/${applicantId}/appraisal-template`)
+                    const templateData = await templateRes.json().catch(() => ({}))
+                    
+                    // Copy template to override
+                    const templateQuestions = templateData?.template?.questions || []
+                    const roleKey = templateData?.template?.roleKey || templateData?.jobName || "unknown"
+                    
+                    const overrideRes = await fetch(`/api/admin/users/${applicantId}/appraisal-questions`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ questions: templateQuestions, roleKey })
+                    })
+                    const overrideData = await overrideRes.json().catch(() => ({}))
+                    
+                    // Set question editor data and open it
+                    setQuestionEditorData({
+                      questions: overrideData?.questions?.questions || templateQuestions,
+                      roleKey: overrideData?.questions?.roleKey || roleKey,
+                      jobName: templateData?.jobName
+                    })
+                    setConfirmOpen(false)
+                    setQuestionEditorOpen(true)
+                  } catch (qErr) {
+                    // Questions setup failed, but date was set - still allow proceeding
+                    toast.error('Questions could not be loaded, but date was set')
+                    setConfirmOpen(false)
+                    onOpenChange?.(false)
+                    await onUpdated?.()
+                  } finally {
+                    setQuestionEditorLoading(false)
+                  }
                 } catch (e) {
                   toast.error(e?.message || 'Failed to update appraisal date')
                 } finally {
@@ -2029,6 +2152,63 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Question Editor Modal (shown after date confirmation) */}
+      <AppraisalQuestionEditor
+        open={questionEditorOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            // Closing editor - finish the flow
+            setQuestionEditorOpen(false)
+            onOpenChange?.(false)
+            onUpdated?.()
+          }
+        }}
+        questions={questionEditorData?.questions || []}
+        roleKey={questionEditorData?.roleKey || "unknown"}
+        isTemplate={false}
+        loading={questionEditorLoading}
+        onSave={async (questions) => {
+          const res = await fetch(`/api/admin/users/${applicantId}/appraisal-questions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ questions, roleKey: questionEditorData?.roleKey })
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err?.error || "Failed to save questions")
+          }
+          // After saving questions, update the appraisal date again to store snapshot in history
+          await fetch(`/api/admin/users/${applicantId}/appraisal-date`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date })
+          })
+        }}
+        onReset={async () => {
+          // Re-fetch template and copy to override
+          const templateRes = await fetch(`/api/admin/users/${applicantId}/appraisal-template`)
+          const templateData = await templateRes.json().catch(() => ({}))
+          const templateQuestions = templateData?.template?.questions || []
+          const roleKey = templateData?.template?.roleKey || templateData?.jobName || "unknown"
+          
+          // Save to override
+          const res = await fetch(`/api/admin/users/${applicantId}/appraisal-questions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questions: templateQuestions, roleKey })
+          })
+          if (!res.ok) throw new Error("Failed to reset to template")
+          const data = await res.json()
+          
+          // Update local state
+          setQuestionEditorData({
+            questions: data?.questions?.questions || templateQuestions,
+            roleKey: data?.questions?.roleKey || roleKey,
+            jobName: templateData?.jobName
+          })
+        }}
+      />
     </Dialog>
   )
 }
