@@ -12,10 +12,13 @@ import {
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-// Airtable field IDs
-const FIELD_OVERRIDE = "Preappraisal Questions Override (JSON)" // fldCmnvIXn1o2nDrx
-const FIELD_EFFECTIVE = "Preappraisal Questions Effective (JSON)" // fldHKo0Qwki2hba7K
-const FIELD_APPLYING_FOR = "Applying For" // fld2kd9SxfdltFVwW
+// Airtable field IDs (from ATS_schema.json)
+// Applicants table
+const FIELD_OVERRIDE = "fldCmnvIXn1o2nDrx" // "Preappraisal Questions Override (JSON)"
+const FIELD_EFFECTIVE = "fldHKo0Qwki2hba7K" // "Preappraisal Questions Effective (JSON)"
+const FIELD_APPLYING_FOR = "fld2kd9SxfdltFVwW" // "Applying For" - link to Jobs
+// Jobs table
+const FIELD_JOB_TITLE = "fldTvEi44E8tSTsWL" // "Title" - primary field (job name)
 
 /**
  * GET /api/admin/users/[id]/appraisal-questions
@@ -96,12 +99,12 @@ export async function GET(request, { params }) {
         const jobRecords = await base("Jobs")
           .select({
             filterByFormula: `RECORD_ID() = '${applyingFor[0]}'`,
-            fields: ["Job Name"],
+            fields: [FIELD_JOB_TITLE],
             maxRecords: 1
           })
           .firstPage()
         if (jobRecords?.[0]) {
-          roleKey = generateRoleKey(jobRecords[0].get("Job Name"))
+          roleKey = generateRoleKey(jobRecords[0].get(FIELD_JOB_TITLE))
         }
       } catch (e) {
         logger?.warn?.("Failed to fetch job name for roleKey", e)
@@ -192,12 +195,12 @@ export async function POST(request, { params }) {
         const jobRecords = await base("Jobs")
           .select({
             filterByFormula: `RECORD_ID() = '${applyingFor[0]}'`,
-            fields: ["Job Name"],
+            fields: [FIELD_JOB_TITLE],
             maxRecords: 1
           })
           .firstPage()
         if (jobRecords?.[0]) {
-          roleKey = generateRoleKey(jobRecords[0].get("Job Name"))
+          roleKey = generateRoleKey(jobRecords[0].get(FIELD_JOB_TITLE))
         }
       } catch (e) {
         logger?.warn?.("Failed to fetch job name for roleKey", e)

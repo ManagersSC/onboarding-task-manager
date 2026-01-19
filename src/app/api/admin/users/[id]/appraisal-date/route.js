@@ -8,8 +8,10 @@ import { parseAirtableQuestionsField } from "@/lib/utils/appraisal-questions"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-// Airtable field for questions override
-const FIELD_QUESTIONS_OVERRIDE = "Preappraisal Questions Override (JSON)"
+// Airtable field IDs (from ATS_schema.json)
+const FIELD_APPRAISAL_DATE = "fldub0zVNjd0Skkly" // "Appraisal Date"
+const FIELD_APPRAISAL_HISTORY = "fldrnRVH15LptSFzV" // "Appraisal History"
+const FIELD_QUESTIONS_OVERRIDE = "fldCmnvIXn1o2nDrx" // "Preappraisal Questions Override (JSON)"
 
 export async function POST(request, { params }) {
   try {
@@ -45,12 +47,12 @@ export async function POST(request, { params }) {
       const records = await base("Applicants")
         .select({ 
           filterByFormula: `RECORD_ID() = '${id}'`, 
-          fields: ["Appraisal History", FIELD_QUESTIONS_OVERRIDE], 
+          fields: [FIELD_APPRAISAL_HISTORY, FIELD_QUESTIONS_OVERRIDE], 
           maxRecords: 1 
         })
         .firstPage()
 
-      const existingHistoryRaw = records?.[0]?.get?.("Appraisal History")
+      const existingHistoryRaw = records?.[0]?.get?.(FIELD_APPRAISAL_HISTORY)
       
       // Get current questions override for snapshot
       const questionsOverrideRaw = records?.[0]?.get?.(FIELD_QUESTIONS_OVERRIDE)
@@ -129,8 +131,8 @@ export async function POST(request, { params }) {
     }
 
     // Update Applicants.'Appraisal Date' and 'Appraisal History' (if built)
-    const fieldsToUpdate = { "Appraisal Date": dateStr }
-    if (historyString) fieldsToUpdate["Appraisal History"] = historyString
+    const fieldsToUpdate = { [FIELD_APPRAISAL_DATE]: dateStr }
+    if (historyString) fieldsToUpdate[FIELD_APPRAISAL_HISTORY] = historyString
     await base("Applicants").update([{ id, fields: fieldsToUpdate }])
 
     try {

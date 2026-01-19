@@ -12,9 +12,12 @@ import {
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-// Airtable field names
-const FIELD_APPLYING_FOR = "Applying For"
-const FIELD_JOB_TEMPLATE = "Preappraisal Questions Template (JSON)" // fldWdgCRTKzRJBPXI in Jobs table
+// Airtable field IDs (from ATS_schema.json)
+// Applicants table
+const FIELD_APPLYING_FOR = "fld2kd9SxfdltFVwW" // "Applying For" - link to Jobs
+// Jobs table
+const FIELD_JOB_TITLE = "fldTvEi44E8tSTsWL" // "Title" - primary field (job name)
+const FIELD_JOB_TEMPLATE = "fldWdgCRTKzRJBPXI" // "Preappraisal Questions Template (JSON)"
 
 /**
  * GET /api/admin/users/[id]/appraisal-template
@@ -90,7 +93,7 @@ export async function GET(request, { params }) {
     const jobRecords = await base("Jobs")
       .select({
         filterByFormula: `RECORD_ID() = '${jobId}'`,
-        fields: ["Job Name", FIELD_JOB_TEMPLATE],
+        fields: [FIELD_JOB_TITLE, FIELD_JOB_TEMPLATE],
         maxRecords: 1
       })
       .firstPage()
@@ -116,7 +119,7 @@ export async function GET(request, { params }) {
     }
 
     const jobRecord = jobRecords[0]
-    const jobName = jobRecord.get("Job Name") || "Unknown Job"
+    const jobName = jobRecord.get(FIELD_JOB_TITLE) || "Unknown Job"
     const templateRaw = jobRecord.get(FIELD_JOB_TEMPLATE)
     const roleKey = generateRoleKey(jobName)
 
@@ -227,7 +230,7 @@ export async function POST(request, { params }) {
     const jobRecords = await base("Jobs")
       .select({
         filterByFormula: `RECORD_ID() = '${jobId}'`,
-        fields: ["Job Name"],
+        fields: [FIELD_JOB_TITLE],
         maxRecords: 1
       })
       .firstPage()
@@ -239,7 +242,7 @@ export async function POST(request, { params }) {
       })
     }
 
-    const jobName = jobRecords[0].get("Job Name") || "Unknown Job"
+    const jobName = jobRecords[0].get(FIELD_JOB_TITLE) || "Unknown Job"
     const roleKey = body.roleKey || generateRoleKey(jobName)
 
     // Build template data
