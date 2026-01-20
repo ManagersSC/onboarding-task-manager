@@ -12,12 +12,13 @@ import {
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-// Airtable field IDs (from ATS_schema.json)
+// Airtable field names/IDs (from ATS_schema.json)
+// Note: Using field NAMES for better compatibility with Airtable JS SDK
 // Applicants table
-const FIELD_APPLYING_FOR = "fld2kd9SxfdltFVwW" // "Applying For" - link to Jobs
+const FIELD_APPLYING_FOR = "Applying For" // fld2kd9SxfdltFVwW - link to Jobs
 // Jobs table
-const FIELD_JOB_TITLE = "fldTvEi44E8tSTsWL" // "Title" - primary field (job name)
-const FIELD_JOB_TEMPLATE = "fldWdgCRTKzRJBPXI" // "Preappraisal Questions Template (JSON)"
+const FIELD_JOB_TITLE = "Title" // fldTvEi44E8tSTsWL - primary field (job name)
+const FIELD_JOB_TEMPLATE = "Preappraisal Questions Template (JSON)" // fldWdgCRTKzRJBPXI
 
 /**
  * GET /api/admin/users/[id]/appraisal-template

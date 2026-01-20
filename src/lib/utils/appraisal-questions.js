@@ -153,7 +153,7 @@ export function copyTemplateToOverride(templateJSON, overrideRoleKey = null) {
 }
 
 /**
- * Parse questions from Airtable field (handles lookup array format)
+ * Parse questions from Airtable field (handles lookup array format and legacy formats)
  * @param {string|Array} fieldValue - The raw Airtable field value
  * @returns {{ success: boolean, data: object|null, error: string|null }}
  */
@@ -168,7 +168,39 @@ export function parseAirtableQuestionsField(fieldValue) {
     return { success: false, data: null, error: "Empty field value" }
   }
 
-  const validation = validateQuestionsJSON(jsonString)
+  // Try to parse the JSON
+  let parsed
+  try {
+    parsed = typeof jsonString === "string" ? JSON.parse(jsonString) : jsonString
+  } catch (e) {
+    return { success: false, data: null, error: `JSON parse error: ${e.message}` }
+  }
+
+  // Handle legacy format: { version: 1, questions: ["string", "string"] }
+  // Convert to new format: { version: 1, type: "preappraisal", roleKey, questions: [{order, text}] }
+  if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+    const firstQuestion = parsed.questions[0]
+    
+    // Check if it's legacy format (questions are strings, not objects)
+    if (typeof firstQuestion === "string") {
+      const convertedQuestions = parsed.questions
+        .filter(q => typeof q === "string" && q.trim())
+        .map((text, idx) => ({ order: idx + 1, text: text.trim() }))
+      
+      const convertedData = {
+        version: 1,
+        type: "preappraisal",
+        roleKey: parsed.roleKey || "unknown",
+        updatedAt: parsed.updatedAt || new Date().toISOString(),
+        questions: convertedQuestions
+      }
+      
+      return { success: true, data: convertedData, error: null }
+    }
+  }
+
+  // Standard validation for new format
+  const validation = validateQuestionsJSON(parsed)
   if (!validation.valid) {
     return { success: false, data: null, error: validation.error }
   }

@@ -8,10 +8,11 @@ import { parseAirtableQuestionsField } from "@/lib/utils/appraisal-questions"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-// Airtable field IDs (from ATS_schema.json)
-const FIELD_APPRAISAL_DATE = "fldub0zVNjd0Skkly" // "Appraisal Date"
-const FIELD_APPRAISAL_HISTORY = "fldrnRVH15LptSFzV" // "Appraisal History"
-const FIELD_QUESTIONS_OVERRIDE = "fldCmnvIXn1o2nDrx" // "Preappraisal Questions Override (JSON)"
+// Airtable field names (from ATS_schema.json)
+// Note: Using field NAMES for better compatibility with Airtable JS SDK
+const FIELD_APPRAISAL_DATE = "Appraisal Date" // fldub0zVNjd0Skkly
+const FIELD_APPRAISAL_HISTORY = "Appraisal History" // fldrnRVH15LptSFzV
+const FIELD_QUESTIONS_OVERRIDE = "Preappraisal Questions Override (JSON)" // fldCmnvIXn1o2nDrx
 
 export async function POST(request, { params }) {
   try {
