@@ -126,28 +126,63 @@ This document details the data flow between Next.js and Airtable for the apprais
      │                       │◀────────────────────────┼─────────────────────────│
      │                       │                         │                         │
      │  6. Show Question     │                         │                         │
-     │     Editor Modal      │                         │                         │
+     │     Editor (Step 2)   │                         │                         │
      │◀──────────────────────│                         │                         │
      │                       │                         │                         │
      │  7. Edit questions    │                         │                         │
-     │     (optional)        │                         │                         │
+     │     (add/delete/edit) │                         │                         │
      │──────────────────────▶│                         │                         │
      │                       │                         │                         │
-     │  8. Click "Confirm"   │                         │                         │
+     │  8. Click "Confirm    │                         │                         │
+     │     Appraisal"        │                         │                         │
      │──────────────────────▶│                         │                         │
      │                       │                         │                         │
-     │                       │  9. POST /appraisal-date                          │
+     │                       │  9. POST /appraisal-questions                     │
      │                       │────────────────────────▶│                         │
      │                       │                         │                         │
-     │                       │  10. Update fields      │                         │
-     │                       │      - Appraisal Date   │                         │
-     │                       │      - Appraisal History│                         │
-     │                       │      - Override (JSON)  │                         │
-     │                       │◀────────────────────────│                         │
+     │                       │  10. POST /appraisal-date (with snapshot)         │
+     │                       │────────────────────────▶│                         │
      │                       │                         │                         │
-     │  11. Success toast    │                         │                         │
+     │                       │  11. POST /calendar (create event)                │
+     │                       │────────────────────────▶│                         │
+     │                       │                         │                         │
+     │  12. Success toast    │                         │                         │
      │◀──────────────────────│                         │                         │
      │                       │                         │                         │
+```
+
+### UI Flow (Multi-Step Dialog)
+
+```
+┌─────────────────────────────────────────────────┐
+│  Set Appraisal Date                             │
+│  ─────────────────                              │
+│  Step 1 of 2: Select a date and time            │
+│                                                 │
+│  [Calendar Picker]                              │
+│  [Start Time]  [End Time]                       │
+│                                                 │
+│              [Cancel]  [Continue →]             │
+└─────────────────────────────────────────────────┘
+                      │
+                      ▼ (fetches template from Jobs table)
+┌─────────────────────────────────────────────────┐
+│  Set Appraisal Date                             │
+│  ─────────────────                              │
+│  Step 2 of 2: Customize the pre-appraisal       │
+│  questions                                      │
+│                                                 │
+│  Date: 2026-01-20 at 9:00 AM - 10:00 AM        │
+│  Role: Dental Nurse                             │
+│                                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 1. Question text...        [↑][↓][✎][×] │   │
+│  │ 2. Question text...        [↑][↓][✎][×] │   │
+│  └─────────────────────────────────────────┘   │
+│  [+ Add Question]           [Reset to Template] │
+│                                                 │
+│   [← Back]  [Cancel]  [Confirm Appraisal]       │
+└─────────────────────────────────────────────────┘
 ```
 
 ### Step-by-Step Details
