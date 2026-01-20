@@ -2335,7 +2335,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                 </div>
               </div>
               
-              <ScrollArea className="max-h-[280px] pr-2">
+              <div className="max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
                   {pendingQuestions.length === 0 ? (
                     <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-md">
@@ -2408,7 +2408,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
               
               <Button 
                 variant="outline" 
