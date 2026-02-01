@@ -4,8 +4,15 @@ import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { parseAirtableQuestionsField } from "@/lib/utils/appraisal-questions"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+
+// Airtable field names (from ATS_schema.json)
+// Note: Using field NAMES for better compatibility with Airtable JS SDK
+const FIELD_APPRAISAL_DATE = "Appraisal Date" // fldub0zVNjd0Skkly
+const FIELD_APPRAISAL_HISTORY = "Appraisal History" // fldrnRVH15LptSFzV
+const FIELD_QUESTIONS_OVERRIDE = "Preappraisal Questions Override (JSON)" // fldCmnvIXn1o2nDrx
 
 export async function POST(request, { params }) {
   try {
@@ -39,10 +46,24 @@ export async function POST(request, { params }) {
     ]
     try {
       const records = await base("Applicants")
-        .select({ filterByFormula: `RECORD_ID() = '${id}'`, fields: ["Appraisal History"], maxRecords: 1 })
+        .select({ 
+          filterByFormula: `RECORD_ID() = '${id}'`, 
+          fields: [FIELD_APPRAISAL_HISTORY, FIELD_QUESTIONS_OVERRIDE], 
+          maxRecords: 1 
+        })
         .firstPage()
 
-      const existingHistoryRaw = records?.[0]?.get?.("Appraisal History")
+      const existingHistoryRaw = records?.[0]?.get?.(FIELD_APPRAISAL_HISTORY)
+      
+      // Get current questions override for snapshot
+      const questionsOverrideRaw = records?.[0]?.get?.(FIELD_QUESTIONS_OVERRIDE)
+      let questionsSnapshot = null
+      if (questionsOverrideRaw) {
+        const parsed = parseAirtableQuestionsField(questionsOverrideRaw)
+        if (parsed.success) {
+          questionsSnapshot = parsed.data
+        }
+      }
 
       if (existingHistoryRaw && typeof existingHistoryRaw === "string" && existingHistoryRaw.trim()) {
         try {
@@ -73,6 +94,10 @@ export async function POST(request, { params }) {
           updated.steps = mergedSteps
           updated.createdAt = existing.createdAt || nowIso
           updated.updatedAt = nowIso
+          // Store questions snapshot if available
+          if (questionsSnapshot) {
+            updated.preappraisalQuestions = questionsSnapshot
+          }
           historyObj.appraisals[idx] = updated
         } else {
           const steps = STEP_ORDER.map((def) => ({
@@ -80,7 +105,12 @@ export async function POST(request, { params }) {
             label: def.label,
             completedAt: def.id === "set_appraisal_date" ? nowIso : null,
           }))
-          historyObj.appraisals.push({ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso })
+          const newEntry = { year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso }
+          // Store questions snapshot if available
+          if (questionsSnapshot) {
+            newEntry.preappraisalQuestions = questionsSnapshot
+          }
+          historyObj.appraisals.push(newEntry)
         }
       } else {
         const steps = STEP_ORDER.map((def) => ({
@@ -88,7 +118,12 @@ export async function POST(request, { params }) {
           label: def.label,
           completedAt: def.id === "set_appraisal_date" ? nowIso : null,
         }))
-        historyObj = { appraisals: [{ year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso }] }
+        const newEntry = { year, appraisalDate: appraisalDateIso, steps, createdAt: nowIso, updatedAt: nowIso }
+        // Store questions snapshot if available
+        if (questionsSnapshot) {
+          newEntry.preappraisalQuestions = questionsSnapshot
+        }
+        historyObj = { appraisals: [newEntry] }
       }
 
       historyString = JSON.stringify(historyObj)
@@ -97,8 +132,8 @@ export async function POST(request, { params }) {
     }
 
     // Update Applicants.'Appraisal Date' and 'Appraisal History' (if built)
-    const fieldsToUpdate = { "Appraisal Date": dateStr }
-    if (historyString) fieldsToUpdate["Appraisal History"] = historyString
+    const fieldsToUpdate = { [FIELD_APPRAISAL_DATE]: dateStr }
+    if (historyString) fieldsToUpdate[FIELD_APPRAISAL_HISTORY] = historyString
     await base("Applicants").update([{ id, fields: fieldsToUpdate }])
 
     try {

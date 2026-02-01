@@ -7,7 +7,7 @@ import { Badge } from "@components/ui/badge"
 import { Separator } from "@components/ui/separator"
 import { Button } from "@components/ui/button"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil, CheckCircle2, Circle, AlertCircle, ChevronDown } from "lucide-react"
+import { ExternalLink, FileText, MessageSquare, Loader2, Eye, RefreshCw, ChevronLeft, Star, X, Pencil, CheckCircle2, Circle, AlertCircle, ChevronDown, ChevronUp, Settings, Plus, Trash2, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import UploadDropzone from "./upload-dropzone"
 import { attachFeedback } from "@/app/admin/users/actions"
@@ -19,6 +19,7 @@ import { useFeedbackDocuments } from "@/hooks/useFeedbackDocuments"
 import { ApplicantFileViewerModal } from "./applicant-file-viewer-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { Input } from "@components/ui/input"
+import { Textarea } from "@components/ui/textarea"
 import { Label } from "@components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@components/ui/dialog"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
@@ -26,6 +27,8 @@ import { toast } from "sonner"
 import { useQuizSubmissions } from "@/hooks/useQuizSubmissions"
 import { QuizSubmissionAnswersModal } from "./quiz-submission-answers-modal"
 import { updateApplicant } from "@/app/admin/users/actions"
+import AppraisalQuestionEditor from "./AppraisalQuestionEditor"
+import AppraisalQuestionsViewer from "./AppraisalQuestionsViewer"
 import { generateColorFromString } from "@/lib/utils/colour-hash"
 import Link from "next/link"
 
@@ -108,6 +111,11 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   })
 
   const [appraisalOpen, setAppraisalOpen] = useState(false)
+  const [appraisalViewerOpen, setAppraisalViewerOpen] = useState(false)
+  const [appraisalViewerData, setAppraisalViewerData] = useState(null)
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false)
+  const [templateLoading, setTemplateLoading] = useState(false)
+  const [templateData, setTemplateData] = useState(null)
   const applicationTimelineItems = useMemo(() => {
     if (!applicant) return []
     // Parse history (array or JSON string)
@@ -819,7 +827,37 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         <div className="rounded-lg border p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">Appraisals</h4>
-                            <Button size="sm" className="h-8" onClick={() => setAppraisalOpen(true)}>Set Date</Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Edit template questions"
+                                onClick={async () => {
+                                  if (!applicant?.id) return
+                                  setTemplateLoading(true)
+                                  try {
+                                    const res = await fetch(`/api/admin/users/${applicant.id}/appraisal-template`)
+                                    if (!res.ok) throw new Error("Failed to fetch template")
+                                    const data = await res.json()
+                                    setTemplateData(data)
+                                    setTemplateEditorOpen(true)
+                                  } catch (err) {
+                                    toast.error(err?.message || "Failed to load template")
+                                  } finally {
+                                    setTemplateLoading(false)
+                                  }
+                                }}
+                                disabled={templateLoading}
+                              >
+                                {templateLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Settings className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button size="sm" className="h-8" onClick={() => setAppraisalOpen(true)}>Set Date</Button>
+                            </div>
                           </div>
                           {(() => {
                             let appraisals = []
@@ -874,7 +912,25 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                             {a?.updatedAt ? ` • Updated ${formatDate(a.updatedAt)}` : ''}
                                           </div>
                                         </div>
-                                        <div className="shrink-0">{renderStatusBadge(status)}</div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            title="View questions"
+                                            onClick={() => {
+                                              setAppraisalViewerData({
+                                                questions: a?.preappraisalQuestions,
+                                                appraisalDate: a?.appraisalDate,
+                                                year: a?.year
+                                              })
+                                              setAppraisalViewerOpen(true)
+                                            }}
+                                          >
+                                            <Eye className="h-4 w-4" />
+                                          </Button>
+                                          {renderStatusBadge(status)}
+                                        </div>
                                       </div>
 
                                       {isCurrent && currentStep && (
@@ -944,6 +1000,36 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             applicantEmail={applicant?.email}
                             currentDate={applicant?.appraisalDate}
                             onUpdated={async () => { await mutate?.() }}
+                          />
+                          
+                          {/* Questions Viewer Modal */}
+                          <AppraisalQuestionsViewer
+                            open={appraisalViewerOpen}
+                            onOpenChange={setAppraisalViewerOpen}
+                            questions={appraisalViewerData?.questions}
+                            appraisalDate={appraisalViewerData?.appraisalDate}
+                            year={appraisalViewerData?.year}
+                          />
+                          
+                          {/* Template Editor Modal */}
+                          <AppraisalQuestionEditor
+                            open={templateEditorOpen}
+                            onOpenChange={setTemplateEditorOpen}
+                            questions={templateData?.template?.questions || []}
+                            roleKey={templateData?.template?.roleKey || templateData?.jobName || "unknown"}
+                            isTemplate={true}
+                            loading={templateLoading}
+                            onSave={async (questions) => {
+                              const res = await fetch(`/api/admin/users/${applicant?.id}/appraisal-template`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ questions })
+                              })
+                              if (!res.ok) {
+                                const err = await res.json().catch(() => ({}))
+                                throw new Error(err?.error || "Failed to save template")
+                              }
+                            }}
                           />
                         </div>
                       )}
@@ -1827,7 +1913,31 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
 }
 
 function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = "Applicant", applicantEmail = "", currentDate, onUpdated }) {
+  // Multi-step flow: "date" -> "questions"
+  const [step, setStep] = useState("date")
+  
+  // Date selection state
   const [date, setDate] = useState("")
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
+  const [calMonth, setCalMonth] = useState(() => new Date())
+  const [eventsByDate, setEventsByDate] = useState({})
+  const [dayEvents, setDayEvents] = useState([])
+  const [hasConflict, setHasConflict] = useState(false)
+  
+  // Question editor state
+  const [pendingQuestions, setPendingQuestions] = useState([])
+  const [roleKey, setRoleKey] = useState("unknown")
+  const [jobName, setJobName] = useState("")
+  const [templateWarning, setTemplateWarning] = useState("")
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editingText, setEditingText] = useState("")
+  
+  // Loading/saving states
+  const [templateLoading, setTemplateLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Initialize date from currentDate
   useEffect(() => {
     if (!open) return
     try {
@@ -1840,10 +1950,20 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
       setDate(`${y}-${m}-${day}`)
     } catch { setDate("") }
   }, [open, currentDate])
-  const [saving, setSaving] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [pendingDate, setPendingDate] = useState("")
-  const [calMonth, setCalMonth] = useState(() => new Date())
+  
+  // Reset to step 1 when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setStep("date")
+      setPendingQuestions([])
+      setRoleKey("unknown")
+      setJobName("")
+      setTemplateWarning("")
+      setEditingIndex(null)
+      setEditingText("")
+    }
+  }, [open])
+
   const timeOptions = useMemo(() => {
     const opts = []
     for (let h = 8; h <= 18; h++) {
@@ -1855,11 +1975,6 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
     }
     return opts
   }, [])
-  const [eventsByDate, setEventsByDate] = useState({})
-  const [dayEvents, setDayEvents] = useState([])
-  const [startTime, setStartTime] = useState("")
-  const [endTime, setEndTime] = useState("")
-  const [hasConflict, setHasConflict] = useState(false)
 
   // Fetch month events on open or month change
   useEffect(() => {
@@ -1898,137 +2013,441 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
   // Compute conflicts
   useEffect(() => {
     if (!date || !startTime || !endTime) { setHasConflict(false); return }
-    const [sh, sm] = startTime.split(':').map(Number)
-    const [eh, em] = endTime.split(':').map(Number)
     const start = new Date(`${date}T${startTime}:00`)
     const end = new Date(`${date}T${endTime}:00`)
     if (end <= start) { setHasConflict(true); return }
     const conflict = (eventsByDate[date] || []).some(ev => (start < ev.end && end > ev.start))
     setHasConflict(conflict)
   }, [date, startTime, endTime, eventsByDate])
+
+  // Handle Continue button - fetch template and go to step 2
+  const handleContinue = async () => {
+    if (!applicantId || !date || !startTime || !endTime) return
+    setTemplateLoading(true)
+    setTemplateWarning("")
+    try {
+      const res = await fetch(`/api/admin/users/${applicantId}/appraisal-template`)
+      const data = await res.json().catch(() => ({}))
+      
+      const templateQuestions = data?.template?.questions || []
+      const templateRoleKey = data?.template?.roleKey || data?.jobName || "unknown"
+      
+      setPendingQuestions(templateQuestions)
+      setRoleKey(templateRoleKey)
+      setJobName(data?.jobName || "")
+      
+      if (data?.warning) {
+        setTemplateWarning(data.warning)
+      } else if (templateQuestions.length === 0) {
+        setTemplateWarning("No template questions found for this job. You can add questions manually.")
+      }
+      
+      setStep("questions")
+    } catch (err) {
+      toast.error(err?.message || "Failed to load template questions")
+    } finally {
+      setTemplateLoading(false)
+    }
+  }
+
+  // Question editing helpers
+  const handleAddQuestion = () => {
+    const newOrder = pendingQuestions.length + 1
+    setPendingQuestions([...pendingQuestions, { order: newOrder, text: "" }])
+    setEditingIndex(pendingQuestions.length)
+    setEditingText("")
+  }
+
+  const handleDeleteQuestion = (index) => {
+    const updated = pendingQuestions.filter((_, i) => i !== index)
+    // Re-normalize order
+    const normalized = updated.map((q, i) => ({ ...q, order: i + 1 }))
+    setPendingQuestions(normalized)
+    if (editingIndex === index) {
+      setEditingIndex(null)
+      setEditingText("")
+    }
+  }
+
+  const handleMoveUp = (index) => {
+    if (index === 0) return
+    const updated = [...pendingQuestions]
+    const temp = updated[index - 1]
+    updated[index - 1] = { ...updated[index], order: index }
+    updated[index] = { ...temp, order: index + 1 }
+    setPendingQuestions(updated)
+  }
+
+  const handleMoveDown = (index) => {
+    if (index >= pendingQuestions.length - 1) return
+    const updated = [...pendingQuestions]
+    const temp = updated[index + 1]
+    updated[index + 1] = { ...updated[index], order: index + 2 }
+    updated[index] = { ...temp, order: index + 1 }
+    setPendingQuestions(updated)
+  }
+
+  const handleSaveEdit = () => {
+    if (editingIndex === null) return
+    const trimmed = editingText.trim()
+    if (!trimmed) {
+      // Delete empty question
+      handleDeleteQuestion(editingIndex)
+    } else {
+      const updated = [...pendingQuestions]
+      updated[editingIndex] = { ...updated[editingIndex], text: trimmed }
+      setPendingQuestions(updated)
+    }
+    setEditingIndex(null)
+    setEditingText("")
+  }
+
+  const handleCancelEdit = () => {
+    // If adding new question and cancel, remove it
+    if (editingIndex !== null && !pendingQuestions[editingIndex]?.text) {
+      handleDeleteQuestion(editingIndex)
+    }
+    setEditingIndex(null)
+    setEditingText("")
+  }
+
+  const handleResetToTemplate = async () => {
+    setTemplateLoading(true)
+    try {
+      const res = await fetch(`/api/admin/users/${applicantId}/appraisal-template`)
+      const data = await res.json().catch(() => ({}))
+      const templateQuestions = data?.template?.questions || []
+      setPendingQuestions(templateQuestions)
+      setRoleKey(data?.template?.roleKey || data?.jobName || "unknown")
+      toast.success("Reset to template questions")
+    } catch (err) {
+      toast.error("Failed to reset to template")
+    } finally {
+      setTemplateLoading(false)
+    }
+  }
+
+  // Final confirm - save questions, date, and create calendar event
+  const handleConfirmAppraisal = async () => {
+    if (!applicantId || !date || !startTime || !endTime) return
+    
+    // Validate questions
+    const validQuestions = pendingQuestions.filter(q => q.text?.trim())
+    if (validQuestions.length === 0) {
+      toast.error("Please add at least one question")
+      return
+    }
+    
+    setSaving(true)
+    try {
+      // Normalize question order
+      const normalizedQuestions = validQuestions.map((q, i) => ({ order: i + 1, text: q.text.trim() }))
+      
+      // Build the full questions JSON structure
+      const questionsJSON = {
+        version: 1,
+        type: "preappraisal",
+        roleKey,
+        updatedAt: new Date().toISOString(),
+        questions: normalizedQuestions
+      }
+      
+      // 1. Save questions to override field
+      const questionsRes = await fetch(`/api/admin/users/${applicantId}/appraisal-questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionsJSON)
+      })
+      if (!questionsRes.ok) {
+        const err = await questionsRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to save questions')
+      }
+      
+      // 2. Save date + snapshot to history
+      const dateRes = await fetch(`/api/admin/users/${applicantId}/appraisal-date`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          date,
+          preappraisalQuestions: questionsJSON
+        })
+      })
+      if (!dateRes.ok) {
+        const err = await dateRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to set appraisal date')
+      }
+      
+      // 3. Create calendar event
+      const startDT = `${date}T${startTime}:00`
+      const endDT = `${date}T${endTime}:00`
+      const calRes = await fetch('/api/admin/dashboard/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary: 'Appraisal Appointment',
+          description: `Appointment event: Appraisal for applicant ${applicantName}`,
+          start: { dateTime: startDT, timeZone: 'Europe/London' },
+          end: { dateTime: endDT, timeZone: 'Europe/London' },
+          attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
+          createMeet: false,
+        }),
+      })
+      if (!calRes.ok) {
+        const err = await calRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to create calendar appointment')
+      }
+      
+      toast.success('Appraisal created successfully')
+      onOpenChange?.(false)
+      await onUpdated?.()
+    } catch (e) {
+      toast.error(e?.message || 'Failed to create appraisal')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Format time for display
+  const formatTimeDisplay = (timeStr) => {
+    if (!timeStr) return ""
+    const [h, m] = timeStr.split(':').map(Number)
+    const ampm = h < 12 ? 'AM' : 'PM'
+    const hour12 = ((h % 12) || 12)
+    return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!saving) onOpenChange?.(v) }}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={(v) => { if (!saving && !templateLoading) onOpenChange?.(v) }}>
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Set Appraisal Date</DialogTitle>
-          <DialogDescription>Choose a date for the next appraisal and confirm to update.</DialogDescription>
+          <DialogDescription>
+            {step === "date" 
+              ? "Step 1 of 2: Select a date and time for the appraisal."
+              : "Step 2 of 2: Customize the pre-appraisal questions."}
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Appraisal Date</Label>
-            <div className="text-sm">{date ? formatDate(date) : "—"}</div>
-          </div>
-          <MonthOnlyPicker
-            selected={date}
-            onSelect={(val) => setDate(val)}
-            currentMonth={calMonth}
-            onMonthChange={setCalMonth}
-            eventsByDate={eventsByDate}
-          />
-          {date && (
-            <div className="rounded-md border p-3">
-              <div className="text-sm font-medium mb-2">{date}</div>
-              {dayEvents.length > 0 ? (
-                <div className="space-y-1 mb-3">
-                  {dayEvents.map((ev, i) => (
-                    <div key={i} className="text-xs text-muted-foreground">{ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.title}</div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground mb-3">No events for this day</div>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={startTime} onValueChange={(v) => {
-                  setStartTime(v)
-                  if (endTime && endTime <= v) {
-                    const next = timeOptions.find((t) => t.value > v)
-                    setEndTime(next ? next.value : "")
-                  }
-                }}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
-                  <SelectContent>
-                    {timeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <Select value={endTime} onValueChange={setEndTime}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
-                  <SelectContent>
-                    {(startTime ? timeOptions.filter((t) => t.value > startTime) : timeOptions).map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {hasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
-              {startTime && endTime && endTime <= startTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+        
+        {step === "date" ? (
+          // STEP 1: Date/Time Selection
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Appraisal Date</Label>
+              <div className="text-sm">{date ? formatDate(date) : "—"}</div>
             </div>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="h-8" onClick={() => onOpenChange?.(false)} disabled={saving}>Cancel</Button>
-            <Button className="h-8" disabled={!date || !startTime || !endTime || endTime <= startTime || hasConflict || saving} onClick={() => setConfirmOpen(true)}>Continue</Button>
+            <MonthOnlyPicker
+              selected={date}
+              onSelect={(val) => setDate(val)}
+              currentMonth={calMonth}
+              onMonthChange={setCalMonth}
+              eventsByDate={eventsByDate}
+            />
+            {date && (
+              <div className="rounded-md border p-3">
+                <div className="text-sm font-medium mb-2">{date}</div>
+                {dayEvents.length > 0 ? (
+                  <div className="space-y-1 mb-3">
+                    {dayEvents.map((ev, i) => (
+                      <div key={i} className="text-xs text-muted-foreground">{ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.title}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground mb-3">No events for this day</div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={startTime} onValueChange={(v) => {
+                    setStartTime(v)
+                    if (endTime && endTime <= v) {
+                      const next = timeOptions.find((t) => t.value > v)
+                      setEndTime(next ? next.value : "")
+                    }
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Start time" /></SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={endTime} onValueChange={setEndTime}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="End time" /></SelectTrigger>
+                    <SelectContent>
+                      {(startTime ? timeOptions.filter((t) => t.value > startTime) : timeOptions).map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {hasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
+                {startTime && endTime && endTime <= startTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" className="h-8" onClick={() => onOpenChange?.(false)} disabled={templateLoading}>Cancel</Button>
+              <Button 
+                className="h-8" 
+                disabled={!date || !startTime || !endTime || endTime <= startTime || hasConflict || templateLoading} 
+                onClick={handleContinue}
+              >
+                {templateLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Continue
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          // STEP 2: Question Editor
+          <div className="space-y-4">
+            {/* Date summary */}
+            <div className="rounded-md bg-muted/50 p-3">
+              <div className="text-sm">
+                <span className="font-medium">Date:</span> {formatDate(date)} at {formatTimeDisplay(startTime)} - {formatTimeDisplay(endTime)}
+              </div>
+              {jobName && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Role: {jobName}
+                </div>
+              )}
+            </div>
+            
+            {/* Warning banner */}
+            {templateWarning && (
+              <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-700 dark:text-amber-400">{templateWarning}</div>
+                </div>
+              </div>
+            )}
+            
+            {/* Questions list */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Pre-Appraisal Questions</Label>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-xs"
+                    onClick={handleResetToTemplate}
+                    disabled={templateLoading}
+                  >
+                    {templateLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                    Reset to Template
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2">
+                  {pendingQuestions.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-md">
+                      No questions yet. Click "Add Question" to get started.
+                    </div>
+                  ) : (
+                    pendingQuestions.map((q, idx) => (
+                      <div key={idx} className="group rounded-md border p-3 space-y-2">
+                        {editingIndex === idx ? (
+                          // Edit mode
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              placeholder="Enter question text..."
+                              className="min-h-[80px] text-sm"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" className="h-7" onClick={handleCancelEdit}>Cancel</Button>
+                              <Button size="sm" className="h-7" onClick={handleSaveEdit}>Save</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          // View mode
+                          <>
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs text-muted-foreground font-medium shrink-0 mt-0.5">{idx + 1}.</span>
+                              <p className="text-sm flex-1 whitespace-pre-wrap">{q.text || <span className="text-muted-foreground italic">Empty question</span>}</p>
+                            </div>
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7" 
+                                onClick={() => handleMoveUp(idx)}
+                                disabled={idx === 0}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7" 
+                                onClick={() => handleMoveDown(idx)}
+                                disabled={idx >= pendingQuestions.length - 1}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7" 
+                                onClick={() => { setEditingIndex(idx); setEditingText(q.text || "") }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10" 
+                                onClick={() => handleDeleteQuestion(idx)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full h-8"
+                onClick={handleAddQuestion}
+                disabled={editingIndex !== null}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Question
+              </Button>
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex justify-between gap-2 pt-2 border-t">
+              <Button 
+                variant="ghost" 
+                className="h-8" 
+                onClick={() => setStep("date")}
+                disabled={saving}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" className="h-8" onClick={() => onOpenChange?.(false)} disabled={saving}>Cancel</Button>
+                <Button 
+                  className="h-8" 
+                  onClick={handleConfirmAppraisal}
+                  disabled={saving || pendingQuestions.filter(q => q.text?.trim()).length === 0}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Confirm Appraisal
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
-      <Dialog open={confirmOpen} onOpenChange={(v) => { if (!saving) setConfirmOpen(v) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Appraisal Date</DialogTitle>
-            <DialogDescription>Set the appraisal date to {date || "—"} and create an appointment event?</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="h-8" onClick={() => setConfirmOpen(false)} disabled={saving}>Cancel</Button>
-            <Button
-              className="h-8"
-              disabled={saving}
-              onClick={async () => {
-                if (!applicantId || !date || !startTime || !endTime) return
-                try {
-                  setSaving(true)
-                  const res = await fetch(`/api/admin/users/${applicantId}/appraisal-date`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date })
-                  })
-                  if (!res.ok) {
-                    const err = await res.json().catch(() => ({}))
-                    throw new Error(err?.error || 'Failed to set appraisal date')
-                  }
-                  await res.json().catch(() => ({}))
-                  // Create appointment event in calendar
-                  const startDT = `${date}T${startTime}:00`
-                  const endDT = `${date}T${endTime}:00`
-                  const calRes = await fetch('/api/admin/dashboard/calendar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      summary: 'Appraisal Appointment',
-                      description: `Appointment event: Appraisal for applicant ${applicantName}`,
-                      start: { dateTime: startDT, timeZone: 'Europe/London' },
-                      end: { dateTime: endDT, timeZone: 'Europe/London' },
-                      attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
-                      createMeet: false,
-                    }),
-                  })
-                  if (!calRes.ok) {
-                    const err = await calRes.json().catch(() => ({}))
-                    throw new Error(err?.error || 'Failed to create calendar appointment')
-                  }
-                  toast.success('Appraisal date updated')
-                  setConfirmOpen(false)
-                  onOpenChange?.(false)
-                  await onUpdated?.()
-                } catch (e) {
-                  toast.error(e?.message || 'Failed to update appraisal date')
-                } finally {
-                  setSaving(false)
-                }
-              }}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Dialog>
   )
 }
