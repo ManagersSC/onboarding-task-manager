@@ -880,12 +880,20 @@ export function NewHireTracker({ initialNewHires = [] }) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle>New Hire Progress</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold tracking-tight">New Hire Progress</CardTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">{newHires.length} active {newHires.length === 1 ? "hire" : "hires"}</p>
+              </div>
+            </div>
             <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -893,14 +901,18 @@ export function NewHireTracker({ initialNewHires = [] }) {
         </CardHeader>
         <CardContent>
           {newHires.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No active new hires found</p>
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-medium">No active new hires</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">New hires will appear here once onboarding starts</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
+            <div className="relative">
+              <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
               {newHires.map((hire, index) => (
                 <Dialog key={hire.id}>
                   <DialogTrigger asChild>
@@ -908,14 +920,14 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex-shrink-0 w-full sm:w-60 bg-card rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
-                      whileHover={{ scale: 1.02 }}
+                      className="flex-shrink-0 w-full sm:w-60 bg-card rounded-xl border border-border/60 p-4 cursor-pointer hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-base ease-out-expo"
+                      whileHover={{ scale: 1.01 }}
                       onClick={() => setSelectedHire(hire)}
                     >
                       <div className="flex items-center gap-3 justify-between">
-                        <Avatar className="h-10 w-10">
+                        <Avatar className={`h-10 w-10 ring-2 ring-offset-2 ring-offset-background ${hire.progress >= 75 ? 'ring-success/40' : hire.progress >= 50 ? 'ring-info/40' : hire.progress >= 25 ? 'ring-warning/40' : 'ring-muted-foreground/20'}`}>
                           <AvatarImage src={hire.avatar || "/placeholder.svg"} alt={hire.name} />
-                          <AvatarFallback>
+                          <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
                             {hire.name
                               .split(" ")
                               .map((n) => n[0])
@@ -959,11 +971,16 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       </div>
 
                       <div className="mt-4">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>Onboarding Progress</span>
-                          <span className="font-medium">{hire.progress}%</span>
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="text-muted-foreground">Progress</span>
+                          <span className={`font-semibold ${hire.progress >= 75 ? 'text-success' : hire.progress >= 50 ? 'text-info' : hire.progress >= 25 ? 'text-warning' : 'text-muted-foreground'}`}>{hire.progress}%</span>
                         </div>
-                        <Progress value={hire.progress} className="h-2" />
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-slower ease-out-expo ${hire.progress >= 75 ? 'progress-gradient-success' : hire.progress >= 50 ? 'progress-gradient-info' : 'progress-gradient-warning'}`}
+                            style={{ width: `${hire.progress}%` }}
+                          />
+                        </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
@@ -1127,8 +1144,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                         </div>
                       </div>
 
-                      {/* Status Badge */
-                      }
+                      {/* Status Badge */}
                       <div className="flex justify-center">
                         {hire.onboardingStarted ? (
                           <Badge variant="default" className="px-4 py-2">
@@ -1212,6 +1228,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                   </DialogContent>
                 </Dialog>
               ))}
+            </div>
             </div>
           )}
         </CardContent>

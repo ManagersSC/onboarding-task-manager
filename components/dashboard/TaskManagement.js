@@ -46,22 +46,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 import { Checkbox } from "@components/ui/checkbox"
 
-// Enhanced priority colors with very high priority
+// Enhanced priority colors with very high priority - using semantic tokens
 const priorityColors = {
-  "very high": "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-white",
-  low: "bg-green-500 text-white",
-  "very low": "bg-blue-500 text-white",
+  "very high": "bg-error text-error-foreground",
+  high: "bg-warning text-warning-foreground",
+  medium: "bg-warning/80 text-warning-foreground",
+  low: "bg-success text-success-foreground",
+  "very low": "bg-info text-info-foreground",
 }
 
-// Status colors
+// Status colors - using semantic tokens
 const statusColors = {
-  "in-progress": "bg-emerald-500 text-white",
-  completed: "bg-blue-500 text-white",
-  flagged: "bg-amber-500 text-white",
-  overdue: "bg-red-500 text-white",
-  today: "bg-emerald-500 text-white",
+  "in-progress": "bg-info text-info-foreground",
+  completed: "bg-success text-success-foreground",
+  flagged: "bg-warning text-warning-foreground",
+  overdue: "bg-error text-error-foreground",
+  today: "bg-info text-info-foreground",
 }
 
 // Priority order
@@ -1695,24 +1695,24 @@ function isAppraisalActionPlanTask(task) {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold">Task Management</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <CardTitle className="text-lg font-semibold tracking-tight">Task Management</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {tabCounts.upcoming + tabCounts.overdue + tabCounts.flagged} total tasks
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="relative max-w-sm group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors duration-base group-focus-within:text-primary" />
                   <Input
                     placeholder="Search tasks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9 bg-background border-border/50 focus:border-primary/50"
+                    className="pl-9 h-9 bg-background border-border/50 focus:border-primary/50 w-48 focus:w-64 transition-all duration-slow"
                   />
                 </div>
                 <Button
@@ -1790,44 +1790,44 @@ function isAppraisalActionPlanTask(task) {
 
           <CardContent className="pt-0">
             <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/30 p-1 rounded-lg h-11">
+              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/40 p-1 rounded-xl h-11 gap-1">
                 <TabsTrigger
                   value="upcoming"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
                 >
                   <Clock className="h-4 w-4" />
                   <span className="hidden sm:inline">Unclaimed</span>
-                  <Badge className="bg-blue-500 hover:bg-blue-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="info-solid" size="sm">
                     {unclaimedCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="overdue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
                 >
                   <AlertTriangle className="h-4 w-4" />
                   <span className="hidden sm:inline">Overdue</span>
-                  <Badge className="bg-red-500 hover:bg-red-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="error-solid" size="sm">
                     {tabCounts.overdue}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="flagged"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
                 >
                   <Flag className="h-4 w-4" />
                   <span className="hidden sm:inline">Flagged</span>
-                  <Badge className="bg-amber-500 hover:bg-amber-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="warning-solid" size="sm">
                     {tabCounts.flagged}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="queue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
                 >
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">My Queue</span>
-                  <Badge className="bg-emerald-600 hover:bg-emerald-600/90 text-white text-xs" variant="secondary">
+                  <Badge variant="success-solid" size="sm">
                     {myQueue.length}
                   </Badge>
                 </TabsTrigger>
