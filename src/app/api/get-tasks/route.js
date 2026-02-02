@@ -86,9 +86,12 @@ export async function GET(request) {
       return Response.json([])
     }
 
+    // Filter by "Applicant Email" lookup field instead of "Assigned" link field
+    const filterFormula = `FIND("${applicantEmail}", ARRAYJOIN({Applicant Email}))`;
+    
     const taskLogRecords = await base("Onboarding Tasks Logs")
     .select({
-      filterByFormula: `FIND("${applicantRecords[0]._rawJson.fields.Email}", ARRAYJOIN({fldqftlVTfZ5sSkrs}))`,
+      filterByFormula: filterFormula,
       fields: [
         "Task", 
         "Status", 

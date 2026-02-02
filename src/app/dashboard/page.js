@@ -484,8 +484,11 @@ export default function DashboardPage() {
 
   const totalTasks = tasks.length
   const completedTasksCount = tasks.filter((task) => task.completed).length
-  const overdueTasksCount = tasks.filter((task) => task.overdue && !task.isQuiz).length
+  // Overdue Tasks = tasks in the "Overdue" stage (includes all task types)
+  const overdueTasksCount = tasks.filter((task) => task.overdue).length
+  // Pending Tasks = tasks in the "Assigned" stage (not completed and not overdue)
   const assignedTasksCount = tasks.filter((task) => !task.completed && !task.overdue).length
+  // Completion Rate = (completed tasks / total tasks assigned) * 100
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0
 
   const availableWeeks = useMemo(

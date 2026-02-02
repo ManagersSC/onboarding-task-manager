@@ -73,6 +73,9 @@ const AnimatedCounterSimple = React.forwardRef(({
   const [hasAnimated, setHasAnimated] = React.useState(false)
   const containerRef = React.useRef(null)
 
+  // Track the last animated value to detect significant changes
+  const lastValueRef = React.useRef(value)
+
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -99,6 +102,7 @@ const AnimatedCounterSimple = React.forwardRef(({
           }
 
           requestAnimationFrame(animate)
+          lastValueRef.current = value
         }
       },
       { threshold: 0.1 }
@@ -109,6 +113,33 @@ const AnimatedCounterSimple = React.forwardRef(({
     }
 
     return () => observer.disconnect()
+  }, [value, duration, hasAnimated])
+
+  // Handle value changes after initial animation (e.g., when data loads)
+  React.useEffect(() => {
+    if (hasAnimated && value !== lastValueRef.current) {
+      const startTime = performance.now()
+      const startValue = lastValueRef.current
+      const endValue = value
+
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        // Ease out expo
+        const easeOutExpo = 1 - Math.pow(2, -10 * progress)
+        const currentValue = startValue + (endValue - startValue) * easeOutExpo
+
+        setDisplayValue(currentValue)
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+
+      requestAnimationFrame(animate)
+      lastValueRef.current = value
+    }
   }, [value, duration, hasAnimated])
 
   const formattedValue = decimals > 0
