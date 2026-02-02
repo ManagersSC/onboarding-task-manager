@@ -80,6 +80,56 @@ const TaskList = ({ tasks, onComplete, disableActions }) => {
   )
 }
 
+// HelpControls component - defined outside DashboardPage to prevent recreation on every render
+function HelpControls() {
+  const { start } = useTour();
+  const [autoShow, setAutoShow] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" });
+        const d = res.ok ? await res.json() : {};
+        // introTooltip true => tour already completed => do NOT auto show
+        if (!cancelled) setAutoShow(!Boolean(d?.introTooltip));
+      } catch {}
+    })();
+    return () => { cancelled = true };
+  }, []);
+
+  const onToggle = async (checked) => {
+    setAutoShow(checked);
+    try {
+      // store inverse: autoShow=true means not completed
+      await fetch("/api/user/intro-tooltip", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ introTooltip: !checked })
+      });
+    } catch {}
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Help" data-tour="user.help">
+          <CircleHelp className="h-5 w-5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Show tips automatically</div>
+            <Checkbox checked={autoShow} onCheckedChange={onToggle} aria-label="Show tips automatically" />
+          </div>
+          <Button size="sm" className="w-full" onClick={() => start()}>Start tour</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -536,55 +586,6 @@ export default function DashboardPage() {
       status:
         nextSection === "completed" ? "completed" : prev.status === "completed" ? "all" : prev.status,
     }))
-  }
-
-  function HelpControls() {
-    const { start } = useTour();
-    const [autoShow, setAutoShow] = useState(true);
-
-    useEffect(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" });
-          const d = res.ok ? await res.json() : {};
-          // introTooltip true => tour already completed => do NOT auto show
-          if (!cancelled) setAutoShow(!Boolean(d?.introTooltip));
-        } catch {}
-      })();
-      return () => { cancelled = true };
-    }, []);
-
-    const onToggle = async (checked) => {
-      setAutoShow(checked);
-      try {
-        // store inverse: autoShow=true means not completed
-        await fetch("/api/user/intro-tooltip", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ introTooltip: !checked })
-        });
-      } catch {}
-    };
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Help" data-tour="user.help">
-            <CircleHelp className="h-5 w-5" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-64">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Show tips automatically</div>
-              <Checkbox checked={autoShow} onCheckedChange={onToggle} aria-label="Show tips automatically" />
-            </div>
-            <Button size="sm" className="w-full" onClick={() => start()}>Start tour</Button>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
   }
 
   return (
