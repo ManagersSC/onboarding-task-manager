@@ -44,6 +44,7 @@ next-env.d.ts
 ATS_schema.json
 
 #Cursor
+.cursor/*
 .cursor/rules*
 
 # Claude
