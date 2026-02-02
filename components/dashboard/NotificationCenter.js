@@ -20,10 +20,10 @@ const typeIcons = {
 }
 
 const typeStyles = {
-  Critical: "text-red-500 bg-red-100 dark:bg-red-900/20",
+  Critical: "text-error bg-error-muted",
   Info: "text-blue-500 bg-blue-100 dark:bg-blue-900/20",
-  Success: "text-green-500 bg-green-100 dark:bg-green-900/20",
-  Warning: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
+  Success: "text-success bg-success-muted",
+  Warning: "text-warning bg-warning-muted",
 }
 
 export function NotificationCenter() {
@@ -155,7 +155,7 @@ export function NotificationCenter() {
               ))}
             </div>
           ) : error ? (
-            <div className="text-red-500 text-center py-8">{error}</div>
+            <div className="text-error text-center py-8">{error}</div>
           ) : notifications.length === 0 ? (
             <div className="text-muted-foreground text-center py-8 flex flex-col items-center gap-2">
               <Bell className="h-8 w-8 opacity-50" />

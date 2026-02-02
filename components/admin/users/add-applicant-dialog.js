@@ -260,7 +260,7 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
           <TabsContent value="invite" className="mt-4">
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="invite-job">Job <span className="text-destructive">*</span></Label>
+                <Label htmlFor="invite-job">Job <span className="text-error">*</span></Label>
                 <select
                   id="invite-job"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -273,7 +273,7 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
                     <option key={j.id} value={j.id}>{j.title}</option>
                   ))}
                 </select>
-                {jobsError ? (<div className="text-xs text-destructive">{jobsError}</div>) : null}
+                {jobsError ? (<div className="text-xs text-error">{jobsError}</div>) : null}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="emails">Emails</Label>
@@ -294,15 +294,15 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
           <TabsContent value="hired" className="mt-4">
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="hired-name">Full Name <span className="text-destructive">*</span></Label>
+                <Label htmlFor="hired-name">Full Name <span className="text-error">*</span></Label>
                 <Input id="hired-name" value={hiredName} onChange={(e) => setHiredName(e.target.value)} placeholder="Jane Doe" />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="hired-email">Email <span className="text-destructive">*</span></Label>
+                <Label htmlFor="hired-email">Email <span className="text-error">*</span></Label>
                 <Input id="hired-email" type="email" value={hiredEmail} onChange={(e) => setHiredEmail(e.target.value)} placeholder="jane@example.com" />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="hired-job">Job <span className="text-destructive">*</span></Label>
+                <Label htmlFor="hired-job">Job <span className="text-error">*</span></Label>
                 <select
                   id="hired-job"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -315,7 +315,7 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
                     <option key={j.id} value={j.id}>{j.title}</option>
                   ))}
                 </select>
-                {jobsError ? (<div className="text-xs text-destructive">{jobsError}</div>) : null}
+                {jobsError ? (<div className="text-xs text-error">{jobsError}</div>) : null}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="hired-phone">Phone</Label>

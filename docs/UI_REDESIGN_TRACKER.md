@@ -1,7 +1,7 @@
 # UI Redesign Implementation Tracker
 
 > **Purpose:** Track all UI redesign tasks so any Claude instance can pick up from where work stopped.
-> **Last Updated:** 2026-01-30
+> **Last Updated:** 2026-02-02
 > **Branch:** `feature/init_claude_code`
 
 ---
@@ -76,6 +76,60 @@ These are already implemented and available for use in all subsequent tasks:
 
 ### Phase 6: Skeleton Loader Updates
 - [ ] **`components/dashboard/skeletons/`** — (Optional/Low Priority) Review and update skeleton loaders to match new layouts. Key files: `quick-metrics-skeleton`, `activity-feed-skeleton`, `task-management-skeleton`, `new-hire-tracker-skeleton`, `calendar-preview-skeleton`. Each skeleton should mirror the new card structures, spacing, and element sizes. Note: QuickMetrics already has MetricSkeleton defined inline.
+
+---
+
+## Remaining Pages & Components (Phases 7–12)
+
+### Phase 7: Auth Pages
+- [x] `src/app/forgot-password/page.js` — Already redesigned: GradientBackground + Card variant="glass", icon-prefixed inputs, semantic error/success tokens.
+- [x] `src/app/reset-password/page.js` — Already redesigned: GradientBackground + Card variant="glass", Lock icon inputs, skeleton loader, semantic tokens.
+- [x] `src/app/accept-admin-invite/page.js` — Already redesigned: GradientBackground + Card variant="glass", ShieldAlert admin badge, semantic tokens.
+
+### Phase 8: Quiz Components
+- [x] `components/quiz/question-item.jsx` — Already redesigned: success/error tokens for correct/incorrect states, ring-success/ring-error, bg-success-muted/bg-error-muted.
+- [x] `components/quiz/quiz-results.jsx` — Already redesigned: success/error/warning/info tokens, border-t-success/error, semantic progress bar.
+- [x] `components/quiz/info-item.jsx` — Already redesigned: border-info, text-info tokens.
+
+### Phase 9: Admin Pages
+- [x] `src/app/admin/quizzes/page.js` — Already redesigned: bg-success-muted/bg-error-muted/bg-warning-muted badges, semantic progress bars, text-success/text-error/text-warning tokens.
+- [x] `src/app/admin/audit-logs/page.js` — Replaced text-destructive→text-error for failure count. text-success/text-error for status display.
+- [x] `src/app/admin/profile/page.js` — Already redesigned: bg-info-muted/text-info, bg-success-muted/text-success, bg-warning-muted/text-warning, bg-error-muted/text-error for activity icons.
+
+### Phase 10: Admin User Management Components
+- [x] `components/admin/users/applicant-drawer.js` — Replaced 28 hardcoded colors: emerald→success, amber→warning, red→error, purple→primary, yellow stars→warning.
+- [x] `components/admin/users/admin-document-upload.js` — Already redesigned: semantic category colors (info-muted, error-muted, success-muted, warning-muted, primary/10).
+- [x] `components/admin/users/applicant-file-viewer-modal.js` — Replaced text-destructive→text-error. File type icons already use semantic tokens (text-info, text-success, text-warning, text-error).
+- [x] `components/admin/users/AppraisalQuestionEditor.js` — Already redesigned: text-error, bg-error-muted, bg-warning-muted, text-warning tokens.
+- [x] `components/admin/users/AppraisalQuestionsViewer.js` — Already redesigned: text-warning, primary/10 tokens.
+- [x] `components/admin/users/quiz-submission-answers-modal.js` — Replaced bg-primary progress bar with conditional bg-success/bg-error. Pass/fail badges already use semantic tokens.
+- [x] `components/admin/users/add-applicant-dialog.js` — Replaced text-destructive→text-error for required asterisks and validation errors.
+- [x] `components/admin/users/bulk-delete-modal.js` — Replaced text-destructive→text-error on icon and error text.
+- [x] `components/admin/users/progress-stepper.js` — Replaced bg-emerald-600→bg-success for completed steps and connector lines.
+
+### Phase 11: Task Management Components
+- [x] `components/tasks/TaskEditSheet.js` — Replaced all amber-* modified-field highlights→warning tokens, blue-* info alerts→info tokens, text-destructive→text-error.
+- [x] `components/tasks/TasksTable.js` — Replaced text-red-500→text-error.
+- [x] `components/tasks/AssignedTasksLogsTable.js` — Replaced text-red-500→text-error.
+- [x] `components/tasks/CreateTaskForm.js` — Replaced all border-red-500→border-error, text-red-500→text-error for form validation.
+- [x] `components/tasks/BulkCreateResourcesForm.js` — Replaced all hardcoded colors: red→error, green→success, blue→info, amber→warning, purple→primary tokens.
+- [x] `components/tasks/DynamicTaskEditSheet.js` — Replaced blue-* info alerts→info tokens, text-destructive→text-error.
+- [x] `components/tasks/BulkDeleteTasksModal.jsx` — Replaced text-destructive→text-error on icon and error text.
+
+### Phase 12: Dashboard Utility Components
+- [x] `components/dashboard/OnboardingHealth.js` — Already redesigned: bg-success/bg-warning/bg-error for health bars.
+- [x] `components/admin/bottom-navigation.js` — Already redesigned: text-primary/text-muted-foreground, bg-primary indicator dot.
+
+### Additional Components (discovered during sweep)
+- [x] `components/dashboard/TaskManagement.js` — Replaced ~30 remaining hardcoded colors from Phase 4 (emerald/amber/red/blue/purple→semantic tokens).
+- [x] `components/dashboard/NewHireTracker.js` — Replaced ~6 remaining hardcoded colors from Phase 4 (green/amber→success/warning tokens).
+- [x] `components/TaskList.js` — Replaced all hardcoded color configs (red/amber/green→error/warning/success tokens).
+- [x] `components/dashboard/subComponents/FloatingQuickActions.jsx` — Replaced bg-amber-500/bg-green-500→bg-warning/bg-success.
+- [x] `components/dashboard/NotificationCenter.js` — Replaced red/green/amber notification type colors→error/success/warning tokens.
+- [x] `components/dashboard/subComponents/new-staff-task-modal.js` — Replaced bg-red-100 text-red-700→bg-error-muted text-error.
+- [x] `components/dashboard/subComponents/file-viewer-modal.js` — Replaced text-destructive→text-error.
+- [x] `components/admin/Sidebar.js` — Replaced red-600 logout colors→text-error/bg-error-muted.
+- [x] `components/quiz/quiz-client.jsx` — Replaced text-destructive→text-error for error states.
 
 ---
 

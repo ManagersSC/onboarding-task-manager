@@ -38,9 +38,9 @@ const departments = [
 export function OnboardingHealth() {
   // Function to determine color based on completion percentage
   const getHealthColor = (completion) => {
-    if (completion >= 80) return "bg-green-500"
-    if (completion >= 60) return "bg-amber-500"
-    return "bg-red-500"
+    if (completion >= 80) return "bg-success"
+    if (completion >= 60) return "bg-warning"
+    return "bg-error"
   }
 
   // Function to generate sparkline points

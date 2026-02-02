@@ -23,14 +23,14 @@ const actions = [
     icon: "Calendar",
     label: "Schedule Event",
     description: "Plan an onboarding activity",
-    color: "bg-amber-500 hover:bg-amber-600",
+    color: "bg-warning hover:bg-warning/90",
     iconColor: "text-white",
   },
   {
     icon: "Mail",
     label: "Send Update",
     description: "Notify team of progress",
-    color: "bg-green-500 hover:bg-green-600",
+    color: "bg-success hover:bg-success/90",
     iconColor: "text-white",
   },
 ]

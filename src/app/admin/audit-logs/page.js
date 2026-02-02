@@ -467,7 +467,7 @@ function AuditLogsClient() {
               <span className="font-medium text-foreground">{total}</span> total logs
             </div>
             <div>
-              <span className="font-medium text-destructive">{aggregates.failures}</span> failures
+              <span className="font-medium text-error">{aggregates.failures}</span> failures
             </div>
             <div className="ml-auto flex items-center gap-2">
               <span>Show</span>
@@ -539,9 +539,9 @@ function AuditLogsClient() {
                     <span
                       className={
                         row.status === "Success"
-                          ? "text-green-600 dark:text-green-400"
+                          ? "text-success"
                           : row.status === "Failure" || row.status === "Error"
-                            ? "text-red-600 dark:text-red-400"
+                            ? "text-error"
                             : ""
                       }
                     >
@@ -645,9 +645,9 @@ function AuditLogsClient() {
                   <span
                     className={
                       selected.status === "Success"
-                        ? "text-green-600 dark:text-green-400 font-medium"
+                        ? "text-success font-medium"
                         : selected.status === "Failure" || selected.status === "Error"
-                          ? "text-red-600 dark:text-red-400 font-medium"
+                          ? "text-error font-medium"
                           : ""
                     }
                   >

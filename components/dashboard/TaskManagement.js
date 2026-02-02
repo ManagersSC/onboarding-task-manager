@@ -976,13 +976,13 @@ function isAppraisalActionPlanTask(task) {
             <PriorityIcon
               className={`h-4 w-4 flex-shrink-0 ${
                 task.priority.toLowerCase().trim() === "very high"
-                  ? "text-red-500"
+                  ? "text-error"
                   : task.priority.toLowerCase().trim() === "high"
-                    ? "text-orange-500"
+                    ? "text-warning"
                     : task.priority.toLowerCase().trim() === "medium"
-                      ? "text-yellow-500"
+                      ? "text-warning"
                       : task.priority.toLowerCase().trim() === "low"
-                        ? "text-green-500"
+                        ? "text-success"
                         : "text-blue-500"
               }`}
             />
@@ -1000,7 +1000,7 @@ function isAppraisalActionPlanTask(task) {
                   className={`text-[10px] px-2 py-0.5 font-medium border-0 ${
                     isGlobalTask(task)
                       ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                      : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                      : "bg-success-muted text-success"
                   }`}
                 >
                   {isGlobalTask(task) ? "Unclaimed" : "Claimed"}
@@ -1021,14 +1021,14 @@ function isAppraisalActionPlanTask(task) {
               <Separator orientation="vertical" className="h-3 flex-shrink-0" />
               <div className="flex items-center gap-1 flex-shrink-0">
                 <Clock className="h-3 w-3" />
-                <span className={tabId === "overdue" ? "text-red-500 font-medium" : task.rawDueDate ? "" : "text-muted-foreground italic"}>
+                <span className={tabId === "overdue" ? "text-error font-medium" : task.rawDueDate ? "" : "text-muted-foreground italic"}>
                   {formatDueDate(task.rawDueDate)}
                 </span>
               </div>
               {task.flaggedReason && (
                 <>
                   <Separator orientation="vertical" className="h-3 flex-shrink-0" />
-                  <div className="flex items-center gap-1 text-amber-600 min-w-0">
+                  <div className="flex items-center gap-1 text-warning min-w-0">
                     <AlertCircle className="h-3 w-3 flex-shrink-0" />
                     <span className="truncate">{task.flaggedReason}</span>
                   </div>
@@ -1042,11 +1042,11 @@ function isAppraisalActionPlanTask(task) {
             <Badge
               className={`text-[10px] px-2 py-0.5 font-medium border-0 rounded-md ${
                 normalizedStatusValue === "overdue"
-                  ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                  ? "bg-error-muted text-error"
                   : normalizedStatusValue === "in-progress" || normalizedStatusValue === "today"
                     ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
                     : normalizedStatusValue === "flagged"
-                      ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                      ? "bg-warning-muted text-warning"
                       : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
               }`}
               variant="secondary"
@@ -1065,7 +1065,7 @@ function isAppraisalActionPlanTask(task) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                      className="h-7 w-7 p-0 hover:bg-success-muted hover:text-success"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isAppraisalTask(task)) {
@@ -1147,7 +1147,7 @@ function isAppraisalActionPlanTask(task) {
                         setDeleteTaskDialogOpen(true)
                         setTaskToDelete(task)
                       }}
-                      className="text-red-600 focus:text-red-600"
+                      className="text-error focus:text-error"
                     >
                       <Trash className="h-3 w-3 mr-2" />
                       Delete Task
@@ -1164,7 +1164,7 @@ function isAppraisalActionPlanTask(task) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                        className="h-7 w-7 p-0 hover:bg-success-muted hover:text-success"
                         onClick={(e) => {
                           e.stopPropagation()
                           completeTask(task.id)
@@ -1251,7 +1251,7 @@ function isAppraisalActionPlanTask(task) {
                         setDeleteTaskDialogOpen(true)
                         setTaskToDelete(task)
                       }}
-                      className="text-red-600 focus:text-red-600"
+                      className="text-error focus:text-error"
                     >
                       <Trash className="h-3 w-3 mr-2" />
                       Delete Task
@@ -1266,7 +1266,7 @@ function isAppraisalActionPlanTask(task) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                        className="h-7 w-7 p-0 hover:bg-warning-muted hover:text-warning"
                         onClick={(e) => {
                           e.stopPropagation()
                           openFlagDialog(task)
@@ -1291,7 +1291,7 @@ function isAppraisalActionPlanTask(task) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                      className="h-7 w-7 p-0 hover:bg-warning-muted hover:text-warning"
                       onClick={(e) => {
                         e.stopPropagation()
                         openFlagDialog(task)
@@ -1445,19 +1445,19 @@ function isAppraisalActionPlanTask(task) {
         icon: AlertTriangle,
         title: "No overdue tasks",
         description: "Excellent work! You're staying on top of your deadlines.",
-        color: "text-emerald-500",
+        color: "text-success",
       },
       flagged: {
         icon: Flag,
         title: "No flagged tasks",
         description: "All clear! No tasks require special attention right now.",
-        color: "text-amber-500",
+        color: "text-warning",
       },
       queue: {
         icon: Users,
         title: "No items in your queue",
         description: "Claim tasks to start reviewing.",
-        color: "text-emerald-500",
+        color: "text-success",
       },
     }
 
@@ -1511,8 +1511,8 @@ function isAppraisalActionPlanTask(task) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <AlertCircle className="h-8 w-8 text-destructive" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-error" />
             </div>
             <h3 className="text-lg font-semibold mb-2 text-foreground">Failed to load tasks</h3>
             <p className="text-sm text-muted-foreground mb-6">{error}</p>
@@ -1624,7 +1624,7 @@ function isAppraisalActionPlanTask(task) {
                 >
                   <span>{cell.day}</span>
                   {(eventsByDate[cell.dateString]?.length || 0) > 0 && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-success" />
                   )}
                 </Button>
               ))}
@@ -2038,7 +2038,7 @@ function isAppraisalActionPlanTask(task) {
                                       className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
                                         isGlobalTask(t)
                                           ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                                          : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                          : "bg-success-muted text-success"
                                       }`}
                                     >
                                       {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
@@ -2221,8 +2221,8 @@ function isAppraisalActionPlanTask(task) {
                           </Select>
                         </div>
                       </div>
-                      {appraisalHasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
-                      {appraisalStartTime && appraisalEndTime && appraisalEndTime <= appraisalStartTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+                      {appraisalHasConflict && (<div className="mt-2 text-xs text-error">Selected time overlaps with an existing event.</div>)}
+                      {appraisalStartTime && appraisalEndTime && appraisalEndTime <= appraisalStartTime && (<div className="mt-1 text-xs text-error">End time must be after start time.</div>)}
                     </div>
                   )}
 
@@ -2369,7 +2369,7 @@ function isAppraisalActionPlanTask(task) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-amber/10">
-                      <Flag className="h-4 w-4 text-amber-600" />
+                      <Flag className="h-4 w-4 text-warning" />
                     </div>
                     <h2 className="text-lg font-semibold">Flag Task</h2>
                   </div>
@@ -2379,7 +2379,7 @@ function isAppraisalActionPlanTask(task) {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-sm">Reason <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm">Reason <span className="text-error">*</span></Label>
                     <Textarea value={flagReason} onChange={(e) => setFlagReason(e.target.value)} rows={3} className="mt-1" placeholder="Why is this task being flagged?" />
                   </div>
                 </div>
@@ -2407,7 +2407,7 @@ function isAppraisalActionPlanTask(task) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-emerald/10">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                     </div>
                     <h2 className="text-lg font-semibold">Resolve Flag</h2>
                   </div>
@@ -2512,7 +2512,7 @@ function isAppraisalActionPlanTask(task) {
                 {monthlyReviewsLoading ? (
                   <div className="py-10 text-center text-sm text-muted-foreground">Loading onboarding people…</div>
                 ) : monthlyReviewsError ? (
-                  <div className="py-10 text-center text-sm text-red-600">{monthlyReviewsError}</div>
+                  <div className="py-10 text-center text-sm text-error">{monthlyReviewsError}</div>
                 ) : monthlyPeople.length === 0 ? (
                   <div className="py-10 text-center text-sm text-muted-foreground">No people currently onboarding.</div>
                 ) : (
@@ -2647,8 +2647,8 @@ function isAppraisalActionPlanTask(task) {
                     {selectedTask.flaggedReason && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Flagged Reason</Label>
-                        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <p className="text-sm text-amber-800 dark:text-amber-200">{selectedTask.flaggedReason}</p>
+                        <div className="mt-2 p-3 bg-warning-muted rounded-lg border border-warning/20">
+                          <p className="text-sm text-warning">{selectedTask.flaggedReason}</p>
                         </div>
                         <div className="mt-3 flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => resolveFlag(selectedTask.id)}>
@@ -2660,8 +2660,8 @@ function isAppraisalActionPlanTask(task) {
                     {!selectedTask.flaggedReason && selectedTask.resolutionNote && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Resolution Note</Label>
-                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                          <p className="text-sm text-emerald-800 dark:text-emerald-200">{selectedTask.resolutionNote}</p>
+                        <div className="mt-2 p-3 bg-success-muted rounded-lg border border-success/20">
+                          <p className="text-sm text-success">{selectedTask.resolutionNote}</p>
                         </div>
                       </div>
                     )}
@@ -2721,8 +2721,8 @@ function isAppraisalActionPlanTask(task) {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-destructive/10">
-                      <Trash className="h-5 w-5 text-destructive" />
+                    <div className="p-2 rounded-lg bg-error/10">
+                      <Trash className="h-5 w-5 text-error" />
                     </div>
                     <h2 className="text-lg font-semibold text-foreground">Delete Task</h2>
                   </div>
@@ -2780,7 +2780,7 @@ function isAppraisalActionPlanTask(task) {
                     <div>
                       <h2 className="text-lg font-semibold text-foreground">Edit Task</h2>
                       {hasChanges && (
-                        <Badge className="bg-amber-500 text-white font-medium px-2 py-0.5 text-xs mt-1">Unsaved Changes</Badge>
+                        <Badge className="bg-warning text-warning-foreground font-medium px-2 py-0.5 text-xs mt-1">Unsaved Changes</Badge>
                       )}
                     </div>
                   </div>
@@ -2799,7 +2799,7 @@ function isAppraisalActionPlanTask(task) {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="title" className="text-foreground mb-1 block font-medium text-sm">
-                      Title <span className="text-red-500">*</span>
+                      Title <span className="text-error">*</span>
                     </Label>
                     <Input
                       id="title"
@@ -2829,7 +2829,7 @@ function isAppraisalActionPlanTask(task) {
                   {editedTask.status === "Flagged" && (
                     <div>
                       <Label htmlFor="flaggedReason" className="text-foreground mb-1 block font-medium text-sm">
-                        Flagged Reason <span className="text-red-500">*</span>
+                        Flagged Reason <span className="text-error">*</span>
                       </Label>
                       <Input
                         id="flaggedReason"
@@ -2845,7 +2845,7 @@ function isAppraisalActionPlanTask(task) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="priority" className="text-foreground mb-1 block font-medium text-sm">
-                        Priority <span className="text-red-500">*</span>
+                        Priority <span className="text-error">*</span>
                       </Label>
                       <Select
                         value={editedTask.priority}
@@ -2866,7 +2866,7 @@ function isAppraisalActionPlanTask(task) {
 
                     <div>
                       <Label htmlFor="status" className="text-foreground mb-1 block font-medium text-sm">
-                        Status <span className="text-red-500">*</span>
+                        Status <span className="text-error">*</span>
                       </Label>
                       <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
                         <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20 h-9">

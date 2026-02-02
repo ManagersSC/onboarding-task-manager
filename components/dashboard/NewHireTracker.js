@@ -943,7 +943,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-green-500 hover:text-green-600"
+                              className="h-6 w-6 text-success hover:text-success/80"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleResume(hire)
@@ -957,7 +957,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-amber-500 hover:text-amber-600"
+                              className="h-6 w-6 text-warning hover:text-warning/80"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openPauseConfirm(hire)
@@ -1010,7 +1010,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
 
                       {/* Paused meta */}
                       {hire.onboardingPaused && (
-                        <div className="mt-2 text-[11px] text-amber-500">
+                        <div className="mt-2 text-[11px] text-warning">
                           Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
                           {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` : ""}
                           {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}
@@ -1083,7 +1083,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 bg-transparent text-green-600 border-green-600"
+                                className="h-7 px-2 bg-transparent text-success border-success"
                                 onClick={() => handleResume(hire)}
                                 disabled={resuming}
                               >
@@ -1093,7 +1093,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 bg-transparent text-amber-600 border-amber-600"
+                                className="h-7 px-2 bg-transparent text-warning border-warning"
                                 onClick={() => openPauseConfirm(hire)}
                               >
                                 <PauseCircle className="h-4 w-4 mr-1" /> Pause
@@ -1161,7 +1161,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
 
                       {/* Paused/Active meta text */}
                       {hire.onboardingPaused ? (
-                        <div className="text-xs text-amber-600 text-center mt-2">
+                        <div className="text-xs text-warning text-center mt-2">
                           Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
                           {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : ""}
                           {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}

@@ -713,11 +713,11 @@ export default function ProfilePage() {
 // Helper function to generate activity icons
 function getActivityIcon(index) {
   const icons = [
-    { icon: UserCog, color: "bg-blue-100 text-blue-500 dark:bg-blue-900/20" },
-    { icon: Lock, color: "bg-green-100 text-green-500 dark:bg-green-900/20" },
-    { icon: Mail, color: "bg-purple-100 text-purple-500 dark:bg-purple-900/20" },
-    { icon: Shield, color: "bg-amber-100 text-amber-500 dark:bg-amber-900/20" },
-    { icon: Bell, color: "bg-red-100 text-red-500 dark:bg-red-900/20" },
+    { icon: UserCog, color: "bg-info-muted text-info" },
+    { icon: Lock, color: "bg-success-muted text-success" },
+    { icon: Mail, color: "bg-primary/10 text-primary" },
+    { icon: Shield, color: "bg-warning-muted text-warning" },
+    { icon: Bell, color: "bg-error-muted text-error" },
   ]
   return icons[index % icons.length]
 }
