@@ -270,7 +270,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
 
 ### Phase B: Admin Dashboard Page Redesign
 
-- [ ] **Task B1: Redesign Dashboard Page Layout (`src/app/admin/dashboard/page.js`)**
+- [x] **Task B1: Redesign Dashboard Page Layout (`src/app/admin/dashboard/page.js`)**
 **File:** `src/app/admin/dashboard/page.js` (74 lines)
 **Current state:** 6-column grid with various widgets. DashboardHeader in top-right corner.
 **Changes:**
@@ -287,7 +287,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Remove ResourceHub lazy load from dashboard (it has its own page). Remove FloatingQuickActions (replaced by clear primary actions in each section).
   - [ ] Apply `animate-fade-in-up` with stagger classes `stagger-1` through `stagger-5` on each row.
 
-- [ ] **Task B2: Redesign QuickMetrics Component (`components/dashboard/QuickMetrics.js`)**
+- [x] **Task B2: Redesign QuickMetrics Component (`components/dashboard/QuickMetrics.js`)**
 **File:** `components/dashboard/QuickMetrics.js`
 **Current state:** 2-column/4-column grid with gradient tinted cards, animated counters, trend indicators.
 **Changes:**
@@ -300,7 +300,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Hover: `hover:shadow-elevated transition-shadow duration-base`.
   - [ ] Skeleton: update `MetricSkeleton` to match new card structure — `Skeleton` for icon area (w-9 h-9 rounded-lg), value area (h-8 w-20), label area (h-3 w-24), trend area (h-4 w-14 rounded-full).
 
-- [ ] **Task B3: Redesign DashboardHeader (`components/dashboard/DashboardHeader.js`)**
+- [x] **Task B3: Redesign DashboardHeader (`components/dashboard/DashboardHeader.js`)**
 **File:** `components/dashboard/DashboardHeader.js`
 **Current state:** Theme toggle + profile dropdown in top-right.
 **Changes:**
@@ -310,7 +310,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Dropdown content: `shadow-elevated-lg rounded-xl border border-border/40 p-1 min-w-[200px]`. Menu items with `rounded-lg` and `px-3 py-2 text-body-sm`. Logout item styled with `text-error hover:bg-error/5`.
   - [ ] Add `animate-scale-in` to dropdown open.
 
-- [ ] **Task B4: Redesign ActivityFeed (`components/dashboard/ActivityFeed.js`)**
+- [x] **Task B4: Redesign ActivityFeed (`components/dashboard/ActivityFeed.js`)**
 **File:** `components/dashboard/ActivityFeed.js`
 **Current state:** Timeline with vertical gradient line, activity items with icons and avatars.
 **Changes:**
@@ -322,7 +322,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Limit to 5 items. Show skeleton loader (5 rows of: circle skeleton + two line skeletons).
   - [ ] Empty state: centered muted icon + "No recent activity" text.
 
-- [ ] **Task B5: Redesign TaskManagement (`components/dashboard/TaskManagement.js`)**
+- [x] **Task B5: Redesign TaskManagement (`components/dashboard/TaskManagement.js`)**
 **File:** `components/dashboard/TaskManagement.js` (900+ lines)
 **Current state:** Complex multi-state component with tabs (upcoming/overdue/flagged), task cards, multiple modals.
 **IMPORTANT:** This is a large, complex component. Changes are cosmetic only — do not restructure the state management or modal logic.
@@ -335,7 +335,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Keep all existing modals — just ensure they use `rounded-xl` dialog content and consistent spacing (`p-6`).
   - [ ] Skeleton: 5 rows of horizontal skeleton lines.
 
-- [ ] **Task B6: Redesign NewHireTracker (`components/dashboard/NewHireTracker.js`)**
+- [x] **Task B6: Redesign NewHireTracker (`components/dashboard/NewHireTracker.js`)**
 **File:** `components/dashboard/NewHireTracker.js`
 **Current state:** Header with icon, progress bars, avatar rings.
 **Changes:**
@@ -347,7 +347,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Progress bar: `h-1.5 rounded-full bg-muted` track with colored fill. Color by completion: `bg-success` (>75%), `bg-info` (50-75%), `bg-warning` (25-50%), `bg-error` (<25%). Show percentage on the right in `text-caption font-medium`.
   - [ ] Hover: `hover:bg-muted/20 rounded-lg -mx-2 px-2 transition-colors`.
 
-- [ ] **Task B7: Redesign CalendarPreview (`components/dashboard/CalendarPreview.js`)**
+- [x] **Task B7: Redesign CalendarPreview (`components/dashboard/CalendarPreview.js`)**
 **File:** `components/dashboard/CalendarPreview.js`
 **Current state:** Calendar with today ring, event categories, view toggle.
 **Changes:**
@@ -358,7 +358,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] No view toggle — keep month view only for dashboard (full calendar is elsewhere).
   - [ ] Header: month/year in `text-title-sm font-medium`, nav arrows as `ghost` icon buttons.
 
-- [ ] **Task B8: Redesign OnboardingHealth (`components/dashboard/OnboardingHealth.js`)**
+- [x] **Task B8: Redesign OnboardingHealth (`components/dashboard/OnboardingHealth.js`)**
 **File:** `components/dashboard/OnboardingHealth.js`
 **Current state:** Health metric bars.
 **Changes:**
@@ -369,7 +369,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Space between metrics: `space-y-4`.
   - [ ] Add subtle `animate-fade-in-up` on mount.
 
-- [ ] **Task B9: Redesign NotificationCenter (`components/dashboard/NotificationCenter.js`)**
+- [x] **Task B9: Redesign NotificationCenter (`components/dashboard/NotificationCenter.js`)**
 **File:** `components/dashboard/NotificationCenter.js`
 **Current state:** Notification panel with various notification types.
 **Changes:**

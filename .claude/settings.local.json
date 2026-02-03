@@ -9,7 +9,10 @@
       "Bash(for f in src/app/admin/*.js src/app/admin/**/*.js)",
       "Bash(do [ -f \"$f\" ])",
       "Bash(done)",
-      "Bash(for f in components/admin/*.js components/admin/**/*.js)"
+      "Bash(for f in components/admin/*.js components/admin/**/*.js)",
+      "Skill(ralph-loop:ralph-loop)",
+      "Bash(npm run lint)",
+      "Bash(npx next build:*)"
     ]
   }
 }

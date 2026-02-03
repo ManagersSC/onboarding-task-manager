@@ -825,10 +825,13 @@ export function NewHireTracker({ initialNewHires = [] }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <Card>
+        <Card variant="elevated">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle>New Hire Progress</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-title-sm">New Hire Progress</CardTitle>
+                <Badge variant="secondary">0</Badge>
+              </div>
               <div className="flex gap-1">
                 <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
                   <ChevronLeft className="h-4 w-4" />
@@ -877,17 +880,12 @@ export function NewHireTracker({ initialNewHires = [] }) {
         </Breadcrumb>
       </div>
 
-      <Card>
+      <Card variant="elevated">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">New Hire Progress</CardTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">{newHires.length} active {newHires.length === 1 ? "hire" : "hires"}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-title-sm">New Hire Progress</CardTitle>
+              <Badge variant="secondary">{newHires.length}</Badge>
             </div>
             <div className="flex gap-1">
               <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
@@ -920,14 +918,14 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex-shrink-0 w-full sm:w-60 bg-card rounded-xl border border-border/60 p-4 cursor-pointer hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-base ease-out-expo"
+                      className="flex-shrink-0 w-full sm:w-60 rounded-lg p-4 cursor-pointer hover:bg-muted/20 -mx-2 px-2 transition-colors border-b border-border/20 last:border-0"
                       whileHover={{ scale: 1.01 }}
                       onClick={() => setSelectedHire(hire)}
                     >
-                      <div className="flex items-center gap-3 justify-between">
-                        <Avatar className={`h-10 w-10 ring-2 ring-offset-2 ring-offset-background ${hire.progress >= 75 ? 'ring-success/40' : hire.progress >= 50 ? 'ring-info/40' : hire.progress >= 25 ? 'ring-warning/40' : 'ring-muted-foreground/20'}`}>
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-9 w-9 rounded-full">
                           <AvatarImage src={hire.avatar || "/placeholder.svg"} alt={hire.name} />
-                          <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                          <AvatarFallback className="bg-primary/5 text-primary text-caption font-semibold">
                             {hire.name
                               .split(" ")
                               .map((n) => n[0])
@@ -935,8 +933,8 @@ export function NewHireTracker({ initialNewHires = [] }) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm">{hire.name}</h4>
-                          <p className="text-xs text-muted-foreground">{hire.role}</p>
+                          <h4 className="text-body-sm font-medium">{hire.name}</h4>
+                          <p className="text-caption text-muted-foreground">{hire.role}</p>
                         </div>
                         <div className="flex-shrink-0">
                           {hire.onboardingPaused ? (
@@ -971,13 +969,13 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       </div>
 
                       <div className="mt-4">
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="text-muted-foreground">Progress</span>
-                          <span className={`font-semibold ${hire.progress >= 75 ? 'text-success' : hire.progress >= 50 ? 'text-info' : hire.progress >= 25 ? 'text-warning' : 'text-muted-foreground'}`}>{hire.progress}%</span>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-caption text-muted-foreground">Progress</span>
+                          <span className={`text-caption font-medium ${hire.progress >= 75 ? 'text-success' : hire.progress >= 50 ? 'text-info' : hire.progress >= 25 ? 'text-warning' : 'text-error'}`}>{hire.progress}%</span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-slower ease-out-expo ${hire.progress >= 75 ? 'progress-gradient-success' : hire.progress >= 50 ? 'progress-gradient-info' : 'progress-gradient-warning'}`}
+                            className={`h-full rounded-full transition-all duration-slower ease-out-expo ${hire.progress >= 75 ? 'bg-success' : hire.progress >= 50 ? 'bg-info' : hire.progress >= 25 ? 'bg-warning' : 'bg-error'}`}
                             style={{ width: `${hire.progress}%` }}
                           />
                         </div>

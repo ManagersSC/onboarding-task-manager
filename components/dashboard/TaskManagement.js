@@ -940,6 +940,12 @@ function isAppraisalActionPlanTask(task) {
   const TaskItem = ({ task, index, tabId }) => {
     const PriorityIcon = priorityIcons[task.priority.toLowerCase().trim()] || Clock
     const normalizedStatusValue = normalizeStatus(task.status)
+    const priorityKey = task.priority.toLowerCase().trim()
+    const priorityBorderColor = priorityKey === "very high" || priorityKey === "high"
+      ? "border-l-error"
+      : priorityKey === "medium"
+        ? "border-l-warning"
+        : "border-l-info"
 
     return (
       <motion.div
@@ -950,7 +956,7 @@ function isAppraisalActionPlanTask(task) {
         className="group relative"
       >
         <div
-          className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 hover:border-border transition-all duration-200 cursor-pointer"
+          className={`flex items-center gap-3 py-3 border-b border-border/20 last:border-0 border-l-[3px] ${priorityBorderColor} pl-3 hover:bg-muted/30 transition-all duration-200 cursor-pointer`}
           onClick={(e) => {
             if (isMonthlyReviewsTask(task) && !isGlobalTask(task)) {
               e.stopPropagation()
@@ -991,9 +997,9 @@ function isAppraisalActionPlanTask(task) {
           {/* Task Content - Allow it to grow and shrink */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
+              <h4 className="text-body-sm font-medium text-foreground truncate flex-1">{task.title}</h4>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-caption text-muted-foreground">
               <div className="flex items-center gap-2 min-w-0">
                 <Badge
                   variant="secondary"
@@ -1040,16 +1046,16 @@ function isAppraisalActionPlanTask(task) {
           {/* Compact Status Pill */}
           <div className="ml-auto flex items-center flex-shrink-0">
             <Badge
-              className={`text-[10px] px-2 py-0.5 font-medium border-0 rounded-md ${
+              variant={
                 normalizedStatusValue === "overdue"
-                  ? "bg-error-muted text-error"
+                  ? "error"
                   : normalizedStatusValue === "in-progress" || normalizedStatusValue === "today"
-                    ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                    ? "info"
                     : normalizedStatusValue === "flagged"
-                      ? "bg-warning-muted text-warning"
-                      : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-              }`}
-              variant="secondary"
+                      ? "warning"
+                      : "secondary"
+              }
+              className="text-caption px-2 py-0.5 font-medium"
             >
               {task.status?.trim() || task.status}
             </Badge>
@@ -1691,7 +1697,7 @@ function isAppraisalActionPlanTask(task) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <Card className="shadow-sm border-border/50">
+        <Card variant="elevated" className="shadow-sm border-border/50">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -1699,7 +1705,7 @@ function isAppraisalActionPlanTask(task) {
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-semibold tracking-tight">Task Management</CardTitle>
+                  <CardTitle className="text-title-sm font-semibold tracking-tight">Task Management</CardTitle>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {tabCounts.upcoming + tabCounts.overdue + tabCounts.flagged} total tasks
                   </p>
@@ -1790,44 +1796,44 @@ function isAppraisalActionPlanTask(task) {
 
           <CardContent className="pt-0">
             <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/40 p-1 rounded-xl h-11 gap-1">
+              <TabsList className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1 mb-6">
                 <TabsTrigger
                   value="upcoming"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Unclaimed</span>
-                  <Badge variant="info-solid" size="sm">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {unclaimedCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="overdue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Overdue</span>
-                  <Badge variant="error-solid" size="sm">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {tabCounts.overdue}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="flagged"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Flag className="h-4 w-4" />
+                  <Flag className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Flagged</span>
-                  <Badge variant="warning-solid" size="sm">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {tabCounts.flagged}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="queue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all duration-base"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">My Queue</span>
-                  <Badge variant="success-solid" size="sm">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {myQueue.length}
                   </Badge>
                 </TabsTrigger>
@@ -2280,7 +2286,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -2363,7 +2369,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -2401,7 +2407,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -2770,7 +2776,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-lg p-4 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
+                className="bg-background border border-border rounded-xl w-full max-w-lg p-6 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">

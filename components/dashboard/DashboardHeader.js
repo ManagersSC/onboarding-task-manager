@@ -45,13 +45,13 @@ export function DashboardHeader() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex items-center justify-end gap-2"
+      className="flex items-center gap-3"
     >
       {/* Theme toggle */}
       <Button
         variant="ghost"
         size="icon"
-        className="rounded-full h-9 w-9 transition-all duration-base hover:bg-muted"
+        className="h-9 w-9 rounded-lg"
         onClick={toggleTheme}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -59,31 +59,32 @@ export function DashboardHeader() {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-10 rounded-full px-2 gap-2 transition-all duration-base hover:bg-muted group">
-            <Avatar className="h-8 w-8 ring-2 ring-transparent group-hover:ring-primary/20 transition-all duration-base">
+          <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors">
+            <Avatar className="h-8 w-8 rounded-full">
               <AvatarImage src="/file.svg" alt="User" />
-              <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">JD</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-medium text-caption">JD</AvatarFallback>
             </Avatar>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-base group-data-[state=open]:rotate-180" />
-          </Button>
+            <span className="text-body-sm font-medium">John Doe</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 shadow-elevated-lg animate-scale-in p-1">
+        <DropdownMenuContent align="end" className="shadow-elevated-lg rounded-xl border border-border/40 p-1 min-w-[200px] animate-scale-in">
           <DropdownMenuLabel className="px-3 py-2">
-            <p className="text-sm font-semibold">My Account</p>
+            <p className="text-body-sm font-semibold">My Account</p>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="mx-1" />
-          <DropdownMenuItem onClick={navigateToProfile} className="mx-1 rounded-md cursor-pointer gap-2.5 py-2">
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={navigateToProfile} className="rounded-lg cursor-pointer gap-2.5 px-3 py-2 text-body-sm">
             <User className="h-4 w-4 text-muted-foreground" />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={navigateToSettings} className="mx-1 rounded-md cursor-pointer gap-2.5 py-2">
+          <DropdownMenuItem onClick={navigateToSettings} className="rounded-lg cursor-pointer gap-2.5 px-3 py-2 text-body-sm">
             <Settings className="h-4 w-4 text-muted-foreground" />
             Settings
           </DropdownMenuItem>
-          <DropdownMenuSeparator className="mx-1" />
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => handleLogout(router)}
-            className="mx-1 rounded-md cursor-pointer gap-2.5 py-2 text-error focus:text-error focus:bg-error/10"
+            className="rounded-lg cursor-pointer gap-2.5 px-3 py-2 text-body-sm text-error hover:bg-error/5 focus:text-error focus:bg-error/5"
           >
             <LogOut className="h-4 w-4" />
             Log out

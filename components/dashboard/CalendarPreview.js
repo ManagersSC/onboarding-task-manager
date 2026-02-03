@@ -763,7 +763,7 @@ export function CalendarPreview() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Card className="border border-border/60 shadow-sm overflow-hidden">
+      <Card variant="elevated" className="overflow-hidden">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -779,17 +779,17 @@ export function CalendarPreview() {
             <div className="flex items-center gap-2">
               <div className="flex">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-l-lg rounded-r-none border-r-0 bg-transparent"
+                  className="h-8 w-8"
                   onClick={() => navigateDate(-1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-r-lg rounded-l-none bg-transparent"
+                  className="h-8 w-8"
                   onClick={() => navigateDate(1)}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -830,7 +830,7 @@ export function CalendarPreview() {
                 className="p-4"
               >
                 <div className="text-center mb-4">
-                  <h3 className="font-medium text-lg">
+                  <h3 className="text-title-sm font-medium">
                     {monthName} {year}
                   </h3>
                 </div>
@@ -860,60 +860,41 @@ export function CalendarPreview() {
                             variants={cellVariants}
                             whileHover={!cell.isEmpty ? "hover" : {}}
                             whileTap={!cell.isEmpty ? "tap" : {}}
-                            className={`relative rounded-lg p-1 transition-colors duration-base ${
+                            className={`relative rounded-md p-0.5 transition-colors duration-base ${
                               cell.isEmpty
                                 ? "text-muted-foreground/40"
-                                : "hover:cursor-pointer border border-transparent hover:border-border/60 hover:bg-muted/30"
-                            } ${isCurrentDay ? "bg-primary/5 ring-2 ring-primary/30 border-primary/20" : ""}`}
+                                : "hover:cursor-pointer hover:bg-muted/30"
+                            }`}
                             onClick={() => !cell.isEmpty && handleDayClick(cell)}
                           >
                             <div
-                              className={`flex flex-col h-full min-h-[60px] md:min-h-[80px] p-1 ${cell.isEmpty ? "opacity-40" : ""}`}
+                              className={`flex flex-col items-center h-full min-h-[40px] md:min-h-[48px] p-0.5 ${cell.isEmpty ? "opacity-40" : ""}`}
                             >
-                              <div className="flex justify-end">
-                                <span
-                                  className={`text-xs font-medium ${
-                                    isCurrentDay
-                                      ? "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center"
-                                      : ""
-                                  }`}
-                                >
-                                  {cell.day}
-                                </span>
-                              </div>
+                              <span
+                                className={`text-caption ${
+                                  isCurrentDay
+                                    ? "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center font-semibold"
+                                    : "w-6 h-6 flex items-center justify-center"
+                                }`}
+                              >
+                                {cell.day}
+                              </span>
 
-                              <div className="mt-1 flex-grow">
-                                {!cell.isEmpty && cell.events && cell.events.length > 0 && (
-                                  <div className="space-y-1">
-                                    {cell.events.slice(0, 2).map((event, j) => {
-                                      const category = eventCategories[event.type] || eventCategories.default
-                                      return (
-                                        <div
-                                          key={j}
-                                          className="text-[10px] px-1 py-0.5 rounded truncate"
-                                          style={{
-                                            backgroundColor: category.bgColor,
-                                            borderLeft: `2px solid ${category.color}`,
-                                          }}
-                                          title={event.title}
-                                        >
-                                          {event.time !== "All day" && (
-                                            <span className="mr-1 opacity-70">
-                                              {event.time.replace(/\s[AP]M$/, "")}
-                                            </span>
-                                          )}
-                                          {event.title}
-                                        </div>
-                                      )
-                                    })}
-                                    {cell.events.length > 2 && (
-                                      <div className="text-[10px] text-muted-foreground pl-1">
-                                        +{cell.events.length - 2} more
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                              {/* Event dots */}
+                              {!cell.isEmpty && cell.events && cell.events.length > 0 && (
+                                <div className="flex gap-0.5 mt-1 justify-center">
+                                  {cell.events.slice(0, 3).map((event, j) => {
+                                    const category = eventCategories[event.type] || eventCategories.default
+                                    return (
+                                      <div
+                                        key={j}
+                                        className={`w-1 h-1 rounded-full ${category.dotClass}`}
+                                        title={event.title}
+                                      />
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </motion.div>
                         )

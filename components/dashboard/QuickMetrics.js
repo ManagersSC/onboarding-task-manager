@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ArrowUpRight, ArrowDownRight, Users, CheckCircle, Clock, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react'
+import { Users, Clock, TrendingUp, TrendingDown } from 'lucide-react'
 
 import { Card, CardContent } from "@components/ui/card"
 import { useQuickMetrics } from "@/hooks/dashboard/useQuickMetrics"
@@ -22,18 +22,18 @@ function formatValue(val, isPercent = false, isCompletionRate = false, isTasksDu
   return val;
 }
 
-// Loading skeleton for metrics
+// Loading skeleton for metrics - updated to match new card structure
 function MetricSkeleton() {
   return (
-    <Card className="overflow-hidden">
+    <Card variant="elevated" className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
-          <Skeleton className="h-12 w-12 rounded-xl" />
-          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="h-5 w-14 rounded-full" />
         </div>
         <div className="mt-4 space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-3 w-24" />
         </div>
       </CardContent>
     </Card>
@@ -45,8 +45,8 @@ export function QuickMetrics({ initialData }) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 gap-4">
+        {[1, 2].map((i) => (
           <MetricSkeleton key={i} />
         ))}
       </div>
@@ -64,24 +64,22 @@ export function QuickMetrics({ initialData }) {
 
   const cards = [
     {
-      title: "Active Onboardings",
+      title: "ACTIVE ONBOARDINGS",
       value: formatValue(metrics.activeOnboardings),
       numericValue: typeof metrics.activeOnboardings === 'number' ? metrics.activeOnboardings : null,
       change: metrics.activeOnboardingsMonthlyChange,
       icon: Users,
-      iconBg: "bg-info/10",
+      iconBg: "bg-info/8",
       iconColor: "text-info",
-      gradient: "from-info/5 via-transparent to-transparent",
     },
     {
-      title: "Tasks Due This Week",
+      title: "TASKS DUE THIS WEEK",
       value: formatValue(metrics.tasksDueThisWeek, false, false, true),
       numericValue: typeof metrics.tasksDueThisWeek === 'number' ? metrics.tasksDueThisWeek : null,
       change: metrics.tasksDueThisWeekMonthlyChange,
       icon: Clock,
-      iconBg: "bg-warning/10",
+      iconBg: "bg-warning/8",
       iconColor: "text-warning",
-      gradient: "from-warning/5 via-transparent to-transparent",
     },
   ];
 
@@ -90,7 +88,7 @@ export function QuickMetrics({ initialData }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      className="grid grid-cols-2 gap-4"
     >
       {cards.map((metric, index) => (
         <motion.div
@@ -99,54 +97,52 @@ export function QuickMetrics({ initialData }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-          <Card variant="interactive" className="overflow-hidden group">
-            {/* Gradient background */}
-            <div className={cn(
-              "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-slow",
-              metric.gradient
-            )} />
-
-            <CardContent className="p-5 relative">
+          <Card variant="elevated" className="overflow-hidden hover:shadow-elevated transition-shadow duration-base">
+            <CardContent className="p-5">
               <div className="flex items-start justify-between">
-                {/* Icon with gradient background */}
+                {/* Icon in rounded container */}
                 <div className={cn(
-                  "p-3 rounded-xl transition-transform duration-base group-hover:scale-105",
+                  "w-9 h-9 rounded-lg flex items-center justify-center",
                   metric.iconBg
                 )}>
                   <metric.icon className={cn("h-5 w-5", metric.iconColor)} />
                 </div>
 
-                {/* Change indicator */}
-                <div className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-base",
-                  metric.change > 0
-                    ? "bg-success/10 text-success"
-                    : metric.change < 0
-                      ? "bg-error/10 text-error"
-                      : "bg-muted text-muted-foreground"
-                )}>
-                  {metric.change > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : metric.change < 0 ? (
-                    <TrendingDown className="h-3 w-3" />
-                  ) : null}
-                  <span>{formatPercent(metric.change)}</span>
-                </div>
+                {/* Trend indicator pill */}
+                {metric.change !== null && metric.change !== undefined && (
+                  <div className={cn(
+                    "flex items-center gap-0.5 px-2 py-0.5 rounded-full text-caption font-medium",
+                    metric.change > 0
+                      ? "bg-success/10 text-success"
+                      : metric.change < 0
+                        ? "bg-error/10 text-error"
+                        : "bg-muted text-muted-foreground"
+                  )}>
+                    {metric.change > 0 ? (
+                      <TrendingUp className="h-3 w-3" />
+                    ) : metric.change < 0 ? (
+                      <TrendingDown className="h-3 w-3" />
+                    ) : null}
+                    <span>{formatPercent(metric.change)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4">
-                <p className="text-sm text-muted-foreground font-medium">{metric.title}</p>
-                <div className="mt-1">
+                {/* Value */}
+                <div>
                   {metric.numericValue !== null ? (
                     <AnimatedCounterSimple
                       value={metric.numericValue}
                       duration={1200}
-                      className="text-3xl font-bold tracking-tight"
+                      className="text-headline font-bold"
                     />
                   ) : (
-                    <span className="text-3xl font-bold tracking-tight">{metric.value}</span>
+                    <span className="text-headline font-bold">{metric.value}</span>
                   )}
                 </div>
+                {/* Label */}
+                <p className="text-caption text-muted-foreground uppercase tracking-wide mt-1">{metric.title}</p>
               </div>
             </CardContent>
           </Card>
