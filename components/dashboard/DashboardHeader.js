@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import { handleLogout } from "@/lib/utils/logout";
 import { Sun, Moon, User, LogOut, Settings, ChevronDown } from "lucide-react";
 
@@ -17,9 +18,19 @@ import {
 } from "@components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar";
 
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
+function getInitials(name) {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 export function DashboardHeader() {
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
+  const { data: user } = useSWR("/api/admin/dashboard/current-user", fetcher);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -62,9 +73,11 @@ export function DashboardHeader() {
           <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors">
             <Avatar className="h-8 w-8 rounded-full">
               <AvatarImage src="/file.svg" alt="User" />
-              <AvatarFallback className="bg-primary/10 text-primary font-medium text-caption">JD</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-medium text-caption">
+                {getInitials(user?.name)}
+              </AvatarFallback>
             </Avatar>
-            <span className="text-body-sm font-medium">John Doe</span>
+            <span className="text-body-sm font-medium">{user?.name || "Loading..."}</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         </DropdownMenuTrigger>
