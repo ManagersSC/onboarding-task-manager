@@ -4,7 +4,12 @@
       "Bash(ls:*)",
       "Bash(tree:*)",
       "Bash(wc:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(for f in src/app/admin/*.js src/app/admin/**/*.js)",
+      "Bash(do [ -f \"$f\" ])",
+      "Bash(done)",
+      "Bash(for f in components/admin/*.js components/admin/**/*.js)"
     ]
   }
 }
