@@ -8,6 +8,39 @@ Smile Clinique Onboarding Task Manager - a Next.js 15 application for managing d
 
 ## Rules
 
+### Task Workflow
+
+Follow this workflow for EVERY task the user prompts:
+
+**Step 1 — Break down the task**
+- Analyze the user's request and decompose it into clear, atomic sub-tasks.
+- Present the sub-task list to the user for confirmation before proceeding.
+
+**Step 2 — Branch decision**
+- ALWAYS ask the user: "Do you want to implement this in a new git branch?"
+- If **yes**: create a descriptively named branch from the current branch (e.g., `feat/add-quiz-timer`, `fix/login-redirect`) and switch to it.
+- If **no**: stay on the current branch.
+
+**Step 3 — Create a task tracking file**
+- Create a markdown file in the project root named after the task (e.g., `TASK-add-quiz-timer.md`).
+- List every sub-task with an unchecked checkbox (`- [ ]`).
+- Include a header with the branch name (if applicable) and a brief description.
+
+**Step 4 — Implement and track progress**
+- Work through each sub-task one at a time.
+- After completing each sub-task:
+  1. Check off the corresponding checkbox in the task file (`- [x]`).
+  2. Stage, commit, and push the changes to the appropriate branch (new branch or current branch based on Step 2).
+  3. Use clear, descriptive commit messages referencing the sub-task.
+
+**Step 5 — Wrap up**
+- Once all sub-tasks are complete, ask the user: "All tasks are done. Would you like me to open a Pull Request for this branch?"
+- This is only relevant when working on a new branch.
+- If **yes**: create a PR using `gh pr create` with:
+  - A concise title summarizing the work.
+  - A body containing a summary of changes, the completed task list, and a test plan.
+- If **no**: inform the user the work is complete and the branch is ready.
+
 
 ## Commands
 
