@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag, Paperclip } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
@@ -34,7 +34,7 @@ const urgencyConfig = {
   },
 }
 
-function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
+function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disableActions }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
   const handleCompleteTask = async (taskId) => {
@@ -134,12 +134,28 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {task.resourceUrl && (
+                          {task.hasDocuments && onOpenFiles && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => onOpenFiles(task.id, task.title)}
+                            >
+                              <Paperclip className="h-4 w-4 sm:mr-1.5" />
+                              <span className="hidden sm:inline">Files</span>
+                              {task.attachmentCount > 0 && (
+                                <span className="ml-1 text-xs bg-primary/15 text-primary rounded-full px-1.5 font-medium">
+                                  {task.attachmentCount + (task.resourceUrl ? 1 : 0)}
+                                </span>
+                              )}
+                            </Button>
+                          )}
+                          {task.resourceUrl && !task.hasDocuments && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-info hover:text-info/80"
-                              onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                              onClick={() => onOpenFiles ? onOpenFiles(task.id, task.title) : window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
                             >
                               <ExternalLink className="h-4 w-4 sm:mr-1.5" />
                               <span className="hidden sm:inline">Resource</span>
@@ -193,7 +209,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
   )
 }
 
-export default function FolderCard({ folderName, tasks, onComplete, status, disableActions }) {
+export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles, status, disableActions }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -344,7 +360,7 @@ export default function FolderCard({ folderName, tasks, onComplete, status, disa
       </Card>
 
       {isOpen && (
-        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} disableActions={disableActions} />
+        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
       )}
     </>
   )

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 // Assuming these paths are correct in your project. Adjust if necessary.
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
+import { UserFileViewerModal } from "@components/dashboard/UserFileViewerModal"
 import { ProfileActions } from "@components/ProfileActions"
 import UserDashboardTourClient from "@components/onboarding/UserDashboardTourClient"
 import { useTour } from "@components/onboarding/TourProvider"
@@ -59,7 +60,7 @@ function toSearchableString(value) {
   }
 }
 
-const TaskList = ({ tasks, onComplete, disableActions }) => {
+const TaskList = ({ tasks, onComplete, onOpenFiles, disableActions }) => {
   return (
     <div className="divide-y divide-border">
       <AnimatePresence>
@@ -72,7 +73,7 @@ const TaskList = ({ tasks, onComplete, disableActions }) => {
             transition={{ duration: 0.2, delay: i * 0.04 }}
             layout
           >
-            <TaskCard task={task} onComplete={onComplete} disableActions={disableActions} />
+            <TaskCard task={task} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -139,6 +140,17 @@ export default function DashboardPage() {
   const [section, setSection] = useState("active") // active | completed
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
+
+  // File viewer modal state
+  const [fileViewerOpen, setFileViewerOpen] = useState(false)
+  const [fileViewerTaskId, setFileViewerTaskId] = useState(null)
+  const [fileViewerTaskTitle, setFileViewerTaskTitle] = useState(null)
+
+  const handleOpenFiles = useCallback((taskId, taskTitle) => {
+    setFileViewerTaskId(taskId)
+    setFileViewerTaskTitle(taskTitle)
+    setFileViewerOpen(true)
+  }, [])
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -254,11 +266,13 @@ export default function DashboardPage() {
               null,
             week: task.week,
             folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
-            isQuiz: false
+            isQuiz: false,
+            attachmentCount: task.attachmentCount || 0,
+            hasDocuments: task.hasDocuments || false,
           }))
-  
+
         console.log("Regular tasks after quiz filtering:", regularTasks.length)
-  
+
         // Combine all tasks
         const allTasks = [...regularTasks, ...apiQuizTasks];
 
@@ -355,6 +369,8 @@ export default function DashboardPage() {
           week: task.week,
           folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
           isQuiz: false,
+          attachmentCount: task.attachmentCount || 0,
+          hasDocuments: task.hasDocuments || false,
         }))
 
       const allTasks = [...regularTasks, ...apiQuizTasks]
@@ -952,7 +968,7 @@ export default function DashboardPage() {
                     {filters.status === "assigned" ? (
                       <>
                         {assignedQuizTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                           <FolderCard
@@ -960,12 +976,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {assignedTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(assignedTasks.length === 0 && foldersByStatus.assigned.length === 0 && assignedQuizTasks.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -981,12 +998,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {overdueTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(overdueTasks.length === 0 && foldersByStatus.overdue.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -1016,7 +1034,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="space-y-4">
                       {assignedQuizTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                         <FolderCard
@@ -1029,7 +1047,7 @@ export default function DashboardPage() {
                         />
                       ))}
                       {assignedTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {assignedTasks.length === 0 &&
                         foldersByStatus.assigned.length === 0 &&
@@ -1067,7 +1085,7 @@ export default function DashboardPage() {
                         />
                       ))}
                       {overdueTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
                         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -1079,7 +1097,7 @@ export default function DashboardPage() {
                 </div>
               )
             ) : section === "active" && activeView === "list" ? (
-              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
             ) : (
               // Completed Section - masonry layout sorted by completedTime
               <>
@@ -1108,6 +1126,7 @@ export default function DashboardPage() {
                           <TaskCard
                             task={{ ...t, status: "completed" }}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             disableActions={globalPaused.isPaused}
                             compact={!t.description}
                           />
@@ -1127,6 +1146,14 @@ export default function DashboardPage() {
           </AnimatePresence>
         )}
       </main>
+
+      {/* File Viewer Modal */}
+      <UserFileViewerModal
+        isOpen={fileViewerOpen}
+        onClose={() => setFileViewerOpen(false)}
+        taskId={fileViewerTaskId}
+        taskTitle={fileViewerTaskTitle}
+      />
     </div>
     </UserDashboardTourClient>
   )
