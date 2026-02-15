@@ -3,9 +3,10 @@
 import { useTheme } from "@components/theme-provider"
 import { generateColorFromString } from "@lib/utils/colour-hash"
 import { Badge } from "@components/ui/badge"
-import { motion } from "framer-motion"
-import { Folder } from 'lucide-react'
 import { cn } from "@components/lib/utils"
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+} from "@components/ui/tooltip"
 
 export function FolderBadge({ name, usageCount, isSystem = false, className = "" }) {
   const { resolvedTheme } = useTheme()
@@ -14,48 +15,32 @@ export function FolderBadge({ name, usageCount, isSystem = false, className = ""
   if (!name) return null
 
   const colors = generateColorFromString(name)
-  const bgColor = isDark ? colors.dark : colors.light
-  const textColor = isDark ? "text-white" : "text-black"
+  const dotColor = isDark ? colors.dark : colors.light
 
   return (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 500, 
-        damping: 20,
-        duration: 0.3 
-      }}
-      whileHover={{ 
-        scale: 1.05,
-        transition: { duration: 0.2 }
-      }}
-      className={className}
-    >
-      <Badge
-        className={cn(
-          "font-normal text-xs px-2 py-0.5 truncate max-w-[150px] flex items-center gap-1",
-          textColor,
-          className
-        )}
-        style={{
-          backgroundColor: bgColor,
-          borderColor: "transparent",
-        }}
-      >
-        <motion.div
-          initial={{ rotate: -10 }}
-          animate={{ rotate: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Folder className="h-3 w-3" />
-        </motion.div>
-        <span className="truncate">{name}</span>
-        {isSystem && (
-          <span className="text-xs opacity-75">(S)</span>
-        )}
-      </Badge>
-    </motion.div>
+    <TooltipProvider delayDuration={400}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={cn("inline-flex items-center", className)}>
+            <Badge
+              variant="secondary"
+              className="font-normal text-caption px-2 py-0.5 max-w-[120px] flex items-center gap-1.5 cursor-default"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: dotColor }}
+              />
+              <span className="truncate">{name}</span>
+              {isSystem && (
+                <span className="text-caption opacity-60">(S)</span>
+              )}
+            </Badge>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>{name}{isSystem ? " (System)" : ""}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }

@@ -597,6 +597,152 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
 | `src/app/admin/users/page.js` | G | G3 |
 | `components/admin/mobile-page-header.js` | G | G4 |
 
+---
+
+### Phase H: Admin Resources Page UX Overhaul
+
+> **Problem Statement:** The `/admin/resources` page "feels like a lot". Records are displayed as a flat, overwhelming list with no visual grouping. Week/day ordering is broken (showing "1, 1, 4, 2, 1" jumbled sequences) because Airtable sorts `Week Number` and `Day Number` as strings, not integers. 10 columns are visible simultaneously, creating horizontal scroll and cognitive overload. There is no way to see the task structure at a glance.
+>
+> **Goal:** Transform the resources page from a dense data table into an intuitive, scannable interface with proper week/day ordering, logical grouping, reduced visual noise, and a clear information hierarchy. The page should feel spacious, organized, and easy to navigate even with hundreds of records.
+
+---
+
+- [ ] **Task H1: Add client-side numeric sort for Week/Day columns (`components/tasks/TasksTable.js`)**
+**File:** `components/tasks/TasksTable.js`
+**Current problem:** Sorting relies entirely on Airtable's API, which treats `Week Number` and `Day Number` as strings. This produces lexicographic ordering (1, 10, 2, 3...) instead of numeric (1, 2, 3... 10). Users see jumbled week sequences like "1, 1, 4, 2, 1".
+**Changes:**
+  - [ ] After fetching data from the API, apply a secondary client-side sort when the active sort column is `week` or `day`. Parse values as integers (`parseInt(value, 10)`) before comparing.
+  - [ ] Default sort on page load: primary sort by `Week Number` (ascending, numeric), secondary sort by `Day Number` (ascending, numeric). This ensures tasks appear in natural onboarding order: Week 1 Day 1, Week 1 Day 2, ..., Week 2 Day 1, etc.
+  - [ ] Add a `sortNumerically` flag to the sort column config for `week` and `day` columns, so the sort handler knows to use `parseInt` comparison instead of string comparison.
+  - [ ] Keep the Airtable API sort as the primary sort (for pagination consistency), but apply the client-side numeric re-sort on the returned page of results.
+
+- [ ] **Task H2: Add grouped view mode with collapsible week sections (`components/tasks/TasksTable.js`)**
+**File:** `components/tasks/TasksTable.js`
+**Current problem:** All tasks render as a flat list. Users cannot see task structure by week, making it hard to understand the onboarding timeline.
+**Changes:**
+  - [ ] Add a view toggle in the filter toolbar: "List" (current flat table) and "Grouped" (grouped by week). Use a `LayoutList` / `LayoutGrid` icon toggle pair. Default to "Grouped" view.
+  - [ ] In grouped view, render tasks organized under collapsible week headers:
+    ```
+    ▼ Week 1 (12 tasks)
+      Day 1: [task] [task] [task]
+      Day 2: [task] [task]
+    ▼ Week 2 (8 tasks)
+      Day 1: [task] [task]
+      ...
+    ```
+  - [ ] Week header: `flex items-center gap-3 py-3 px-4 bg-muted/20 rounded-lg cursor-pointer hover:bg-muted/30 transition-colors`. Title in `text-body-sm font-semibold`. Task count in `Badge variant="secondary"`. ChevronDown icon that rotates when collapsed.
+  - [ ] Day sub-header: `text-caption text-muted-foreground font-medium uppercase tracking-wide pl-6 py-2 border-b border-border/20`. Format as "Day 1", "Day 2", etc.
+  - [ ] Collapse state per week stored in local component state. All weeks expanded by default.
+  - [ ] Add "Expand All" / "Collapse All" ghost button next to the view toggle.
+  - [ ] Grouped view groups the current page's results — it works within the existing pagination, not across pages.
+  - [ ] Use `AnimatePresence` with `slideDown`/`slideUp` for smooth collapse transitions.
+
+- [ ] **Task H3: Reduce visible columns and add expandable row detail (`components/tasks/TasksTable.js`)**
+**File:** `components/tasks/TasksTable.js`
+**Current problem:** 10 columns visible simultaneously (checkbox, title, description, week, day, folder, job, attachments, resource, edit) requiring ~1368px minimum width. Causes horizontal scrolling and cognitive overload.
+**Changes:**
+  - [ ] Default visible columns (6): Checkbox, Title, Week, Day, Folder, Actions (combined edit + resource + attachments into a single actions cell).
+  - [ ] Hide Description, Job columns by default — these are available in the expanded row detail.
+  - [ ] Actions cell: merge Edit, Resource Link, and Attachments into a compact `flex items-center gap-1` cell with `ghost size="icon-sm"` buttons. Show attachment count as a small badge on the Paperclip icon when > 0.
+  - [ ] Expandable row: clicking a row (not the checkbox) expands an inline detail panel below the row. Detail panel shows: full description, job title, type, resource link (as clickable URL), attachment list, created date. Style: `bg-muted/10 border-l-2 border-primary/20 px-6 py-4 animate-fade-in-up`.
+  - [ ] Use `AnimatePresence` for expand/collapse transitions.
+  - [ ] Column widths: Checkbox (40px), Title (flex-1, min 200px), Week (72px), Day (72px), Folder (140px), Actions (100px). Total: fits comfortably in ~800px.
+  - [ ] On mobile (<768px): hide Week and Day columns (they're visible in expanded detail). Show only Checkbox, Title, Folder, Actions.
+
+- [ ] **Task H4: Redesign ResourcePage container and header (`components/tasks/ResourcePage.js`)**
+**File:** `components/tasks/ResourcePage.js` (40 lines)
+**Current state:** Basic header with h1 + description + Create Resource button. Minimal wrapper.
+**Changes:**
+  - [ ] Page header: follow the layout framework from the design direction. `flex items-center justify-between mb-6 animate-fade-in-up`. Left: title in `text-headline` "Resources" + description `text-body-sm text-muted-foreground` "Manage task templates and onboarding resources". Right: "Create Resource" button as `default` variant with `Plus` icon.
+  - [ ] Add a summary stats row below header (before the table): 3 compact stat chips showing total resources, total folders, and total weeks. Each chip: `inline-flex items-center gap-2 bg-muted/30 rounded-lg px-3 py-1.5 text-body-sm`. Count in `font-semibold`. These values come from the existing table data (count of current page results, distinct folders, distinct weeks).
+  - [ ] Wrap content in `animate-fade-in-up` with stagger.
+
+- [ ] **Task H5: Improve filter toolbar layout and active filter UX (`components/tasks/TasksTable.js` — TableFilters)**
+**File:** `components/tasks/TasksTable.js` (TableFilters function, lines ~26-200)
+**Current problem:** All 5 filters (search, week, day, job, folder) are displayed in one horizontal row. On smaller screens this wraps awkwardly. Active filter pills take additional space below.
+**Changes:**
+  - [ ] Reorganize filters into a cleaner toolbar: Search input on the left (`w-72 h-10 rounded-lg pl-9 border-border/40` with Search icon). Filter group on the right: Week and Day as compact `Select` components (`h-9 rounded-lg min-w-[90px]`), Job and Folder as `Select` components (`h-9 rounded-lg min-w-[120px]`). View toggle (List/Grouped) at far right.
+  - [ ] Active filter pills: render inline after the filter controls, not on a separate row. Each pill: `inline-flex items-center gap-1.5 bg-primary/5 border border-primary/15 rounded-full px-2.5 py-1 text-caption text-primary font-medium`. X button to remove. If more than 3 filters active, show "+N more" with a popover listing all active filters.
+  - [ ] "Clear all filters" ghost button appears when any filter is active.
+  - [ ] On mobile (<768px): collapse filters behind a "Filters" button that opens a slide-down panel. Show search always visible, other filters in the panel. Active filter count shown as badge on the Filters button.
+  - [ ] Remove the separate page-size selector from the filter row. Move it into the pagination footer.
+  - [ ] Refresh button: `ghost size="icon"` with `RotateCw` icon, placed after the view toggle.
+
+- [ ] **Task H6: Redesign table chrome, row styling, and pagination (`components/tasks/TasksTable.js`)**
+**File:** `components/tasks/TasksTable.js`
+**Current problem:** Table uses default styling with all borders, dense rows, and basic pagination. The overall feel is data-heavy without breathing room.
+**Changes:**
+  - [ ] Wrap table in `Card variant="elevated"` with no CardHeader — table starts directly inside the card.
+  - [ ] Table header: `bg-muted/20 sticky top-0 z-10`. Header text: `text-overline text-muted-foreground/70 uppercase tracking-wider font-medium`. Header height: `h-11`.
+  - [ ] Remove outer table border. Use `border-b border-border/20` between rows only.
+  - [ ] Row height: `h-14`. Row hover: `hover:bg-muted/20 transition-colors cursor-pointer` (since rows are now expandable).
+  - [ ] Reduce animation stagger on rows — change from `index * 0.05` (50ms) to `index * 0.02` (20ms) to reduce perceived load time while keeping the effect.
+  - [ ] Column resize handles: make subtler — `w-0.5 bg-transparent hover:bg-primary/30 cursor-col-resize` (visible only on hover).
+  - [ ] Sort indicators: `ChevronUp`/`ChevronDown` icons (`h-3.5 w-3.5`) next to sorted column header, `text-primary` when active, `text-muted-foreground/30` when inactive.
+  - [ ] Pagination footer: `flex items-center justify-between px-4 py-3 border-t border-border/20`. Left: `text-caption text-muted-foreground` showing "Showing X tasks". Center: page navigation buttons as `outline size="sm"`. Right: page size selector as compact `Select`.
+  - [ ] Skeleton loading: replace Loader2 spinner rows with proper skeleton rows (6 rows matching the new reduced column layout — each skeleton row has: checkbox skeleton, title skeleton bar, week/day small skeleton, folder skeleton badge, actions skeleton dots).
+  - [ ] Empty state: centered `AnimatedEmptyState` with `Package` icon (48x48 text-muted-foreground/40), "No resources found" in `text-body-sm`, "Try adjusting your filters or create a new resource" in `text-caption text-muted-foreground/60`, and a "Create Resource" CTA button.
+
+- [ ] **Task H7: Improve FolderBadge for table context (`components/tasks/FolderBadge.js`)**
+**File:** `components/tasks/FolderBadge.js` (61 lines)
+**Current state:** Animated badge with scale/rotate hover effects, colorful backgrounds. In a dense table, multiple animated badges create visual noise.
+**Changes:**
+  - [ ] Reduce animation intensity for table context: remove `rotate` from hover animation. Keep a subtle `scale: 1.02` on hover only.
+  - [ ] Use `Badge variant="secondary"` as the base, with a small colored dot (4px circle) on the left indicating the folder color. This is more scannable than a fully colored badge.
+  - [ ] Format: `inline-flex items-center gap-1.5 text-caption`. Dot + folder name in normal weight.
+  - [ ] Truncate long folder names with `max-w-[120px] truncate` and show full name in a tooltip.
+
+- [ ] **Task H8: Add keyboard navigation and accessibility (`components/tasks/TasksTable.js`)**
+**File:** `components/tasks/TasksTable.js`
+**Changes:**
+  - [ ] Add `Enter` key to expand/collapse row detail (when row is focused).
+  - [ ] Add `Space` key to toggle row checkbox.
+  - [ ] Add `tabIndex={0}` and `role="row"` to interactive table rows.
+  - [ ] Add `aria-expanded` attribute to expandable rows.
+  - [ ] Add `aria-sort` attributes to sortable column headers.
+  - [ ] Ensure focus ring is visible on keyboard navigation: `focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none rounded-sm`.
+
+---
+
+**Phase H Implementation Order:**
+1. **H1** (sorting fix) — foundational, fixes the core complaint
+2. **H4** (ResourcePage container) — sets the page structure
+3. **H5** (filter toolbar) — reorganizes controls
+4. **H6** (table chrome) — visual overhaul of table shell
+5. **H3** (column reduction) — simplifies data density
+6. **H7** (FolderBadge) — reduces visual noise in table
+7. **H2** (grouped view) — adds week grouping
+8. **H8** (accessibility) — finishing touch
+
+**Phase H Dependencies:**
+- Phase A (sidebar/layout) should be completed first (provides layout context).
+- H1 should be done before H2 (grouping depends on proper numeric sorting).
+- H4, H5, H6 can run in parallel.
+- H3 should be done after H6 (table chrome must be in place before restructuring columns).
+- H7 can run independently.
+- H8 should be done last (after all structural changes are settled).
+
+**Phase H Files in Scope:**
+
+| File | Task |
+|------|------|
+| `components/tasks/TasksTable.js` | H1, H2, H3, H5, H6, H8 |
+| `components/tasks/ResourcePage.js` | H4 |
+| `components/tasks/FolderBadge.js` | H7 |
+| `components/tasks/SkeletonRow.js` | H6 |
+| `components/tasks/table/AnimatedSearchBar.js` | H5 |
+| `components/tasks/table/AnimatedFilterPills.js` | H5 |
+| `components/tasks/table/AnimatedEmptyState.js` | H6 |
+| `components/tasks/table/PageTransition.js` | H6 |
+
+**Phase H Files NOT in Scope:**
+- `src/app/api/admin/tasks/core-tasks/route.js` — No API changes. Sorting fix is client-side.
+- `components/tasks/TaskEditSheet.js` — Edit sheet is separate; no changes needed.
+- `components/tasks/CreateTaskDialog.js` — Creation flow is separate.
+- `components/tasks/BulkCreateResourcesForm.js` — Bulk creation is separate.
+
+---
+
 ## Files NOT in Scope
 
 - `src/app/api/**` — All API routes
