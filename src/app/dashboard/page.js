@@ -1047,6 +1047,7 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
@@ -1085,6 +1086,7 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
