@@ -5,6 +5,6 @@
 
 ## Sub-tasks
 
-- [ ] Create API endpoint `/api/admin/dashboard/new-hires/[id]/tasks` to fetch top 5 incomplete tasks
-- [ ] Update admin/users page to support `?applicantId=xxx` query param for auto-opening drawer
-- [ ] Update NewHireTracker modal with task preview section, ellipsis indicator, and "See more" link
+- [x] Create API endpoint `/api/admin/dashboard/new-hires/[id]/tasks` to fetch top 5 incomplete tasks
+- [x] Update admin/users page to support `?applicantId=xxx` query param for auto-opening drawer
+- [x] Update NewHireTracker modal with task preview section, ellipsis indicator, and "See more" link
