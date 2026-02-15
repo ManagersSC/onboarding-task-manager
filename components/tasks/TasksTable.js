@@ -11,7 +11,7 @@ import {
   ExternalLink, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
   Search, X, Loader2, Paperclip, Trash2, RefreshCw, Pencil,
   Package, Plus, LayoutList, Layers, ChevronsUpDown,
-  Calendar, Briefcase, FileText, Clock
+  Calendar, Briefcase, FileText, Clock, Link2
 } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
@@ -100,6 +100,8 @@ function TableFilters({
   folder,
   onJobChange,
   onFolderChange,
+  hasDocuments,
+  onHasDocumentsChange,
   taskCount,
   selectedTasks,
   onDeleteSelected,
@@ -167,9 +169,9 @@ function TableFilters({
   const handleKeyDown = (e) => { if (e.key === "Enter") onSubmit(term) }
   const handleClear = () => { setTerm(""); onSearch("") }
 
-  const hasActiveFilters = week !== "all" || day !== "all" || job !== "all" || folder !== "all" || term
+  const hasActiveFilters = week !== "all" || day !== "all" || job !== "all" || folder !== "all" || hasDocuments !== "all" || term
   const activeFilterCount = [
-    week !== "all", day !== "all", job !== "all", folder !== "all", term
+    week !== "all", day !== "all", job !== "all", folder !== "all", hasDocuments !== "all", term
   ].filter(Boolean).length
 
   const clearAllFilters = () => {
@@ -179,6 +181,7 @@ function TableFilters({
     onDayChange("all")
     onJobChange("all")
     onFolderChange("all")
+    onHasDocumentsChange("all")
   }
 
   return (
@@ -278,6 +281,20 @@ function TableFilters({
             </SelectContent>
           </Select>
 
+          <Select value={hasDocuments} onValueChange={onHasDocumentsChange}>
+            <SelectTrigger className="h-9 w-[150px] rounded-lg text-body-sm border-border/40">
+              <div className="flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Documents" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Resources</SelectItem>
+              <SelectItem value="yes">Has Documents</SelectItem>
+              <SelectItem value="no">No Documents</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Active filter pills — inline */}
           <AnimatePresence>
             {hasActiveFilters && (
@@ -301,6 +318,9 @@ function TableFilters({
                 )}
                 {folder !== "all" && (
                   <AnimatedFilterPill label="Folder" value={folder} onRemove={() => onFolderChange("all")} />
+                )}
+                {hasDocuments !== "all" && (
+                  <AnimatedFilterPill label="Docs" value={hasDocuments === "yes" ? "Has Documents" : "No Documents"} onRemove={() => onHasDocumentsChange("all")} />
                 )}
                 {activeFilterCount > 1 && (
                   <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 px-2 text-caption text-muted-foreground hover:text-foreground">
@@ -488,7 +508,7 @@ function ExpandedRowDetail({ task, onOpenFileViewer, onOpenEditSheet }) {
               <Pencil className="h-3.5 w-3.5 mr-1.5" />
               Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onOpenFileViewer(task.id)} className="h-8">
+            <Button variant="outline" size="sm" onClick={() => onOpenFileViewer(task.id, task.resourceUrl)} className="h-8">
               <Paperclip className="h-3.5 w-3.5 mr-1.5" />
               Files {task.attachmentCount > 0 && `(${task.attachmentCount})`}
             </Button>
@@ -550,6 +570,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const [dayFilter, setDayFilter] = useState("all")
   const [jobFilter, setJobFilter] = useState("all")
   const [folderFilter, setFolderFilter] = useState("all")
+  const [hasDocumentsFilter, setHasDocumentsFilter] = useState("all")
 
   // Task Editing
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -558,6 +579,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   // File Viewer Modal
   const [isFileViewerOpen, setIsFileViewerOpen] = useState(false)
   const [currentTaskId, setCurrentTaskId] = useState(null)
+  const [currentTaskResourceUrl, setCurrentTaskResourceUrl] = useState(null)
 
   // Bulk Delete Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -601,6 +623,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         if (dayFilter !== "all") params.append("day", dayFilter)
         if (jobFilter !== "all") params.append("jobTitle", jobFilter.trim())
         if (folderFilter !== "all") params.append("folderName", folderFilter.trim())
+        if (hasDocumentsFilter !== "all") params.append("hasDocuments", hasDocumentsFilter)
 
         if (sortColumn) {
           const columnToFieldMap = {
@@ -645,7 +668,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         setLoading(false)
       }
     },
-    [pagination.pageSize, searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, sortColumn, sortDirection],
+    [pagination.pageSize, searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, hasDocumentsFilter, sortColumn, sortDirection],
   )
 
   useEffect(() => {
@@ -656,7 +679,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
       cursorHistory: [],
     }))
     fetchTasks(null)
-  }, [searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, pagination.pageSize, fetchTasks])
+  }, [searchTerm, weekFilter, dayFilter, jobFilter, folderFilter, hasDocumentsFilter, pagination.pageSize, fetchTasks])
 
   // Pagination handlers
   const handleNextPage = useCallback(() => {
@@ -683,6 +706,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const handleDayChange = useCallback((value) => setDayFilter(value), [])
   const handleJobChange = useCallback((value) => setJobFilter(value), [])
   const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
+  const handleHasDocumentsChange = useCallback((value) => setHasDocumentsFilter(value), [])
 
   // Edit/File/Delete handlers
   const handleOpenEditSheet = useCallback((taskId) => {
@@ -690,8 +714,9 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
     setIsSheetOpen(true)
   }, [])
 
-  const handleOpenFileViewer = useCallback((taskId) => {
+  const handleOpenFileViewer = useCallback((taskId, resourceUrl) => {
     setCurrentTaskId(taskId)
+    setCurrentTaskResourceUrl(resourceUrl || null)
     setIsFileViewerOpen(true)
   }, [])
 
@@ -893,11 +918,11 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
 
           {/* Actions */}
           <TableCell style={{ width: `${columnWidths.actions}px` }} className="h-14">
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleOpenEditSheet(task.id)}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" onClick={() => handleOpenEditSheet(task.id)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
@@ -906,11 +931,11 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative" onClick={() => handleOpenFileViewer(task.id)}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 relative text-muted-foreground hover:text-foreground" onClick={() => handleOpenFileViewer(task.id, task.resourceUrl)}>
                       <Paperclip className="h-3.5 w-3.5" />
-                      {task.attachmentCount > 0 && (
+                      {(task.attachmentCount > 0 || task.resourceUrl) && (
                         <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-[14px] rounded-full bg-primary text-primary-foreground text-[9px] font-medium flex items-center justify-center px-0.5">
-                          {task.attachmentCount}
+                          {task.attachmentCount + (task.resourceUrl ? 1 : 0)}
                         </span>
                       )}
                     </Button>
@@ -924,7 +949,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -1057,6 +1082,8 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
         folder={folderFilter}
         onJobChange={handleJobChange}
         onFolderChange={handleFolderChange}
+        hasDocuments={hasDocumentsFilter}
+        onHasDocumentsChange={handleHasDocumentsChange}
         taskCount={tasks.length}
         selectedTasks={selectedTasks}
         onDeleteSelected={handleDeleteSelected}
@@ -1228,6 +1255,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
           isOpen={isFileViewerOpen}
           onClose={() => setIsFileViewerOpen(false)}
           taskId={currentTaskId}
+          resourceUrl={currentTaskResourceUrl}
           onFilesUpdated={handleFilesUpdated}
         />
       )}

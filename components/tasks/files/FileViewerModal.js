@@ -25,6 +25,8 @@ import {
   Trash2,
   Loader2,
   Pencil,
+  ExternalLink,
+  Link2,
 } from "lucide-react"
 import Image from "next/image"
 
@@ -44,6 +46,7 @@ const fileTypeIcons = {
 // Get file type from mime type or extension
 const getFileType = (file) => {
   if (!file) return "default"
+  if (file.isLink) return "link"
 
   const mimeType = file.type || ""
   const extension = file.filename ? file.filename.split(".").pop().toLowerCase() : ""
@@ -51,11 +54,18 @@ const getFileType = (file) => {
   if (mimeType.includes("pdf") || extension === "pdf") return "pdf"
   if (mimeType.includes("image") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension)) return "image"
   if (
+    mimeType.includes("word") ||
+    mimeType.includes("officedocument.wordprocessing") ||
+    ["doc", "docx"].includes(extension)
+  )
+    return "document"
+  if (
     mimeType.includes("text") ||
     ["txt", "md", "rtf", "js", "jsx", "ts", "tsx", "css", "html", "json"].includes(extension)
   )
     return "text"
-  if (mimeType.includes("spreadsheet") || ["xls", "xlsx", "csv"].includes(extension)) return "spreadsheet"
+  if (mimeType.includes("spreadsheet") || mimeType.includes("officedocument.spreadsheet") || ["xls", "xlsx", "csv"].includes(extension)) return "spreadsheet"
+  if (mimeType.includes("presentation") || mimeType.includes("officedocument.presentation") || ["ppt", "pptx"].includes(extension)) return "presentation"
   if (["js", "jsx", "ts", "tsx", "html", "css", "json", "xml", "py", "rb", "java", "php"].includes(extension))
     return "code"
   if (mimeType.includes("zip") || ["zip", "rar", "7z", "tar", "gz"].includes(extension)) return "archive"
@@ -77,7 +87,7 @@ const formatFileSize = (bytes) => {
 // File Item Component
 const FileItem = ({ file, displayName, isSelected, onSelect, onRename, onDelete, onDownload }) => {
   const fileType = getFileType(file)
-  const icon = fileTypeIcons[fileType] || fileTypeIcons.default
+  const icon = file.isLink ? <Link2 className="h-5 w-5" /> : (fileTypeIcons[fileType] || fileTypeIcons.default)
   const nameToShow = displayName ?? file.filename
 
   return (
@@ -85,56 +95,65 @@ const FileItem = ({ file, displayName, isSelected, onSelect, onRename, onDelete,
       className={cn(
         "flex items-center gap-2 p-3 rounded-md cursor-pointer",
         isSelected ? "bg-[#1f2937]" : "hover:bg-[#1a1d24]",
+        file.isLink && "border-l-2 border-blue-500/50",
       )}
       onClick={() => onSelect(file)}
     >
-      <div className="flex-shrink-0 text-gray-400">{icon}</div>
+      <div className={cn("flex-shrink-0", file.isLink ? "text-blue-400" : "text-gray-400")}>{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{nameToShow}</div>
         <div className="text-xs text-gray-400 flex items-center gap-1">
-          <span>{formatFileSize(file.size)}</span>
-          <span>•</span>
-          <span>{file.type || "Text"}</span>
+          {file.isLink ? (
+            <span className="truncate max-w-[180px]">{file.url}</span>
+          ) : (
+            <>
+              <span>{formatFileSize(file.size)}</span>
+              <span>•</span>
+              <span>{file.type || "Text"}</span>
+            </>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRename(file)
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(file)
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDownload(file)
+      {!file.isLink && (
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRename(file)
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(file)
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#1f2937]"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDownload(file)
           }}
         >
           <Download className="h-4 w-4" />
         </Button>
       </div>
+      )}
     </div>
   )
 }
@@ -162,6 +181,39 @@ const FileContentViewer = ({ file, content, isLoading }) => {
 
   const fileType = getFileType(file)
 
+  // Resource link — show as a styled link card
+  if (fileType === "link") {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-4 text-center p-8 max-w-md">
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+            <Link2 className="h-8 w-8 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Resource Link</p>
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 hover:underline text-sm break-all"
+            >
+              {file.url}
+            </a>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open in New Tab
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (fileType === "image") {
     return (
       <div className="flex items-center justify-center h-full">
@@ -178,6 +230,53 @@ const FileContentViewer = ({ file, content, isLoading }) => {
 
   if (fileType === "pdf") {
     return <iframe src={file.url} className="w-full h-full border-0" title={file.filename} />
+  }
+
+  // Office documents (.docx, .xlsx, .pptx) — render via Office Online viewer
+  if (fileType === "document" || fileType === "spreadsheet" || fileType === "presentation") {
+    const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.url)}`
+    return (
+      <div className="w-full h-full flex flex-col">
+        <iframe src={officeViewerUrl} className="w-full flex-1 border-0" title={file.filename} />
+        <div className="flex items-center justify-center gap-2 py-2 border-t border-gray-800 text-xs text-gray-400">
+          <span>Preview powered by Office Online</span>
+          <span>•</span>
+          <a
+            href={file.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:underline"
+          >
+            Download original
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Video files — native player
+  if (fileType === "video") {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <video controls className="max-w-full max-h-full rounded-lg" src={file.url}>
+          Your browser does not support video playback.
+        </video>
+      </div>
+    )
+  }
+
+  // Audio files — native player
+  if (fileType === "audio") {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-4 p-8">
+          <FileAudio className="h-16 w-16 text-gray-400" />
+          <audio controls src={file.url}>
+            Your browser does not support audio playback.
+          </audio>
+        </div>
+      </div>
+    )
   }
 
   // Text or code content
@@ -299,7 +398,7 @@ const RenameDialog = ({ file, isOpen, onClose, onSave }) => {
 
 
 // Main File Viewer Modal Component
-export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
+export function FileViewerModal({ isOpen, onClose, taskId, resourceUrl, onFilesUpdated }) {
   const [files, setFiles] = useState([])
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileContent, setFileContent] = useState("")
@@ -320,8 +419,19 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
   // Derived state
   const hasUnsavedChanges = newFiles.length > 0 || Object.keys(fileRenames).length > 0 || filesToRemove.length > 0
 
-  // Combined files (existing + new)
+  // Resource link as a virtual file item
+  const resourceLinkItem = resourceUrl ? {
+    id: "resource-link",
+    filename: "Resource Link",
+    size: 0,
+    type: "link",
+    url: resourceUrl,
+    isLink: true,
+  } : null
+
+  // Combined files (existing + new + resource link)
   const allFiles = [
+    ...(resourceLinkItem ? [resourceLinkItem] : []),
     ...files.filter((file) => !filesToRemove.includes(file.id)),
     ...newFiles.map((file, idx) => ({
       id: `new-${idx}`,
@@ -336,6 +446,7 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
 
   // Get display name (considering renames)
   const getDisplayName = (file) => {
+    if (file.isLink) return "Resource Link"
     if (file.isNew) return file.filename
     return fileRenames[file.id]?.newName || file.filename
   }
@@ -361,8 +472,8 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
       setFiles(formattedFiles)
 
       // Select first file if available
-      if (formattedFiles.length > 0 && !selectedFile) {
-        setSelectedFile(formattedFiles[0])
+      if (formattedFiles.length > 0) {
+        setSelectedFile((prev) => prev || formattedFiles[0])
       }
 
       // Reset state
@@ -381,20 +492,21 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
     } finally {
       setIsLoading(false)
     }
-  }, [taskId, selectedFile])
+  }, [taskId])
 
   useEffect(() => {
     if (isOpen && taskId) {
       fetchFiles()
     }
 
-    // Cleanup object URLs when component unmounts
     return () => {
       newFiles.forEach((file) => {
         if (file.objectUrl) URL.revokeObjectURL(file.objectUrl)
       })
     }
-  }, [isOpen, taskId, fetchFiles, newFiles])
+    // Only re-fetch when modal opens or taskId changes — not on every newFiles/fetchFiles change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, taskId])
 
   // Fetch file content when selected file changes
   useEffect(() => {
@@ -407,7 +519,7 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
 
   // Fetch file content
   const fetchFileContent = async (file) => {
-    if (!file || !file.url) return
+    if (!file || !file.url || file.isLink) return
 
     const fileType = getFileType(file)
     if (fileType !== "text" && fileType !== "code") {
@@ -599,7 +711,7 @@ export function FileViewerModal({ isOpen, onClose, taskId, onFilesUpdated }) {
   }
 
   async function handleDownloadFile(file) {
-    if (!file || !file.url) return
+    if (!file || !file.url || file.isLink) return
   
     try {
       // 1) Fetch the raw data
