@@ -16,12 +16,15 @@ export function ResourcePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* H4: Redesigned page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in-up">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tasks & Resources</h1>
-          <p className="text-sm text-muted-foreground">Manage onboarding tasks and resources for your team.</p>
+          <h1 className="text-headline">Resources</h1>
+          <p className="text-body-sm text-muted-foreground mt-1">
+            Manage task templates and onboarding resources
+          </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="shrink-0">
           <Plus className="mr-2 h-4 w-4" />
           Create Resource
         </Button>

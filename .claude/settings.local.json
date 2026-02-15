@@ -13,8 +13,10 @@
       "Skill(ralph-loop:ralph-loop)",
       "Bash(npm run lint)",
       "Bash(npx next build:*)",
-      "Bash(git push:*)",
-      "Bash(gh pr create:*)"
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
