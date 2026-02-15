@@ -84,7 +84,8 @@ export async function GET(req) {
           "👤 Assigned Applicant",
           "Flagged Reason",
           "Resolution Note",
-          "Task Type"
+          "Task Type",
+          "Display Resource Link"
         ],
         pageSize
       }
@@ -153,6 +154,11 @@ export async function GET(req) {
         flaggedReason: task.fields["Flagged Reason"] || "",
         resolutionNote: task.fields["Resolution Note"] || "",
         taskType: task.fields["Task Type"] || "Standard",
+        taskDocumentUrl: (() => {
+          const raw = task.fields["Display Resource Link"];
+          if (Array.isArray(raw) && raw.length > 0) return raw[0] || "";
+          return typeof raw === "string" ? raw : "";
+        })(),
       });
     });
 

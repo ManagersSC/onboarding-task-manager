@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   CheckCircle2,
@@ -22,6 +23,8 @@ import {
   Search,
   TrendingUp,
   Users,
+  ExternalLink,
+  FileText,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -509,7 +512,25 @@ function isAppraisalActionPlanTask(task) {
     if (!initialTasks) {
       fetchTasks()
     }
-  }, []) 
+  }, [])
+
+  // Lock background scroll when hire completions modal is open
+  useEffect(() => {
+    if (showGroupsModal) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = "hidden"
+      document.body.style.position = "fixed"
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = "100%"
+      return () => {
+        document.body.style.overflow = ""
+        document.body.style.position = ""
+        document.body.style.top = ""
+        document.body.style.width = ""
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [showGroupsModal])
 
   const openMonthlyReviewsModal = async (task) => {
     try {
@@ -1858,293 +1879,409 @@ function isAppraisalActionPlanTask(task) {
           </CardContent>
         </Card>
 
-        {/* Hire Completions Modal */}
-        <AnimatePresence>
-          {showGroupsModal && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-5xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto custom-scrollbar"
-                onClick={(e) => e.stopPropagation()}
+        {/* Hire Completions Modal — rendered via portal for global overlay */}
+        {typeof document !== "undefined" && createPortal(
+          <AnimatePresence>
+            {showGroupsModal && (
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                style={{ zIndex: 9999 }}
+                onClick={() => setShowGroupsModal(false)}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-primary/10">
-                      <Users className="h-4 w-4 text-primary" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-foreground">Hire Completions</h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={showHistory ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        const next = !showHistory
-                        setShowHistory(next)
-                        if (next) {
-                          // Ensure History is scoped to the currently selected applicant.
-                          // If none selected yet, default to the first applicant in the list.
-                          const fallbackApplicantId =
-                            selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
-                          if (!selectedApplicantId && fallbackApplicantId) {
-                            setSelectedApplicantId(fallbackApplicantId)
-                          } else {
-                            fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
-                          }
-                        }
-                      }}
-                      className="h-8"
-                    >
-                      {showHistory ? "Back to Tasks" : "History"}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {applicantGroups.length === 0 ? (
-                  <div className="py-10 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Left: Applicants */}
-                    <div className="md:col-span-1 border rounded-lg p-3 bg-card/50">
-                      <div className="space-y-2">
-                        {applicantGroups.map((g) => (
-                          <button
-                            key={g.applicantId}
-                            onClick={() => setSelectedApplicantId(g.applicantId)}
-                            className={`w-full text-left px-3 py-2 rounded-md border transition ${
-                              selectedApplicantId === g.applicantId ? "bg-primary/10 border-primary/30" : "hover:bg-muted/40"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium truncate">{g.applicantName}</span>
-                              <Badge className="text-xs bg-blue-500 text-white" variant="secondary">{g.tasks.length}</Badge>
-                            </div>
-                          </button>
-                        ))}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 16 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="bg-background border border-border rounded-xl w-full max-w-5xl shadow-2xl my-4 max-h-[92vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Sticky header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-background/80 backdrop-blur-md rounded-t-xl shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/10">
+                        <Users className="h-4 w-4 text-primary" />
                       </div>
+                      <h2 className="text-lg font-semibold text-foreground tracking-tight">Hire Completions</h2>
                     </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant={showHistory ? "default" : "outline"}
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          const next = !showHistory
+                          setShowHistory(next)
+                          if (next) {
+                            const fallbackApplicantId =
+                              selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
+                            if (!selectedApplicantId && fallbackApplicantId) {
+                              setSelectedApplicantId(fallbackApplicantId)
+                            } else {
+                              fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
+                            }
+                          }
+                        }}
+                      >
+                        {showHistory ? "Back to Tasks" : "History"}
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-8 w-8">
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Close</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
 
-                    {/* Right: Tasks for selected applicant OR History */}
-                    <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
-                      {showHistory ? (
-                        <div>
-                          <div className="flex items-center justify-between mb-3 gap-3">
-                            <div className="min-w-0">
-                              <h3 className="text-base font-semibold">Recent Verifications</h3>
-                              <p className="text-xs text-muted-foreground">
-                                {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    value={historySearch}
-                                    onChange={(e) => setHistorySearch(e.target.value)}
-                                    placeholder="Search verifications..."
-                                    className="pl-7 h-8 w-56"
-                                  />
-                                </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8"
-                                onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                  {/* Scrollable body */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4">
+                    {applicantGroups.length === 0 ? (
+                      <div className="py-16 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Left: Applicants */}
+                        <div className="md:col-span-1 border rounded-lg p-3 bg-card/50">
+                          <div className="space-y-1.5">
+                            {applicantGroups.map((g) => (
+                              <button
+                                key={g.applicantId}
+                                onClick={() => setSelectedApplicantId(g.applicantId)}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all duration-150 ${
+                                  selectedApplicantId === g.applicantId
+                                    ? "bg-primary/10 border-primary/30 shadow-sm"
+                                    : "border-transparent hover:bg-muted/50 hover:border-border/50"
+                                }`}
                               >
-                                <RefreshCw className="h-3 w-3 mr-2" /> Refresh
-                              </Button>
-                            </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium truncate">{g.applicantName}</span>
+                                  <Badge className="text-xs bg-blue-500/90 text-white ml-2 tabular-nums" variant="secondary">{g.tasks.length}</Badge>
+                                </div>
+                              </button>
+                            ))}
                           </div>
-                          {historyLoading ? (
-                            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
-                          ) : historyItems.length === 0 ? (
-                            <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
-                          ) : (
-                            <div className="space-y-2">
-                              {historyItems
-                                .filter((it) => {
-                                  const q = (historySearch || "").trim().toLowerCase()
-                                  if (!q) return true
-                                  const hay = [
-                                    it.message,
-                                    it.title,
-                                    it.applicantName,
-                                    it.completedByName,
-                                    it.completedAt,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")
-                                    .toLowerCase()
-                                  return hay.includes(q)
-                                })
-                                .map((it) => (
-                                <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">
-                                      {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground truncate">
-                                      {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
-                                      {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
-                      ) : (() => {
-                        const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
-                        const tasksForRaw = selected ? selected.tasks : []
-                        const tasksFor = groupSearch
-                          ? tasksForRaw.filter((t) => (t.title || "").toLowerCase().includes(groupSearch.toLowerCase()))
-                          : tasksForRaw
-                        const headerName = selected ? selected.applicantName : ""
-                        return (
-                          <div>
-                            <div className="flex items-center justify-between mb-3 gap-3">
-                              <div className="min-w-0">
-                                <h3 className="text-base font-semibold">{headerName}</h3>
-                                <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    value={groupSearch}
-                                    onChange={(e) => setGroupSearch(e.target.value)}
-                                    placeholder="Search tasks..."
-                                    className="pl-7 h-8 w-48"
-                                  />
-                                </div>
-                                {selected && (
-                                  <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
-                                    <Plus className="h-3 w-3 mr-2" /> Claim All
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
 
-                            <div className="space-y-2">
-                              {tasksFor.map((t) => (
-                                <div key={t.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                        {/* Right: Tasks for selected applicant OR History */}
+                        <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
+                          {showHistory ? (
+                            <div>
+                              <div className="flex items-center justify-between mb-3 gap-3">
+                                <div className="min-w-0">
+                                  <h3 className="text-base font-semibold">Recent Verifications</h3>
+                                  <p className="text-xs text-muted-foreground">
+                                    {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                    <Input
+                                      value={historySearch}
+                                      onChange={(e) => setHistorySearch(e.target.value)}
+                                      placeholder="Search verifications..."
+                                      className="pl-7 h-8 w-56"
+                                    />
+                                  </div>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-8 w-8"
+                                        onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                                      >
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      <p>Refresh</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                              {historyLoading ? (
+                                <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+                              ) : historyItems.length === 0 ? (
+                                <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {historyItems
+                                    .filter((it) => {
+                                      const q = (historySearch || "").trim().toLowerCase()
+                                      if (!q) return true
+                                      const hay = [
+                                        it.message,
+                                        it.title,
+                                        it.applicantName,
+                                        it.completedByName,
+                                        it.completedAt,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")
+                                        .toLowerCase()
+                                      return hay.includes(q)
+                                    })
+                                    .map((it) => (
+                                    <div key={it.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-medium break-words whitespace-normal leading-5">
+                                          {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                          {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
+                                          {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
+                                        </div>
+                                      </div>
+                                      {it.taskDocumentUrl && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              className="h-8 w-8 shrink-0"
+                                              onClick={() => window.open(it.taskDocumentUrl, "_blank", "noopener,noreferrer")}
+                                            >
+                                              <FileText className="h-3.5 w-3.5 text-primary" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="left">
+                                            <p>Open Resource Link</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (() => {
+                            const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
+                            const tasksForRaw = selected ? selected.tasks : []
+                            const tasksFor = groupSearch
+                              ? tasksForRaw.filter((t) => (t.title || "").toLowerCase().includes(groupSearch.toLowerCase()))
+                              : tasksForRaw
+                            const headerName = selected ? selected.applicantName : ""
+                            return (
+                              <div>
+                                <div className="flex items-center justify-between mb-3 gap-3">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
-                                    <div className="text-xs text-muted-foreground truncate">ID: {t.id}</div>
+                                    <h3 className="text-base font-semibold">{headerName}</h3>
+                                    <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant="secondary"
-                                      className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
-                                        isGlobalTask(t)
-                                          ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                                          : "bg-success-muted text-success"
-                                      }`}
-                                    >
-                                      {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
-                                    </Badge>
-                                    {/* Actions mirroring the main component */}
-                                    {isGlobalTask(t) ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8"
-                                        onClick={() => handleClaimTask(t.id)}
-                                      >
-                                        <Plus className="h-3 w-3 mr-2" /> Claim
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8"
-                                          onClick={() => completeTask(t.id)}
-                                        >
-                                          <CheckCircle2 className="h-3 w-3 mr-2" /> Complete
-                                        </Button>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-8">
-                                              <MoreHorizontal className="h-3 w-3" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-44">
-                                            <DropdownMenuItem onClick={() => { setSelectedTask(t); setShowTaskDetails(true); }}>
-                                              <Eye className="h-3 w-3 mr-2" /> View Details
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openEditDialog(t)}>
-                                              <Pencil className="h-3 w-3 mr-2" /> Edit Task
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openFlagDialog(t)}>
-                                              <Flag className="h-3 w-3 mr-2" /> Flag
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              onClick={() => {
-                                                const key = `unclaim-${t.id}`
-                                                const timer = setTimeout(async () => {
-                                                  try {
-                                                    const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
-                                                      method: "PATCH",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({ action: "unclaim" }),
-                                                    })
-                                                    if (!res.ok) {
-                                                      const d = await res.json()
-                                                      throw new Error(d.error || "Failed to unclaim")
-                                                    }
-                                                    fetchTasks()
-                                                  } catch (e) {
-                                                    toast.error(e.message)
-                                                  }
-                                                }, 4000)
-                                                pendingTimersRef.current.set(key, timer)
-                                                toast.success("Task will be unclaimed", {
-                                                  duration: 4000,
-                                                  action: {
-                                                    label: "Undo",
-                                                    onClick: () => {
-                                                      const tt = pendingTimersRef.current.get(key)
-                                                      if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
-                                                    },
-                                                  },
-                                                })
-                                              }}
-                                            >
-                                              <X className="h-3 w-3 mr-2" /> Unclaim
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </>
+                                    <div className="relative">
+                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                      <Input
+                                        value={groupSearch}
+                                        onChange={(e) => setGroupSearch(e.target.value)}
+                                        placeholder="Search tasks..."
+                                        className="pl-7 h-8 w-48"
+                                      />
+                                    </div>
+                                    {selected && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
+                                            <Plus className="h-3 w-3 mr-1.5" /> Claim All
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">
+                                          <p>Claim all tasks for {headerName}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
                                     )}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8"
-                                      onClick={() => openFlagDialog(t)}
-                                    >
-                                      <Flag className="h-3 w-3 mr-2" /> Flag
-                                    </Button>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </div>
+
+                                <div className="space-y-2">
+                                  {tasksFor.map((t) => (
+                                    <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
+                                        <div className="text-xs text-muted-foreground truncate mt-0.5">ID: {t.id}</div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <Badge
+                                          variant="secondary"
+                                          className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
+                                            isGlobalTask(t)
+                                              ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+                                              : "bg-success-muted text-success"
+                                          }`}
+                                        >
+                                          {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
+                                        </Badge>
+
+                                        {/* Resource link icon */}
+                                        {t.taskDocumentUrl && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => window.open(t.taskDocumentUrl, "_blank", "noopener,noreferrer")}
+                                              >
+                                                <FileText className="h-3.5 w-3.5 text-primary" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Open Resource Link</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+
+                                        {/* Action icons */}
+                                        {isGlobalTask(t) ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleClaimTask(t.id)}
+                                              >
+                                                <Plus className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Claim</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => completeTask(t.id)}
+                                                >
+                                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>Complete</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => { setSelectedTask(t); setShowTaskDetails(true); }}
+                                                >
+                                                  <Eye className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>View Details</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => openEditDialog(t)}
+                                                >
+                                                  <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>Edit Task</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </>
+                                        )}
+
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              onClick={() => openFlagDialog(t)}
+                                            >
+                                              <Flag className="h-3.5 w-3.5" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom">
+                                            <p>Flag</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+
+                                        {!isGlobalTask(t) && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => {
+                                                  const key = `unclaim-${t.id}`
+                                                  const timer = setTimeout(async () => {
+                                                    try {
+                                                      const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
+                                                        method: "PATCH",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({ action: "unclaim" }),
+                                                      })
+                                                      if (!res.ok) {
+                                                        const d = await res.json()
+                                                        throw new Error(d.error || "Failed to unclaim")
+                                                      }
+                                                      fetchTasks()
+                                                    } catch (e) {
+                                                      toast.error(e.message)
+                                                    }
+                                                  }, 4000)
+                                                  pendingTimersRef.current.set(key, timer)
+                                                  toast.success("Task will be unclaimed", {
+                                                    duration: 4000,
+                                                    action: {
+                                                      label: "Undo",
+                                                      onClick: () => {
+                                                        const tt = pendingTimersRef.current.get(key)
+                                                        if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
+                                                      },
+                                                    },
+                                                  })
+                                                }}
+                                              >
+                                                <X className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Unclaim</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         {/* Appraisal Modal */}
         <AnimatePresence>
