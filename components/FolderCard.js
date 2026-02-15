@@ -1,13 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, Loader2, Star, Flag, Paperclip } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
-import { Progress } from "@components/ui/progress"
 import { cn } from "@components/lib/utils"
 
 // Urgency configuration using semantic tokens
@@ -34,7 +33,7 @@ const urgencyConfig = {
   },
 }
 
-function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
+function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disableActions }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
   const handleCompleteTask = async (taskId) => {
@@ -80,10 +79,10 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40%]">Task</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type/Urgency</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-[45%]">Task</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Files</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,12 +90,11 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
                 tasks.map((task) => {
                   const status = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
                   const statusDetails = statusConfig[status]
-                  const urgencyInfo = urgencyConfig[task.urgency] || urgencyConfig.Medium
 
                   return (
                     <TableRow key={task.id}>
                       <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge variant="outline" className={statusDetails.badgeClass}>
                           <span className="flex items-center gap-1">
                             {statusDetails.icon}
@@ -104,76 +102,46 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {task.isCustom && (
-                            <Badge
-                              variant="outline"
-                              className="bg-primary/10 text-primary border-primary/20"
-                            >
-                              <Star className="h-3 w-3 mr-1" />
-                              <span className="hidden sm:inline">Custom</span>
-                            </Badge>
-                          )}
-
-                          {task.urgency && task.urgency !== "Medium" && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "flex items-center gap-1",
-                                urgencyInfo.color,
-                                urgencyInfo.bgColor,
-                                urgencyInfo.borderColor,
-                              )}
-                            >
-                              <Flag className="h-3 w-3" />
-                              <span className="hidden sm:inline">{task.urgency}</span>
-                            </Badge>
-                          )}
-                        </div>
+                      <TableCell className="text-center">
+                        {onOpenFiles && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => onOpenFiles(task.id, task.title)}
+                          >
+                            <Paperclip className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {task.resourceUrl && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-info hover:text-info/80"
-                              onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-                            >
-                              <ExternalLink className="h-4 w-4 sm:mr-1.5" />
-                              <span className="hidden sm:inline">Resource</span>
-                            </Button>
-                          )}
-
-                          {!task.completed && (
-                            <Button
-                              variant={task.overdue ? "default" : "outline"}
-                              size="sm"
-                              className={cn(
-                                task.overdue && "bg-error hover:bg-error/90 text-error-foreground",
-                                disableActions && "opacity-50 cursor-not-allowed pointer-events-none"
-                              )}
-                              disabled={completingTaskId === task.id || disableActions}
-                              onClick={() => {
-                                if (disableActions) return;
-                                handleCompleteTask(task.id)
-                              }}
-                            >
-                              {completingTaskId === task.id ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-                                  <span className="hidden sm:inline">Completing...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Check className="h-4 w-4 sm:mr-1.5" />
-                                  <span className="hidden sm:inline">Complete</span>
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
+                      <TableCell className="text-center">
+                        {!task.completed && (
+                          <Button
+                            variant={task.overdue ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                              task.overdue && "bg-error hover:bg-error/90 text-error-foreground",
+                              disableActions && "opacity-50 cursor-not-allowed pointer-events-none"
+                            )}
+                            disabled={completingTaskId === task.id || disableActions}
+                            onClick={() => {
+                              if (disableActions) return;
+                              handleCompleteTask(task.id)
+                            }}
+                          >
+                            {completingTaskId === task.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+                                <span className="hidden sm:inline">Completing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 sm:mr-1.5" />
+                                <span className="hidden sm:inline">Complete</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -193,7 +161,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
   )
 }
 
-export default function FolderCard({ folderName, tasks, onComplete, status, disableActions }) {
+export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles, status, disableActions }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -344,7 +312,7 @@ export default function FolderCard({ folderName, tasks, onComplete, status, disa
       </Card>
 
       {isOpen && (
-        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} disableActions={disableActions} />
+        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
       )}
     </>
   )

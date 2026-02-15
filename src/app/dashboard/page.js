@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 // Assuming these paths are correct in your project. Adjust if necessary.
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
+import { UserFileViewerModal } from "@components/dashboard/UserFileViewerModal"
 import { ProfileActions } from "@components/ProfileActions"
 import UserDashboardTourClient from "@components/onboarding/UserDashboardTourClient"
 import { useTour } from "@components/onboarding/TourProvider"
@@ -36,8 +37,7 @@ import { Label } from "@components/ui/label"
 import { toast } from "sonner"
 import { AnimatePresence, motion } from "framer-motion"
 import { staggerContainer, fadeInUp } from "@components/lib/utils"
-import { AnimatedCounterSimple } from "@components/ui/animated-counter"
-import { ProgressRing } from "@components/ui/animated-counter"
+import { AnimatedCounter, ProgressRing } from "@components/ui/animated-counter"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -59,7 +59,7 @@ function toSearchableString(value) {
   }
 }
 
-const TaskList = ({ tasks, onComplete, disableActions }) => {
+const TaskList = ({ tasks, onComplete, onOpenFiles, disableActions }) => {
   return (
     <div className="divide-y divide-border">
       <AnimatePresence>
@@ -72,7 +72,7 @@ const TaskList = ({ tasks, onComplete, disableActions }) => {
             transition={{ duration: 0.2, delay: i * 0.04 }}
             layout
           >
-            <TaskCard task={task} onComplete={onComplete} disableActions={disableActions} />
+            <TaskCard task={task} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -130,6 +130,47 @@ function HelpControls() {
   );
 }
 
+// Pulse animation wrapper for metric cards — triggers a scale pulse + ring glow on value change
+function MetricPulse({ value, enabled = true, ringClass = "ring-primary/30", children }) {
+  const prevValue = useRef(null)
+  const [animating, setAnimating] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) return
+    if (prevValue.current === null) {
+      // First value after data loads — store but don't pulse
+      prevValue.current = value
+      return
+    }
+    if (prevValue.current !== value) {
+      setAnimating(true)
+      prevValue.current = value
+    }
+  }, [value, enabled])
+
+  return (
+    <motion.div
+      animate={animating ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      onAnimationComplete={() => setAnimating(false)}
+      className="relative"
+    >
+      {children}
+      <AnimatePresence>
+        {animating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className={`absolute inset-0 rounded-xl ring-2 ${ringClass} pointer-events-none`}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -139,6 +180,17 @@ export default function DashboardPage() {
   const [section, setSection] = useState("active") // active | completed
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
+
+  // File viewer modal state
+  const [fileViewerOpen, setFileViewerOpen] = useState(false)
+  const [fileViewerTaskId, setFileViewerTaskId] = useState(null)
+  const [fileViewerTaskTitle, setFileViewerTaskTitle] = useState(null)
+
+  const handleOpenFiles = useCallback((taskId, taskTitle) => {
+    setFileViewerTaskId(taskId)
+    setFileViewerTaskTitle(taskTitle)
+    setFileViewerOpen(true)
+  }, [])
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -205,12 +257,14 @@ export default function DashboardPage() {
 
         // Process quiz data from API endpoint (primary source)
         const apiQuizTasks = quizzesData.map((quiz) => {
+          // Completed takes precedence — if quiz was submitted, it's not overdue
+          const isCompleted = Boolean(quiz.completed)
           return {
             id: `quiz-${quiz.quizId || quiz.logId}`,
             title: toSearchableString(quiz.title),
             description: toSearchableString(quiz.description),
-            completed: quiz.completed,
-            overdue: quiz.overdue || false,
+            completed: isCompleted,
+            overdue: isCompleted ? false : (quiz.overdue || false),
             resourceUrl: quiz.resourceUrl,
             lastStatusChange: quiz.lastStatusChange,
             completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
@@ -254,11 +308,13 @@ export default function DashboardPage() {
               null,
             week: task.week,
             folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
-            isQuiz: false
+            isQuiz: false,
+            attachmentCount: task.attachmentCount || 0,
+            hasDocuments: task.hasDocuments || false,
           }))
-  
+
         console.log("Regular tasks after quiz filtering:", regularTasks.length)
-  
+
         // Combine all tasks
         const allTasks = [...regularTasks, ...apiQuizTasks];
 
@@ -307,25 +363,28 @@ export default function DashboardPage() {
 
       const quizLogIds = new Set(quizzesData.map((q) => q.logId))
 
-      const apiQuizTasks = quizzesData.map((quiz) => ({
-        id: `quiz-${quiz.quizId || quiz.logId}`,
-        title: quiz.title,
-        description: quiz.description,
-        completed: quiz.completed,
-        overdue: quiz.overdue || false,
-        resourceUrl: quiz.resourceUrl,
-        lastStatusChange: quiz.lastStatusChange,
-        completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
-        week: quiz.week,
-        folder: null,
-        isQuiz: true,
-        quizId: quiz.quizId,
-        score: quiz.score,
-        passed: quiz.passed,
-        originalLogId: quiz.logId,
-        status: quiz.status,
-        type: "Quiz",
-      }))
+      const apiQuizTasks = quizzesData.map((quiz) => {
+        const isCompleted = Boolean(quiz.completed)
+        return {
+          id: `quiz-${quiz.quizId || quiz.logId}`,
+          title: quiz.title,
+          description: quiz.description,
+          completed: isCompleted,
+          overdue: isCompleted ? false : (quiz.overdue || false),
+          resourceUrl: quiz.resourceUrl,
+          lastStatusChange: quiz.lastStatusChange,
+          completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
+          week: quiz.week,
+          folder: null,
+          isQuiz: true,
+          quizId: quiz.quizId,
+          score: quiz.score,
+          passed: quiz.passed,
+          originalLogId: quiz.logId,
+          status: quiz.status,
+          type: "Quiz",
+        }
+      })
 
       const regularTasks = tasksFromBackend
         .filter((task) => !quizLogIds.has(task.id))
@@ -355,6 +414,8 @@ export default function DashboardPage() {
           week: task.week,
           folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
           isQuiz: false,
+          attachmentCount: task.attachmentCount || 0,
+          hasDocuments: task.hasDocuments || false,
         }))
 
       const allTasks = [...regularTasks, ...apiQuizTasks]
@@ -605,47 +666,53 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8" data-tour="user.metrics">
-          <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent animate-fade-in-up">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={completionRate} className="text-2xl font-bold text-foreground" />
-                  <span className="text-2xl font-bold text-foreground">%</span>
-                  <span className="text-sm text-muted-foreground ml-1">of tasks</span>
+          <MetricPulse value={completionRate} enabled={!loading} ringClass="ring-success/30">
+            <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent animate-fade-in-up">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={completionRate} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-2xl font-bold text-foreground">%</span>
+                    <span className="text-sm text-muted-foreground ml-1">of tasks</span>
+                  </div>
                 </div>
-              </div>
-              <ProgressRing value={completionRate} size={48} strokeWidth={4} />
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent animate-fade-in-up stagger-2">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={assignedTasksCount} className="text-2xl font-bold text-foreground" />
-                  <span className="text-sm text-muted-foreground ml-1">assigned</span>
+                <ProgressRing value={completionRate} size={48} strokeWidth={4} />
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={assignedTasksCount} enabled={!loading} ringClass="ring-info/30">
+            <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent animate-fade-in-up stagger-2">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={assignedTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">assigned</span>
+                  </div>
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-info/15 to-info/5 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-info" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 bg-gradient-to-br from-error/5 to-transparent animate-fade-in-up stagger-3">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={overdueTasksCount} className="text-2xl font-bold text-foreground" />
-                  <span className="text-sm text-muted-foreground ml-1">need attention</span>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-info/15 to-info/5 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-info" />
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-error/15 to-error/5 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-error" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={overdueTasksCount} enabled={!loading} ringClass="ring-error/30">
+            <Card className="border-border/60 bg-gradient-to-br from-error/5 to-transparent animate-fade-in-up stagger-3">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={overdueTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">need attention</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-error/15 to-error/5 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-error" />
+                </div>
+              </CardContent>
+            </Card>
+          </MetricPulse>
         </div>
 
         <div className="mb-6 flex flex-col space-y-4">
@@ -952,7 +1019,7 @@ export default function DashboardPage() {
                     {filters.status === "assigned" ? (
                       <>
                         {assignedQuizTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                           <FolderCard
@@ -960,12 +1027,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {assignedTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(assignedTasks.length === 0 && foldersByStatus.assigned.length === 0 && assignedQuizTasks.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -981,12 +1049,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {overdueTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(overdueTasks.length === 0 && foldersByStatus.overdue.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -1016,7 +1085,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="space-y-4">
                       {assignedQuizTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                         <FolderCard
@@ -1024,12 +1093,13 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
                       ))}
                       {assignedTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {assignedTasks.length === 0 &&
                         foldersByStatus.assigned.length === 0 &&
@@ -1062,12 +1132,13 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
                       ))}
                       {overdueTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
                         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -1079,7 +1150,7 @@ export default function DashboardPage() {
                 </div>
               )
             ) : section === "active" && activeView === "list" ? (
-              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
             ) : (
               // Completed Section - masonry layout sorted by completedTime
               <>
@@ -1108,6 +1179,7 @@ export default function DashboardPage() {
                           <TaskCard
                             task={{ ...t, status: "completed" }}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             disableActions={globalPaused.isPaused}
                             compact={!t.description}
                           />
@@ -1127,6 +1199,14 @@ export default function DashboardPage() {
           </AnimatePresence>
         )}
       </main>
+
+      {/* File Viewer Modal */}
+      <UserFileViewerModal
+        isOpen={fileViewerOpen}
+        onClose={() => setFileViewerOpen(false)}
+        taskId={fileViewerTaskId}
+        taskTitle={fileViewerTaskTitle}
+      />
     </div>
     </UserDashboardTourClient>
   )

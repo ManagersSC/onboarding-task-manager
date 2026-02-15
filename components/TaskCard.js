@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardFooter } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
-import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
+import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag, Paperclip } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@components/lib/utils"
 import Link from "next/link"
@@ -33,7 +33,7 @@ const urgencyConfig = {
   },
 }
 
-export function TaskCard({ task, onComplete, disableActions, compact = false }) {
+export function TaskCard({ task, onComplete, onOpenFiles, disableActions, compact = false }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
   // Status configuration using semantic tokens
@@ -195,13 +195,29 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
           </div>
         ) : (
           <div className="w-full flex items-center justify-between">
-            <div>
-              {task.resourceUrl && (
+            <div className="flex items-center gap-1">
+              {task.hasDocuments && onOpenFiles && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground relative"
+                  onClick={() => onOpenFiles(task.id, task.title)}
+                >
+                  <Paperclip className="h-4 w-4 mr-1.5" />
+                  Files
+                  {task.attachmentCount > 0 && (
+                    <span className="ml-1 text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
+                      {task.attachmentCount + (task.resourceUrl ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              )}
+              {task.resourceUrl && !task.hasDocuments && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-info hover:text-info/80"
-                  onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                  onClick={() => onOpenFiles ? onOpenFiles(task.id, task.title) : window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
                 >
                   <ExternalLink className="h-4 w-4 mr-1.5" />
                   Resource

@@ -202,7 +202,7 @@ const ProgressRing = React.forwardRef(({
           className={cn("text-muted/30", trackClassName)}
         />
         {/* Progress */}
-        <circle
+        <motion.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -210,12 +210,10 @@ const ProgressRing = React.forwardRef(({
           stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ type: "spring", stiffness: 50, damping: 15 }}
           strokeLinecap="round"
-          className={cn(
-            "text-primary transition-all duration-slower ease-out-expo",
-            progressClassName
-          )}
+          className={cn("text-primary", progressClassName)}
         />
       </svg>
       {children && (
