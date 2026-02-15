@@ -22,6 +22,7 @@ import {
   Search,
   TrendingUp,
   Users,
+  ExternalLink,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -1993,6 +1994,17 @@ function isAppraisalActionPlanTask(task) {
                                       {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
                                       {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
                                     </div>
+                                    {it.taskDocumentUrl && (
+                                      <a
+                                        href={it.taskDocumentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
+                                      >
+                                        <ExternalLink className="h-3 w-3 shrink-0" />
+                                        View task document
+                                      </a>
+                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -2037,6 +2049,17 @@ function isAppraisalActionPlanTask(task) {
                                   <div className="min-w-0">
                                     <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
                                     <div className="text-xs text-muted-foreground truncate">ID: {t.id}</div>
+                                    {t.taskDocumentUrl && (
+                                      <a
+                                        href={t.taskDocumentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
+                                      >
+                                        <ExternalLink className="h-3 w-3 shrink-0" />
+                                        View task document
+                                      </a>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Badge
