@@ -1905,33 +1905,26 @@ function isAppraisalActionPlanTask(task) {
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Hire Completions</h2>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={showHistory ? "default" : "outline"}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              const next = !showHistory
-                              setShowHistory(next)
-                              if (next) {
-                                const fallbackApplicantId =
-                                  selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
-                                if (!selectedApplicantId && fallbackApplicantId) {
-                                  setSelectedApplicantId(fallbackApplicantId)
-                                } else {
-                                  fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
-                                }
-                              }
-                            }}
-                          >
-                            {showHistory ? <X className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>{showHistory ? "Back to Tasks" : "History"}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <Button
+                        variant={showHistory ? "default" : "outline"}
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          const next = !showHistory
+                          setShowHistory(next)
+                          if (next) {
+                            const fallbackApplicantId =
+                              selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
+                            if (!selectedApplicantId && fallbackApplicantId) {
+                              setSelectedApplicantId(fallbackApplicantId)
+                            } else {
+                              fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
+                            }
+                          }
+                        }}
+                      >
+                        {showHistory ? "Back to Tasks" : "History"}
+                      </Button>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-8 w-8">
