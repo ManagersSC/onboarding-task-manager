@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
@@ -33,8 +34,17 @@ export default function UsersTable({
   onPageChange,
   onSelectionChange
 }) {
+  const searchParams = useSearchParams()
   const [rows, setRows] = useState(initialRows)
   const [openId, setOpenId] = useState(null)
+
+  // Auto-open drawer if applicantId is in URL params
+  useEffect(() => {
+    const applicantId = searchParams.get('applicantId')
+    if (applicantId) {
+      setOpenId(applicantId)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     setRows(initialRows)
