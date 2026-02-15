@@ -17,7 +17,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npx next lint:*)"
+      "Bash(npx next lint:*)",
+      "Bash(git pull:*)",
+      "Bash(gh pr create:*)"
     ]
   }
 }
