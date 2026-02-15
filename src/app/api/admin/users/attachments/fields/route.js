@@ -4,7 +4,7 @@ import logger from "@/lib/utils/logger"
 
 export async function GET() {
   try {
-    const schemaPath = path.join(process.cwd(), "docs", "ATS_schema.txt")
+    const schemaPath = path.join(process.cwd(), "docs", "ATS_schema.json")
     const raw = await fs.readFile(schemaPath, "utf8")
     const json = JSON.parse(raw)
     const tables = Array.isArray(json?.tables) ? json.tables : []
