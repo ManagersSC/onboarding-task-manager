@@ -1112,14 +1112,14 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           <div className="text-sm font-semibold">Documents</div>
                           <div className="flex items-center gap-2">
                             {(() => {
-                              const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldName}` : ""
+                              const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldId}` : ""
                               return (
                                 <Select
                                   value={valueKey}
                                   onValueChange={(val) => {
-                                    const [table, fieldName] = String(val).split("::")
+                                    const [table, fieldId] = String(val).split("::")
                                     const all = [...docCoreOptions, ...docDocumentsOptions]
-                                    const meta = all.find((o) => o.table === table && o.fieldName === fieldName)
+                                    const meta = all.find((o) => o.table === table && o.fieldId === fieldId)
                                     setSelectedDocMeta(meta || null)
                                     setSelectedDocType(meta?.label || "")
                                     setShowAddDropzone(true)
@@ -1131,12 +1131,12 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                   <SelectContent>
                                     <div className="px-2 py-1 text-xs text-muted-foreground">Core</div>
                                     {docCoreOptions.map((o) => (
-                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                      <SelectItem key={`${o.table}::${o.fieldId}`} value={`${o.table}::${o.fieldId}`}>{o.label}</SelectItem>
                                     ))}
                                     <Separator className="my-1" />
                                     <div className="px-2 py-1 text-xs text-muted-foreground">Documents</div>
                                     {docDocumentsOptions.map((o) => (
-                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                      <SelectItem key={`${o.table}::${o.fieldId}`} value={`${o.table}::${o.fieldId}`}>{o.label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
@@ -1153,7 +1153,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                               setOptimisticDocs((prev) => [...prev, ...optimistic])
                               try {
                                 if (!applicant || !files?.length || !selectedDocType || !selectedDocMeta) return
-                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', selectedDocMeta.fieldName)
+                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldId', selectedDocMeta.fieldId)
                                 const endpoint = selectedDocMeta.table === 'Documents'
                                   ? `/api/admin/users/${applicant.id}/documents/attachments`
                                   : `/api/admin/users/${applicant.id}/attachments`
