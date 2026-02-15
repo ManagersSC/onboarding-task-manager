@@ -26,7 +26,7 @@ export default function Home() {
             </svg>
           </div>
           <h1 className="text-display text-2xl sm:text-3xl font-bold tracking-tight">
-            Smile Clinique
+            Smile Cliniq
           </h1>
           <p className="text-muted-foreground mt-2 text-body-sm">
             Sign in to your account or create a new one
@@ -37,7 +37,7 @@ export default function Home() {
 
         {/* Footer */}
         <p className="text-center text-caption text-muted-foreground/60 mt-8">
-          Secure login powered by Smile Clinique
+          Secure login powered by Smile Cliniq
         </p>
       </main>
     </GradientBackground>

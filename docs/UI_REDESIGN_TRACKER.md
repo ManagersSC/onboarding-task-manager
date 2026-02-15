@@ -236,7 +236,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
 **File:** `components/admin/admin-sidebar.js` (258 lines)
 **Current state:** Basic sidebar with SC logo, nav items, active border-l-2, icon-only mode at 768-1200px.
 **Changes:**
-  - [x] Replace the `SC` square logo block with a refined wordmark: render "Smile Clinique" in `text-body-sm font-semibold tracking-tight` with a small tooth/smile SVG icon (16x16) to the left. In icon-only mode, show just the SVG icon.
+  - [x] Replace the `SC` square logo block with a refined wordmark: render "Smile Cliniq" in `text-body-sm font-semibold tracking-tight` with a small tooth/smile SVG icon (16x16) to the left. In icon-only mode, show just the SVG icon.
   - [x] Add a subtle top-to-bottom gradient on the sidebar background: `bg-gradient-to-b from-background to-muted/20`.
   - [x] Restyle nav items: remove `border-l-2` active indicator. Replace with a `bg-primary/8 text-foreground font-medium rounded-lg` background for active state. Inactive items: `text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg`.
   - [x] Add nav group labels: "MAIN" above Dashboard/Tasks/Resources, "MANAGEMENT" above Users/Quizzes/Audit Logs. Use `text-overline text-muted-foreground/60 tracking-widest px-3 mb-1 mt-4` for group labels. In icon-only mode, hide group labels.

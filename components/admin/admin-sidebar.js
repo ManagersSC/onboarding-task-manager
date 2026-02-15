@@ -253,7 +253,7 @@ export function AdminSidebar() {
               <SmileIcon className="h-5 w-5 shrink-0 text-primary" />
               {!isCollapsed && (
                 <span className="text-body-sm font-semibold truncate tracking-tight text-foreground">
-                  Smile Clinique
+                  Smile Cliniq
                 </span>
               )}
             </motion.div>
@@ -311,7 +311,7 @@ export function AdminSidebar() {
             >
               <SmileIcon className="h-5 w-5 shrink-0 text-primary" />
               <span className="text-body-sm font-semibold truncate tracking-tight text-foreground">
-                Smile Clinique
+                Smile Cliniq
               </span>
             </motion.div>
           </SidebarHeader>

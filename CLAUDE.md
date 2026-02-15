@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Smile Clinique Onboarding Task Manager - a Next.js 15 application for managing dental clinic onboarding workflows. Uses Airtable as the database backend and integrates with Google Calendar.
+Smile Cliniq Onboarding Task Manager - a Next.js 15 application for managing dental clinic onboarding workflows. Uses Airtable as the database backend and integrates with Google Calendar.
 
 ## Rules
 
