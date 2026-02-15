@@ -1,13 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag, Paperclip } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, Loader2, Star, Flag, Paperclip } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
-import { Progress } from "@components/ui/progress"
 import { cn } from "@components/lib/utils"
 
 // Urgency configuration using semantic tokens
@@ -80,9 +79,8 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40%]">Task</TableHead>
+                <TableHead className="w-[50%]">Task</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Type/Urgency</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -91,7 +89,6 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
                 tasks.map((task) => {
                   const status = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
                   const statusDetails = statusConfig[status]
-                  const urgencyInfo = urgencyConfig[task.urgency] || urgencyConfig.Medium
 
                   return (
                     <TableRow key={task.id}>
@@ -104,61 +101,16 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {task.isCustom && (
-                            <Badge
-                              variant="outline"
-                              className="bg-primary/10 text-primary border-primary/20"
-                            >
-                              <Star className="h-3 w-3 mr-1" />
-                              <span className="hidden sm:inline">Custom</span>
-                            </Badge>
-                          )}
-
-                          {task.urgency && task.urgency !== "Medium" && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "flex items-center gap-1",
-                                urgencyInfo.color,
-                                urgencyInfo.bgColor,
-                                urgencyInfo.borderColor,
-                              )}
-                            >
-                              <Flag className="h-3 w-3" />
-                              <span className="hidden sm:inline">{task.urgency}</span>
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {task.hasDocuments && onOpenFiles && (
+                          {(task.hasDocuments || task.resourceUrl) && onOpenFiles && (
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="text-muted-foreground hover:text-foreground"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
                               onClick={() => onOpenFiles(task.id, task.title)}
                             >
-                              <Paperclip className="h-4 w-4 sm:mr-1.5" />
-                              <span className="hidden sm:inline">Files</span>
-                              {task.attachmentCount > 0 && (
-                                <span className="ml-1 text-xs bg-primary/15 text-primary rounded-full px-1.5 font-medium">
-                                  {task.attachmentCount + (task.resourceUrl ? 1 : 0)}
-                                </span>
-                              )}
-                            </Button>
-                          )}
-                          {task.resourceUrl && !task.hasDocuments && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-info hover:text-info/80"
-                              onClick={() => onOpenFiles ? onOpenFiles(task.id, task.title) : window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
-                            >
-                              <ExternalLink className="h-4 w-4 sm:mr-1.5" />
-                              <span className="hidden sm:inline">Resource</span>
+                              <Paperclip className="h-4 w-4" />
                             </Button>
                           )}
 

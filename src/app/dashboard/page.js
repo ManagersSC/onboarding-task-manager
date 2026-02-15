@@ -217,12 +217,14 @@ export default function DashboardPage() {
 
         // Process quiz data from API endpoint (primary source)
         const apiQuizTasks = quizzesData.map((quiz) => {
+          // Completed takes precedence — if quiz was submitted, it's not overdue
+          const isCompleted = Boolean(quiz.completed)
           return {
             id: `quiz-${quiz.quizId || quiz.logId}`,
             title: toSearchableString(quiz.title),
             description: toSearchableString(quiz.description),
-            completed: quiz.completed,
-            overdue: quiz.overdue || false,
+            completed: isCompleted,
+            overdue: isCompleted ? false : (quiz.overdue || false),
             resourceUrl: quiz.resourceUrl,
             lastStatusChange: quiz.lastStatusChange,
             completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
@@ -321,25 +323,28 @@ export default function DashboardPage() {
 
       const quizLogIds = new Set(quizzesData.map((q) => q.logId))
 
-      const apiQuizTasks = quizzesData.map((quiz) => ({
-        id: `quiz-${quiz.quizId || quiz.logId}`,
-        title: quiz.title,
-        description: quiz.description,
-        completed: quiz.completed,
-        overdue: quiz.overdue || false,
-        resourceUrl: quiz.resourceUrl,
-        lastStatusChange: quiz.lastStatusChange,
-        completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
-        week: quiz.week,
-        folder: null,
-        isQuiz: true,
-        quizId: quiz.quizId,
-        score: quiz.score,
-        passed: quiz.passed,
-        originalLogId: quiz.logId,
-        status: quiz.status,
-        type: "Quiz",
-      }))
+      const apiQuizTasks = quizzesData.map((quiz) => {
+        const isCompleted = Boolean(quiz.completed)
+        return {
+          id: `quiz-${quiz.quizId || quiz.logId}`,
+          title: quiz.title,
+          description: quiz.description,
+          completed: isCompleted,
+          overdue: isCompleted ? false : (quiz.overdue || false),
+          resourceUrl: quiz.resourceUrl,
+          lastStatusChange: quiz.lastStatusChange,
+          completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
+          week: quiz.week,
+          folder: null,
+          isQuiz: true,
+          quizId: quiz.quizId,
+          score: quiz.score,
+          passed: quiz.passed,
+          originalLogId: quiz.logId,
+          status: quiz.status,
+          type: "Quiz",
+        }
+      })
 
       const regularTasks = tasksFromBackend
         .filter((task) => !quizLogIds.has(task.id))
