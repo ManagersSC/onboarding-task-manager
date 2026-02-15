@@ -527,7 +527,7 @@ export function TasksTable({ onOpenCreateTask, onSelectionChange }) {
   const [expandedRows, setExpandedRows] = useState({})
 
   // H2: View mode
-  const [viewMode, setViewMode] = useState("grouped")
+  const [viewMode, setViewMode] = useState("list")
   const [collapsedWeeks, setCollapsedWeeks] = useState({})
 
   // Column resizing
