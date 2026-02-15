@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 // Assuming these paths are correct in your project. Adjust if necessary.
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
@@ -37,8 +37,7 @@ import { Label } from "@components/ui/label"
 import { toast } from "sonner"
 import { AnimatePresence, motion } from "framer-motion"
 import { staggerContainer, fadeInUp } from "@components/lib/utils"
-import { AnimatedCounterSimple } from "@components/ui/animated-counter"
-import { ProgressRing } from "@components/ui/animated-counter"
+import { AnimatedCounter, ProgressRing } from "@components/ui/animated-counter"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -129,6 +128,47 @@ function HelpControls() {
       </PopoverContent>
     </Popover>
   );
+}
+
+// Pulse animation wrapper for metric cards — triggers a scale pulse + ring glow on value change
+function MetricPulse({ value, enabled = true, ringClass = "ring-primary/30", children }) {
+  const prevValue = useRef(null)
+  const [animating, setAnimating] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) return
+    if (prevValue.current === null) {
+      // First value after data loads — store but don't pulse
+      prevValue.current = value
+      return
+    }
+    if (prevValue.current !== value) {
+      setAnimating(true)
+      prevValue.current = value
+    }
+  }, [value, enabled])
+
+  return (
+    <motion.div
+      animate={animating ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      onAnimationComplete={() => setAnimating(false)}
+      className="relative"
+    >
+      {children}
+      <AnimatePresence>
+        {animating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className={`absolute inset-0 rounded-xl ring-2 ${ringClass} pointer-events-none`}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
 }
 
 export default function DashboardPage() {
@@ -626,47 +666,53 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8" data-tour="user.metrics">
-          <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent animate-fade-in-up">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={completionRate} className="text-2xl font-bold text-foreground" />
-                  <span className="text-2xl font-bold text-foreground">%</span>
-                  <span className="text-sm text-muted-foreground ml-1">of tasks</span>
+          <MetricPulse value={completionRate} enabled={!loading} ringClass="ring-success/30">
+            <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent animate-fade-in-up">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={completionRate} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-2xl font-bold text-foreground">%</span>
+                    <span className="text-sm text-muted-foreground ml-1">of tasks</span>
+                  </div>
                 </div>
-              </div>
-              <ProgressRing value={completionRate} size={48} strokeWidth={4} />
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent animate-fade-in-up stagger-2">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={assignedTasksCount} className="text-2xl font-bold text-foreground" />
-                  <span className="text-sm text-muted-foreground ml-1">assigned</span>
+                <ProgressRing value={completionRate} size={48} strokeWidth={4} />
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={assignedTasksCount} enabled={!loading} ringClass="ring-info/30">
+            <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent animate-fade-in-up stagger-2">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={assignedTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">assigned</span>
+                  </div>
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-info/15 to-info/5 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-info" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 bg-gradient-to-br from-error/5 to-transparent animate-fade-in-up stagger-3">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounterSimple value={overdueTasksCount} className="text-2xl font-bold text-foreground" />
-                  <span className="text-sm text-muted-foreground ml-1">need attention</span>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-info/15 to-info/5 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-info" />
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-error/15 to-error/5 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-error" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={overdueTasksCount} enabled={!loading} ringClass="ring-error/30">
+            <Card className="border-border/60 bg-gradient-to-br from-error/5 to-transparent animate-fade-in-up stagger-3">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={overdueTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">need attention</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-error/15 to-error/5 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-error" />
+                </div>
+              </CardContent>
+            </Card>
+          </MetricPulse>
         </div>
 
         <div className="mb-6 flex flex-col space-y-4">
