@@ -1091,7 +1091,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       <DialogTitle className="text-xl font-semibold">New Hire Details</DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-120px)] pr-2 custom-scrollbar">
+                    <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-220px)] pr-2 custom-scrollbar">
                       {/* Employee Info Card */}
                       <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-lg">
                         <Avatar className="h-16 w-16 flex-shrink-0">
@@ -1209,17 +1209,15 @@ export function NewHireTracker({ initialNewHires = [] }) {
                                   </motion.div>
                                 ))}
                               </div>
-                              {hireTasks[hire.id].hasMore && (
-                                <div className="px-3 py-1.5 text-center border-t border-border/30">
-                                  <span className="text-xs text-muted-foreground tracking-widest">...</span>
-                                </div>
-                              )}
-                              <div className="px-3 py-2 border-t border-border/30 bg-muted/10">
+                              <div className="flex items-center justify-between px-3 py-1.5 border-t border-border/30 bg-muted/10">
+                                {hireTasks[hire.id].hasMore && (
+                                  <span className="text-xs text-muted-foreground/60 tracking-widest">...</span>
+                                )}
                                 <a
                                   href={`/admin/users?applicantId=${hire.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors ml-auto"
                                 >
                                   See more
                                   <ExternalLink className="h-3 w-3" />
