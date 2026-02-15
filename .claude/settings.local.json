@@ -12,7 +12,11 @@
       "Bash(for f in components/admin/*.js components/admin/**/*.js)",
       "Skill(ralph-loop:ralph-loop)",
       "Bash(npm run lint)",
-      "Bash(npx next build:*)"
+      "Bash(npx next build:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
