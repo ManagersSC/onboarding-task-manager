@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useApplicants } from "@/hooks/useApplicants"
 import ApplicantsPage from "@components/admin/users/users-page"
 
@@ -28,13 +28,15 @@ export default function Page() {
   }
 
   return (
-    <ApplicantsPage 
-      initialApplicants={applicants}
-      pagination={pagination}
-      isLoading={isLoading}
-      isSearching={isSearching}
-      onParamsChange={setParams}
-      onRefresh={mutate}
-    />
+    <Suspense>
+      <ApplicantsPage
+        initialApplicants={applicants}
+        pagination={pagination}
+        isLoading={isLoading}
+        isSearching={isSearching}
+        onParamsChange={setParams}
+        onRefresh={mutate}
+      />
+    </Suspense>
   )
 }
