@@ -607,7 +607,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
 
 ---
 
-- [ ] **Task H1: Add client-side numeric sort for Week/Day columns (`components/tasks/TasksTable.js`)**
+- [x] **Task H1: Add client-side numeric sort for Week/Day columns (`components/tasks/TasksTable.js`)**
 **File:** `components/tasks/TasksTable.js`
 **Current problem:** Sorting relies entirely on Airtable's API, which treats `Week Number` and `Day Number` as strings. This produces lexicographic ordering (1, 10, 2, 3...) instead of numeric (1, 2, 3... 10). Users see jumbled week sequences like "1, 1, 4, 2, 1".
 **Changes:**
@@ -616,7 +616,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Add a `sortNumerically` flag to the sort column config for `week` and `day` columns, so the sort handler knows to use `parseInt` comparison instead of string comparison.
   - [ ] Keep the Airtable API sort as the primary sort (for pagination consistency), but apply the client-side numeric re-sort on the returned page of results.
 
-- [ ] **Task H2: Add grouped view mode with collapsible week sections (`components/tasks/TasksTable.js`)**
+- [x] **Task H2: Add grouped view mode with collapsible week sections (`components/tasks/TasksTable.js`)**
 **File:** `components/tasks/TasksTable.js`
 **Current problem:** All tasks render as a flat list. Users cannot see task structure by week, making it hard to understand the onboarding timeline.
 **Changes:**
@@ -637,7 +637,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Grouped view groups the current page's results — it works within the existing pagination, not across pages.
   - [ ] Use `AnimatePresence` with `slideDown`/`slideUp` for smooth collapse transitions.
 
-- [ ] **Task H3: Reduce visible columns and add expandable row detail (`components/tasks/TasksTable.js`)**
+- [x] **Task H3: Reduce visible columns and add expandable row detail (`components/tasks/TasksTable.js`)**
 **File:** `components/tasks/TasksTable.js`
 **Current problem:** 10 columns visible simultaneously (checkbox, title, description, week, day, folder, job, attachments, resource, edit) requiring ~1368px minimum width. Causes horizontal scrolling and cognitive overload.
 **Changes:**
@@ -649,7 +649,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Column widths: Checkbox (40px), Title (flex-1, min 200px), Week (72px), Day (72px), Folder (140px), Actions (100px). Total: fits comfortably in ~800px.
   - [ ] On mobile (<768px): hide Week and Day columns (they're visible in expanded detail). Show only Checkbox, Title, Folder, Actions.
 
-- [ ] **Task H4: Redesign ResourcePage container and header (`components/tasks/ResourcePage.js`)**
+- [x] **Task H4: Redesign ResourcePage container and header (`components/tasks/ResourcePage.js`)**
 **File:** `components/tasks/ResourcePage.js` (40 lines)
 **Current state:** Basic header with h1 + description + Create Resource button. Minimal wrapper.
 **Changes:**
@@ -657,7 +657,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Add a summary stats row below header (before the table): 3 compact stat chips showing total resources, total folders, and total weeks. Each chip: `inline-flex items-center gap-2 bg-muted/30 rounded-lg px-3 py-1.5 text-body-sm`. Count in `font-semibold`. These values come from the existing table data (count of current page results, distinct folders, distinct weeks).
   - [ ] Wrap content in `animate-fade-in-up` with stagger.
 
-- [ ] **Task H5: Improve filter toolbar layout and active filter UX (`components/tasks/TasksTable.js` — TableFilters)**
+- [x] **Task H5: Improve filter toolbar layout and active filter UX (`components/tasks/TasksTable.js` — TableFilters)**
 **File:** `components/tasks/TasksTable.js` (TableFilters function, lines ~26-200)
 **Current problem:** All 5 filters (search, week, day, job, folder) are displayed in one horizontal row. On smaller screens this wraps awkwardly. Active filter pills take additional space below.
 **Changes:**
@@ -668,7 +668,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Remove the separate page-size selector from the filter row. Move it into the pagination footer.
   - [ ] Refresh button: `ghost size="icon"` with `RotateCw` icon, placed after the view toggle.
 
-- [ ] **Task H6: Redesign table chrome, row styling, and pagination (`components/tasks/TasksTable.js`)**
+- [x] **Task H6: Redesign table chrome, row styling, and pagination (`components/tasks/TasksTable.js`)**
 **File:** `components/tasks/TasksTable.js`
 **Current problem:** Table uses default styling with all borders, dense rows, and basic pagination. The overall feel is data-heavy without breathing room.
 **Changes:**
@@ -683,7 +683,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Skeleton loading: replace Loader2 spinner rows with proper skeleton rows (6 rows matching the new reduced column layout — each skeleton row has: checkbox skeleton, title skeleton bar, week/day small skeleton, folder skeleton badge, actions skeleton dots).
   - [ ] Empty state: centered `AnimatedEmptyState` with `Package` icon (48x48 text-muted-foreground/40), "No resources found" in `text-body-sm`, "Try adjusting your filters or create a new resource" in `text-caption text-muted-foreground/60`, and a "Create Resource" CTA button.
 
-- [ ] **Task H7: Improve FolderBadge for table context (`components/tasks/FolderBadge.js`)**
+- [x] **Task H7: Improve FolderBadge for table context (`components/tasks/FolderBadge.js`)**
 **File:** `components/tasks/FolderBadge.js` (61 lines)
 **Current state:** Animated badge with scale/rotate hover effects, colorful backgrounds. In a dense table, multiple animated badges create visual noise.
 **Changes:**
@@ -692,7 +692,7 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
   - [ ] Format: `inline-flex items-center gap-1.5 text-caption`. Dot + folder name in normal weight.
   - [ ] Truncate long folder names with `max-w-[120px] truncate` and show full name in a tooltip.
 
-- [ ] **Task H8: Add keyboard navigation and accessibility (`components/tasks/TasksTable.js`)**
+- [x] **Task H8: Add keyboard navigation and accessibility (`components/tasks/TasksTable.js`)**
 **File:** `components/tasks/TasksTable.js`
 **Changes:**
   - [ ] Add `Enter` key to expand/collapse row detail (when row is focused).
