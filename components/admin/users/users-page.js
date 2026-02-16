@@ -4,9 +4,7 @@ import { useMemo, useState, useCallback } from "react"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card } from "@components/ui/card"
-import { Badge } from "@components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { cn } from "@components/lib/utils"
 import { Plus, RotateCw, Loader2, Search, Trash2 } from "lucide-react"
 import UsersTable from "./users-table"
 import AddApplicantDialog from "./add-applicant-dialog"
@@ -91,7 +89,7 @@ export default function ApplicantsPage({
         </div>
       </div>
 
-      {/* Toolbar: Search + Filter Pills + Page Size */}
+      {/* Toolbar: Search + Stage Filter + Page Size */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {/* Search */}
         <div className="relative">
@@ -110,29 +108,23 @@ export default function ApplicantsPage({
           )}
         </div>
 
-        {/* Stage Filter Pills */}
-        <div className="inline-flex items-center gap-1 bg-muted/30 rounded-lg p-1">
-          {stageOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => handleStageChange(option.value)}
-              disabled={isLoading}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-body-sm transition-all duration-base",
-                stagePreset === option.value
-                  ? "bg-background text-foreground shadow-sm font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {option.label}
-              {option.count !== undefined && (
-                <Badge variant="secondary" className="ml-1.5 text-caption px-1.5 py-0">
-                  {option.count}
-                </Badge>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* Stage Filter Dropdown */}
+        <Select
+          value={stagePreset}
+          onValueChange={handleStageChange}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="h-10 w-44 rounded-lg border-border/40">
+            <SelectValue placeholder="All Stages" />
+          </SelectTrigger>
+          <SelectContent>
+            {stageOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Page Size Selector */}
         <div className="flex items-center gap-2 text-body-sm text-muted-foreground ml-auto">

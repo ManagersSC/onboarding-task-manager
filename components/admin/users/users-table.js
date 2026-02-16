@@ -71,20 +71,17 @@ function SkeletonRow() {
           </div>
         </div>
       </TableCell>
-      <TableCell>
-        <Skeleton className="h-5 w-24 rounded-md" />
+      <TableCell className="text-center">
+        <Skeleton className="h-5 w-24 rounded-md mx-auto" />
       </TableCell>
-      <TableCell>
-        <Skeleton className="h-3.5 w-28" />
+      <TableCell className="text-center">
+        <Skeleton className="h-3.5 w-28 mx-auto" />
       </TableCell>
-      <TableCell>
-        <Skeleton className="h-3.5 w-20" />
+      <TableCell className="text-center">
+        <Skeleton className="h-3.5 w-20 mx-auto" />
       </TableCell>
-      <TableCell>
-        <Skeleton className="h-3.5 w-20" />
-      </TableCell>
-      <TableCell className="text-right">
-        <Skeleton className="h-8 w-8 rounded-lg ml-auto" />
+      <TableCell className="text-center">
+        <Skeleton className="h-8 w-8 rounded-lg mx-auto" />
       </TableCell>
     </TableRow>
   )
@@ -149,11 +146,10 @@ export default function UsersTable({
                 <Checkbox aria-label="Select all" disabled />
               </TableHead>
               <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Applicant</TableHead>
-              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Stage</TableHead>
-              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Job</TableHead>
-              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Location</TableHead>
-              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Created</TableHead>
-              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-right">Actions</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Stage</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Job</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Created</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,11 +176,10 @@ export default function UsersTable({
               />
             </TableHead>
             <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Applicant</TableHead>
-            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Stage</TableHead>
-            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Job</TableHead>
-            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Location</TableHead>
-            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Created</TableHead>
-            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-right">Actions</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Stage</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Job</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Created</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -222,7 +217,7 @@ export default function UsersTable({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Badge
                     variant={stageBadgeVariant(row.stage)}
                     className="cursor-pointer"
@@ -232,17 +227,10 @@ export default function UsersTable({
                     {row.stage}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <div className="text-body-sm truncate max-w-[180px]">{row.job || "—"}</div>
+                <TableCell className="text-center">
+                  <span className="text-body-sm truncate">{row.job || "—"}</span>
                 </TableCell>
-                <TableCell>
-                  {row.location ? (
-                    <span className="text-body-sm text-muted-foreground">{row.location}</span>
-                  ) : (
-                    <span className="text-caption text-muted-foreground/60">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <span
                     className="text-body-sm text-muted-foreground"
                     title={row.createdAt ? formatDate(row.createdAt) : undefined}
@@ -250,13 +238,13 @@ export default function UsersTable({
                     {relativeTime(row.createdAt)}
                   </span>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-center">
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => setOpenId(row.id)}
                     aria-label="Open details"
-                    className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 rounded-lg"
                     disabled={isLoading}
                   >
                     <Eye className="h-4 w-4" />
@@ -267,7 +255,7 @@ export default function UsersTable({
           })}
           {rows.length === 0 && !isLoading && (
             <TableRow>
-              <TableCell colSpan={7} className="h-48">
+              <TableCell colSpan={6} className="h-48">
                 <div className="flex flex-col items-center justify-center text-center">
                   <Users className="h-12 w-12 text-muted-foreground/40 mb-3" />
                   <p className="text-body-sm text-muted-foreground">No applicants found</p>
