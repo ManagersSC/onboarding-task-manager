@@ -36,9 +36,9 @@ export default function Home() {
         <AuthComponent />
 
         {/* Footer */}
-        <p className="text-center text-caption text-muted-foreground/60 mt-8">
+        {/* <p className="text-center text-caption text-muted-foreground/60 mt-8">
           Secure login powered by Smile Cliniq
-        </p>
+        </p> */}
       </main>
     </GradientBackground>
   )
