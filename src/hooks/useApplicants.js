@@ -17,6 +17,7 @@ export function useApplicants(params = {}) {
     pageSize = 25,
     search = '',
     stage = 'all',
+    job = 'all',
     sortBy = 'Created Time',
     sortOrder = 'desc'
   } = params
@@ -30,17 +31,18 @@ export function useApplicants(params = {}) {
       page: page.toString(),
       pageSize: pageSize.toString(),
       stage,
+      job,
       sortBy,
       sortOrder
     })
-    
+
     // Only add search if it has content
     if (debouncedSearch.trim()) {
       params.set('search', debouncedSearch.trim())
     }
-    
+
     return params.toString()
-  }, [page, pageSize, debouncedSearch, stage, sortBy, sortOrder])
+  }, [page, pageSize, debouncedSearch, stage, job, sortBy, sortOrder])
 
   const { data, error, mutate, isLoading } = useSWR(
     [`/api/admin/users`, queryParams],

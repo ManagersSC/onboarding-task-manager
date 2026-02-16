@@ -10,6 +10,7 @@ export default function Page() {
     pageSize: 25,
     search: '',
     stage: 'all',
+    job: 'all',
     sortBy: 'Created Time',
     sortOrder: 'desc'
   })
