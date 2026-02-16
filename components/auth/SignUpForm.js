@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
-import { useForm, useWatch } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Alert, AlertDescription } from "@components/ui/alert"
-import { Loader2, Eye, EyeOff, Mail, Lock, ShieldCheck, AlertCircle, Check } from "lucide-react"
-import { cn } from "@components/lib/utils"
+import { Loader2 } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 const signUpSchema = z
   .object({
@@ -23,23 +23,6 @@ const signUpSchema = z
     path: ["confirmPassword"],
   })
 
-// Password strength checker
-const getPasswordStrength = (password) => {
-  if (!password) return { score: 0, label: "", color: "" }
-
-  let score = 0
-  if (password.length >= 6) score++
-  if (password.length >= 8) score++
-  if (/[A-Z]/.test(password)) score++
-  if (/[0-9]/.test(password)) score++
-  if (/[^A-Za-z0-9]/.test(password)) score++
-
-  if (score <= 1) return { score: 1, label: "Weak", color: "bg-error" }
-  if (score <= 2) return { score: 2, label: "Fair", color: "bg-warning" }
-  if (score <= 3) return { score: 3, label: "Good", color: "bg-info" }
-  return { score: 4, label: "Strong", color: "bg-success" }
-}
-
 export function SignUpForm({ onSuccess, onLoginClick }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -47,12 +30,10 @@ export function SignUpForm({ onSuccess, onLoginClick }) {
   const [success, setSuccess] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [focusedField, setFocusedField] = useState(null)
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(signUpSchema),
@@ -62,9 +43,6 @@ export function SignUpForm({ onSuccess, onLoginClick }) {
       confirmPassword: "",
     },
   })
-
-  const password = useWatch({ control, name: "password" })
-  const passwordStrength = useMemo(() => getPasswordStrength(password), [password])
 
   const onSubmit = async (data) => {
     setIsLoading(true)
@@ -97,200 +75,94 @@ export function SignUpForm({ onSuccess, onLoginClick }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {error && (
-        <Alert variant="destructive" className="animate-fade-in-up border-error/30 bg-error-muted">
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
-        <Alert className="animate-fade-in-up border-success/30 bg-success-muted text-success">
-          <Check className="h-4 w-4" />
+        <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="signup-email" className="text-sm font-medium">
-            Email
-          </Label>
-          <div className="relative">
-            <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-              focusedField === "email" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <Mail className="h-4 w-4" />
-            </div>
-            <Input
-              id="signup-email"
-              type="email"
-              placeholder="you@example.com"
-              className={cn(
-                "pl-10 h-11",
-                errors.email && "border-error focus-visible:ring-error/30"
-              )}
-              onFocus={() => setFocusedField("email")}
-              onBlur={() => setFocusedField(null)}
-              {...register("email")}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
-              <AlertCircle className="h-3 w-3" />
-              {errors.email.message}
-            </p>
-          )}
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" placeholder="you@example.com" {...register("email")} />
+          {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="signup-password" className="text-sm font-medium">
-            Password
-          </Label>
-          <div className="relative">
-            <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-              focusedField === "password" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <Lock className="h-4 w-4" />
-            </div>
+          <Label htmlFor="password">Password</Label>
+          <div className="relative w-full">
             <Input
-              id="signup-password"
+              id="password"
               type={showPassword ? "text" : "password"}
               placeholder="Create a strong password"
-              className={cn(
-                "pl-10 pr-10 h-11",
-                errors.password && "border-error focus-visible:ring-error/30"
-              )}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
+              className="pr-10"
               {...register("password")}
             />
-            <button
-              type="button"
-              className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-                "text-muted-foreground hover:text-foreground focus:outline-none focus:text-primary"
-              )}
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-            </button>
-          </div>
-          {/* Password strength indicator */}
-          {password && (
-            <div className="space-y-1.5 animate-fade-in">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((level) => (
-                  <div
-                    key={level}
-                    className={cn(
-                      "h-1.5 flex-1 rounded-full transition-all duration-base",
-                      level <= passwordStrength.score ? passwordStrength.color : "bg-muted"
-                    )}
-                  />
-                ))}
-              </div>
-              <p className={cn(
-                "text-xs",
-                passwordStrength.score <= 1 && "text-error",
-                passwordStrength.score === 2 && "text-warning",
-                passwordStrength.score === 3 && "text-info",
-                passwordStrength.score >= 4 && "text-success"
-              )}>
-                Password strength: {passwordStrength.label}
-              </p>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+              </button>
             </div>
-          )}
-          {errors.password && (
-            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
-              <AlertCircle className="h-3 w-3" />
-              {errors.password.message}
-            </p>
-          )}
+          </div>
+          {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword" className="text-sm font-medium">
-            Confirm Password
-          </Label>
-          <div className="relative">
-            <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-              focusedField === "confirmPassword" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <ShieldCheck className="h-4 w-4" />
-            </div>
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <div className="relative w-full">
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm your password"
-              className={cn(
-                "pl-10 pr-10 h-11",
-                errors.confirmPassword && "border-error focus-visible:ring-error/30"
-              )}
-              onFocus={() => setFocusedField("confirmPassword")}
-              onBlur={() => setFocusedField(null)}
+              className="pr-10"
               {...register("confirmPassword")}
             />
-            <button
-              type="button"
-              className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-                "text-muted-foreground hover:text-foreground focus:outline-none focus:text-primary"
-              )}
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
-            </button>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
+              </button>
+            </div>
           </div>
-          {errors.confirmPassword && (
-            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
-              <AlertCircle className="h-3 w-3" />
-              {errors.confirmPassword.message}
-            </p>
-          )}
+          {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full h-11 text-sm font-medium mt-6"
-          disabled={isLoading}
-        >
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Creating account...
             </>
           ) : (
-            "Create Account"
+            "Sign Up"
           )}
         </Button>
       </form>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">or</span>
-        </div>
+      <div className="text-center mt-4">
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Button variant="link" className="p-0 h-auto" onClick={onLoginClick}>
+            Login
+          </Button>
+        </p>
       </div>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Button
-          variant="link"
-          className="p-0 h-auto font-medium text-primary hover:text-primary/80"
-          onClick={onLoginClick}
-        >
-          Sign in
-        </Button>
-      </p>
     </div>
   )
 }

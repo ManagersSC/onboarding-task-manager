@@ -7,7 +7,6 @@ import { formatDistanceToNow } from "date-fns"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import useNotifications from "@/hooks/useNotifications"
-import Link from "next/link"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Button } from "@components/ui/button"
@@ -21,10 +20,10 @@ const typeIcons = {
 }
 
 const typeStyles = {
-  Critical: "text-error bg-error-muted",
-  Info: "text-info bg-info-muted",
-  Success: "text-success bg-success-muted",
-  Warning: "text-warning bg-warning-muted",
+  Critical: "text-red-500 bg-red-100 dark:bg-red-900/20",
+  Info: "text-blue-500 bg-blue-100 dark:bg-blue-900/20",
+  Success: "text-green-500 bg-green-100 dark:bg-green-900/20",
+  Warning: "text-amber-500 bg-amber-100 dark:bg-amber-900/20",
 }
 
 export function NotificationCenter() {
@@ -116,27 +115,24 @@ export function NotificationCenter() {
 
   const isNewNotification = useCallback((id) => newNotificationIds.has(id), [newNotificationIds])
 
-  // Limit to 4 visible notifications
-  const visibleNotifications = notifications.slice(0, 4)
-  const hasMore = notifications.length > 4
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.8 }}
     >
-      <Card variant="elevated">
+      <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-title-sm flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
                 Notifications
-                {isRefreshing && <div className="w-2 h-2 bg-info rounded-full animate-pulse" />}
+                {isRefreshing && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
               </CardTitle>
               {unreadCount > 0 && (
-                <Badge variant="info">
-                  {unreadCount}
+                <Badge className="bg-blue-500 hover:bg-blue-600 text-white" variant="default">
+                  {unreadCount} new
                 </Badge>
               )}
             </div>
@@ -145,9 +141,9 @@ export function NotificationCenter() {
               size="sm"
               onClick={handleMarkAllAsRead}
               disabled={loading || unreadCount === 0}
-              className="text-body-sm"
+              className="text-sm"
             >
-              Mark all read
+              Mark all as read
             </Button>
           </div>
         </CardHeader>
@@ -159,144 +155,138 @@ export function NotificationCenter() {
               ))}
             </div>
           ) : error ? (
-            <div className="text-error text-center py-8">{error}</div>
+            <div className="text-red-500 text-center py-8">{error}</div>
           ) : notifications.length === 0 ? (
             <div className="text-muted-foreground text-center py-8 flex flex-col items-center gap-2">
               <Bell className="h-8 w-8 opacity-50" />
-              <span className="text-body-sm">No notifications</span>
+              <span>No notifications</span>
             </div>
           ) : (
-            <>
-              <div className="notification-container">
-                <AnimatePresence mode="popLayout">
-                  {visibleNotifications.map((notification) => {
-                    const Icon = typeIcons[notification.severity] || Info
-                    const style = typeStyles[notification.severity] || typeStyles.Info
-                    const isNew = isNewNotification(notification.id)
-                    const isUnread = !notification.read
+            <div className="space-y-3 max-h-96 overflow-y-auto notification-container">
+              <AnimatePresence mode="popLayout">
+                {notifications.map((notification) => {
+                  const Icon = typeIcons[notification.severity] || Info
+                  const style = typeStyles[notification.severity] || typeStyles.Info
+                  const isNew = isNewNotification(notification.id)
+                  const isUnread = !notification.read
 
-                    return (
-                      <motion.div
-                        key={notification.id}
-                        layout
-                        initial={
-                          isNew
-                            ? {
-                                opacity: 0,
-                                y: -30,
-                                scale: 0.9,
-                                height: 0,
-                                backgroundColor: "rgba(59, 130, 246, 0.1)",
-                              }
-                            : false
-                        }
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                          height: "auto",
-                          backgroundColor: "transparent",
-                        }}
-                        exit={{
-                          opacity: 0,
-                          x: -20,
-                          scale: 0.95,
-                          height: 0,
-                        }}
-                        transition={{
-                          duration: isNew ? 0.6 : 0.4,
-                          type: "spring",
-                          stiffness: isNew ? 300 : 400,
-                          damping: isNew ? 20 : 25,
-                          layout: { duration: 0.3 },
-                          backgroundColor: { duration: 1.5, delay: 0.3 },
-                        }}
-                        className={`
-                          flex items-start gap-3 py-3 border-b border-border/20 last:border-0
-                          hover:bg-muted/20 rounded-lg -mx-2 px-2 transition-colors
-                          ${notification.actionUrl ? "cursor-pointer" : ""}
-                          ${isNew ? "ring-2 ring-info/20 ring-offset-2 ring-offset-background" : ""}
-                        `}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        {/* Icon container - 32x32 rounded-lg */}
-                        <div className={`w-8 h-8 rounded-lg ${style} flex items-center justify-center flex-shrink-0`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
+                  return (
+                    <motion.div
+                      key={notification.id}
+                      layout
+                      initial={
+                        isNew
+                          ? {
+                              opacity: 0,
+                              y: -30,
+                              scale: 0.9,
+                              height: 0,
+                              marginBottom: 0,
+                              backgroundColor: "rgba(59, 130, 246, 0.1)", // Blue glow for new notifications
+                            }
+                          : false
+                      }
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        height: "auto",
+                        marginBottom: 12,
+                        backgroundColor: "transparent",
+                      }}
+                      exit={{
+                        opacity: 0,
+                        x: -20,
+                        scale: 0.95,
+                        height: 0,
+                        marginBottom: 0,
+                      }}
+                      transition={{
+                        duration: isNew ? 0.6 : 0.4, // Longer animation for new notifications
+                        type: "spring",
+                        stiffness: isNew ? 300 : 400, // Softer spring for new notifications
+                        damping: isNew ? 20 : 25,
+                        layout: { duration: 0.3 },
+                        backgroundColor: { duration: 1.5, delay: 0.3 }, // Fade out the glow
+                      }}
+                      whileHover={{ scale: 1.01 }}
+                      className={`
+            relative flex items-start p-4 rounded-lg border transition-all duration-200
+            ${
+              isUnread
+                ? "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20 shadow-sm hover:shadow-md"
+                : "opacity-70 hover:opacity-90 hover:shadow-sm"
+            }
+            ${notification.actionUrl ? "cursor-pointer" : ""}
+            ${isNew ? "ring-2 ring-blue-500/20 ring-offset-2 ring-offset-background" : ""}
+          `}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      {/* Unread indicator dot */}
+                      {isUnread && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{
+                            scale: 1,
+                            ...(isNew && {
+                              boxShadow: [
+                                "0 0 0 0 rgba(59, 130, 246, 0.7)",
+                                "0 0 0 10px rgba(59, 130, 246, 0)",
+                                "0 0 0 0 rgba(59, 130, 246, 0)",
+                              ],
+                            }),
+                          }}
+                          transition={{
+                            scale: { duration: 0.3 },
+                            boxShadow: isNew
+                              ? {
+                                  duration: 2,
+                                  repeat: 2,
+                                  ease: "easeOut",
+                                }
+                              : {},
+                          }}
+                          className={`absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full ${isNew ? "animate-pulse" : ""}`}
+                        />
+                      )}
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-body-sm font-medium ${!isUnread ? "opacity-70" : ""}`}>
-                            {notification.title || notification.body}
-                          </p>
-                          {notification.title && notification.body && (
-                            <p className="text-caption text-muted-foreground mt-0.5 line-clamp-2">{notification.body}</p>
-                          )}
-                          <p className="text-caption text-muted-foreground/60 mt-0.5">
-                            {notification.createdAt
-                              ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
-                              : ""}
-                          </p>
-                        </div>
+                      {/* Icon */}
+                      <div className={`p-2 rounded-full ${style} mr-3 flex-shrink-0`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
 
-                        {/* Right side: Mark as read button and unread indicator */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {isUnread && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
-                              onClick={(e) => handleMarkAsRead(e, notification.id)}
-                              title="Mark as read"
-                            >
-                              <Check className="h-3 w-3" />
-                            </Button>
-                          )}
-                          {/* Unread indicator dot */}
-                          {isUnread && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{
-                                scale: 1,
-                                ...(isNew && {
-                                  boxShadow: [
-                                    "0 0 0 0 rgba(59, 130, 246, 0.7)",
-                                    "0 0 0 10px rgba(59, 130, 246, 0)",
-                                    "0 0 0 0 rgba(59, 130, 246, 0)",
-                                  ],
-                                }),
-                              }}
-                              transition={{
-                                scale: { duration: 0.3 },
-                                boxShadow: isNew
-                                  ? {
-                                      duration: 2,
-                                      repeat: 2,
-                                      ease: "easeOut",
-                                    }
-                                  : {},
-                              }}
-                              className={`w-2 h-2 rounded-full bg-primary ${isNew ? "animate-pulse" : ""}`}
-                            />
-                          )}
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </AnimatePresence>
-              </div>
-              {/* View All link */}
-              {hasMore && (
-                <div className="pt-3 mt-1 border-t border-border/20">
-                  <Link
-                    href="/dashboard/notifications"
-                    className="text-body-sm text-primary hover:text-primary/80 transition-colors font-medium"
-                  >
-                    View All
-                  </Link>
-                </div>
-              )}
-            </>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 pr-10">
+                        <p className={`text-sm ${isUnread ? "font-semibold" : "font-medium"}`}>
+                          {notification.title || notification.body}
+                        </p>
+                        {notification.title && notification.body && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.body}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {notification.createdAt
+                            ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
+                            : ""}
+                        </p>
+                      </div>
+
+                      {/* Mark as read button - only show for unread notifications */}
+                      {isUnread && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-2 right-6 h-8 w-8 p-0 opacity-80 hover:opacity-100 transition-opacity bg-background/60 hover:bg-background/90 border border-border/50"
+                          onClick={(e) => handleMarkAsRead(e, notification.id)}
+                          title="Mark as read"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+            </div>
           )}
         </CardContent>
       </Card>

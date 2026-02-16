@@ -5,33 +5,30 @@ import { Skeleton } from "@components/ui/skeleton"
 
 export function SkeletonRow() {
   return (
-    <TableRow className="border-b border-border/20">
-      {/* Checkbox */}
-      <TableCell className="h-14" style={{ width: "40px" }}>
-        <Skeleton className="h-4 w-4 rounded" />
+    <TableRow>
+      <TableCell>
+        <Skeleton className="h-5 w-[180px]" />
       </TableCell>
-      {/* Title */}
-      <TableCell className="h-14">
-        <Skeleton className="h-4 w-[180px] rounded" />
+      <TableCell>
+        <Skeleton className="h-5 w-[150px]" />
       </TableCell>
-      {/* Week */}
-      <TableCell className="h-14 hidden md:table-cell">
-        <Skeleton className="h-4 w-8 rounded" />
+      <TableCell>
+        <Skeleton className="h-5 w-[60px]" />
       </TableCell>
-      {/* Day */}
-      <TableCell className="h-14 hidden md:table-cell">
-        <Skeleton className="h-4 w-8 rounded" />
+      <TableCell>
+        <Skeleton className="h-5 w-[60px]" />
       </TableCell>
-      {/* Folder */}
-      <TableCell className="h-14">
-        <Skeleton className="h-5 w-[90px] rounded-full" />
+      <TableCell>
+        <Skeleton className="h-5 w-[100px]" />
       </TableCell>
-      {/* Actions */}
-      <TableCell className="h-14">
-        <div className="flex gap-1">
-          <Skeleton className="h-6 w-6 rounded" />
-          <Skeleton className="h-6 w-6 rounded" />
-        </div>
+      <TableCell>
+        <Skeleton className="h-5 w-[100px]" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-[30px]" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-8 w-[60px]" />
       </TableCell>
     </TableRow>
   )

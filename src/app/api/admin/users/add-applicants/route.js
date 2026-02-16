@@ -138,7 +138,7 @@ export async function POST(request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'Smile-Cliniq-Admin-Panel/1.0'
+        'User-Agent': 'Smile-Clinique-Admin-Panel/1.0'
       },
       body: JSON.stringify(webhookPayload)
     })

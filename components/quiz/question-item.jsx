@@ -34,16 +34,16 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
 
   const optionClasses = {
     default: "border-muted-foreground/20 hover:bg-muted/50",
-    correctSelected: "border-success bg-success-muted ring-2 ring-success",
-    incorrectSelected: "border-error bg-error-muted ring-2 ring-error",
-    correctUnselected: "border-success bg-success-muted",
+    correctSelected: "border-green-500 bg-green-500/10 ring-2 ring-green-500",
+    incorrectSelected: "border-red-500 bg-red-500/10 ring-2 ring-red-500",
+    correctUnselected: "border-green-500 bg-green-500/10",
   }
 
   const IconComponent = ({ state }) => {
     if (!isSubmitted) return null
-    if (state === "correctSelected") return <CheckCircle className="h-5 w-5 text-success ml-auto" />
-    if (state === "incorrectSelected") return <XCircle className="h-5 w-5 text-error ml-auto" />
-    if (state === "correctUnselected") return <CheckCircle className="h-5 w-5 text-success ml-auto" />
+    if (state === "correctSelected") return <CheckCircle className="h-5 w-5 text-green-500 ml-auto" />
+    if (state === "incorrectSelected") return <XCircle className="h-5 w-5 text-red-500 ml-auto" />
+    if (state === "correctUnselected") return <CheckCircle className="h-5 w-5 text-green-500 ml-auto" />
     return null
   }
 

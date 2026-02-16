@@ -46,7 +46,7 @@ function FolderDropdown({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={cn(error && "border-error", className)}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -100,7 +100,7 @@ function JobDropdown({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={cn(error && "border-error", className)}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -391,9 +391,9 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                 value={taskName}
                 onChange={(e) => setTaskName(e.target.value)}
                 required
-                className={validationErrors.taskName ? "border-error" : ""}
+                className={validationErrors.taskName ? "border-red-500" : ""}
               />
-              {validationErrors.taskName && <p className="text-xs text-error">{validationErrors.taskName}</p>}
+              {validationErrors.taskName && <p className="text-xs text-red-500">{validationErrors.taskName}</p>}
             </div>
 
             <div className="grid gap-2">
@@ -431,7 +431,7 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                 <div className="grid gap-2">
                   <Label htmlFor="task-week">Week *</Label>
                   <Select value={taskWeek} onValueChange={setTaskWeek}>
-                    <SelectTrigger id="task-week" className={validationErrors.taskWeek ? "border-error" : ""}>
+                    <SelectTrigger id="task-week" className={validationErrors.taskWeek ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select week" />
                     </SelectTrigger>
                     <SelectContent>
@@ -442,13 +442,13 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                       <SelectItem value="5">Week 5</SelectItem>
                     </SelectContent>
                   </Select>
-                  {validationErrors.taskWeek && <p className="text-xs text-error">{validationErrors.taskWeek}</p>}
+                  {validationErrors.taskWeek && <p className="text-xs text-red-500">{validationErrors.taskWeek}</p>}
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="task-day">Day *</Label>
                   <Select value={taskDay} onValueChange={setTaskDay}>
-                    <SelectTrigger id="task-day" className={validationErrors.taskDay ? "border-error" : ""}>
+                    <SelectTrigger id="task-day" className={validationErrors.taskDay ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select day" />
                     </SelectTrigger>
                     <SelectContent>
@@ -459,14 +459,14 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                       <SelectItem value="5">Day 5</SelectItem>
                     </SelectContent>
                   </Select>
-                  {validationErrors.taskDay && <p className="text-xs text-error">{validationErrors.taskDay}</p>}
+                  {validationErrors.taskDay && <p className="text-xs text-red-500">{validationErrors.taskDay}</p>}
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="task-medium">Medium *</Label>
                 <Select value={taskMedium} onValueChange={setTaskMedium}>
-                  <SelectTrigger id="task-medium" className={validationErrors.taskMedium ? "border-error" : ""}>
+                  <SelectTrigger id="task-medium" className={validationErrors.taskMedium ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select medium" />
                   </SelectTrigger>
                   <SelectContent>
@@ -474,7 +474,7 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                     <SelectItem value="Video">Video</SelectItem>
                   </SelectContent>
                 </Select>
-                {validationErrors.taskMedium && <p className="text-xs text-error">{validationErrors.taskMedium}</p>}
+                {validationErrors.taskMedium && <p className="text-xs text-red-500">{validationErrors.taskMedium}</p>}
               </div>
             </div>
           ) : (
@@ -507,7 +507,7 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                 placeholder="Select a job..."
                 error={validationErrors.taskJob}
               />
-              {validationErrors.taskJob && <p className="text-xs text-error">{validationErrors.taskJob}</p>}
+              {validationErrors.taskJob && <p className="text-xs text-red-500">{validationErrors.taskJob}</p>}
             </div>
 
             <div className="grid gap-2">
@@ -518,7 +518,7 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
                 placeholder="Select a folder..."
                 error={validationErrors.taskFolder}
               />
-              {validationErrors.taskFolder && <p className="text-xs text-error">{validationErrors.taskFolder}</p>}
+              {validationErrors.taskFolder && <p className="text-xs text-red-500">{validationErrors.taskFolder}</p>}
             </div>
           </div>
         </motion.div>
@@ -561,7 +561,7 @@ export function CreateTaskForm({ onSuccess, onCancel, resourcesOnly = false }) {
             />
           </div>
           <div className="flex justify-between items-center">
-            {validationErrors.email && <p className="text-xs text-error">{validationErrors.email}</p>}
+            {validationErrors.email && <p className="text-xs text-red-500">{validationErrors.email}</p>}
             <Button type="button" variant="ghost" size="sm" onClick={addEmail} className="ml-auto text-xs">
               Add Email
             </Button>

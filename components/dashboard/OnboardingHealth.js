@@ -38,9 +38,9 @@ const departments = [
 export function OnboardingHealth() {
   // Function to determine color based on completion percentage
   const getHealthColor = (completion) => {
-    if (completion > 80) return "bg-success"
-    if (completion >= 50) return "bg-warning"
-    return "bg-error"
+    if (completion >= 80) return "bg-green-500"
+    if (completion >= 60) return "bg-amber-500"
+    return "bg-red-500"
   }
 
   // Function to generate sparkline points
@@ -68,12 +68,16 @@ export function OnboardingHealth() {
   }
 
   return (
-    <div className="animate-fade-in-up">
-      <Card variant="elevated">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.6 }}
+    >
+      <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <CardTitle className="text-title-sm">Onboarding Health</CardTitle>
+              <CardTitle>Onboarding Health</CardTitle>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -90,7 +94,7 @@ export function OnboardingHealth() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {departments.map((dept, index) => {
               const sparklinePoints = generateSparkline(dept.completion, dept.trend)
               const pointsString = sparklinePoints
@@ -103,24 +107,38 @@ export function OnboardingHealth() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center gap-3"
+                  className="flex items-center"
                 >
-                  <div className="w-24 truncate text-body-sm">{dept.name}</div>
-                  <div className="h-2 rounded-full bg-muted flex-1 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${dept.completion}%` }}
-                      transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-                      className={`h-full rounded-full ${getHealthColor(dept.completion)}`}
-                    />
+                  <div className="w-24 truncate text-sm">{dept.name}</div>
+                  <div className="flex-1 mx-2">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${dept.completion}%` }}
+                        transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+                        className={`h-full ${getHealthColor(dept.completion)}`}
+                      />
+                    </div>
                   </div>
-                  <span className="text-caption font-medium w-10 text-right">{dept.completion}%</span>
+                  <div className="flex items-center gap-2">
+                    <svg width="40" height="20" className="text-muted-foreground hidden sm:block">
+                      <polyline
+                        points={pointsString}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium">{dept.completion}%</span>
+                  </div>
                 </motion.div>
               )
             })}
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   )
 }

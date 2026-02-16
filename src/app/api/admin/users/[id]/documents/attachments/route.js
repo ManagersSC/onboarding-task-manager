@@ -6,7 +6,7 @@ import { logAuditEvent } from "@/lib/auditLogger"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-async function uploadFileToAirtable(recordId, fieldId, file) {
+async function uploadFileToAirtable(recordId, fieldName, file) {
   const arrayBuffer = await file.arrayBuffer()
   const base64 = Buffer.from(arrayBuffer).toString("base64")
   const body = {
@@ -14,7 +14,7 @@ async function uploadFileToAirtable(recordId, fieldId, file) {
     filename: file.name,
     file: base64,
   }
-  const url = `https://content.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(fieldId)}/uploadAttachment`
+  const url = `https://content.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/${recordId}/${encodeURIComponent(fieldName)}/uploadAttachment`
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -43,11 +43,11 @@ export async function POST(request, { params }) {
     if (!session || session.userRole !== "admin") return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
 
     const formData = await request.formData()
-    const fieldId = String(formData.get("fieldId") || "").trim()
+    const fieldName = String(formData.get("fieldName") || "").trim()
     const title = String(formData.get("title") || "").trim()
     const files = formData.getAll("files")
-    if (!fieldId || files.length === 0) {
-      return new Response(JSON.stringify({ error: "Missing fieldId or files" }), { status: 400 })
+    if (!fieldName || files.length === 0) {
+      return new Response(JSON.stringify({ error: "Missing fieldName or files" }), { status: 400 })
     }
 
     // Validate applicant and find or create a Documents record linked to applicant
@@ -86,7 +86,7 @@ export async function POST(request, { params }) {
       const safeTitle = title ? title.replace(/[\\/:*?"<>|]/g, "-").trim() : ""
       const newName = safeTitle || file.name
       const newFile = new File([arrayBuffer], newName, { type: file.type })
-      await uploadFileToAirtable(documentsRecordId, fieldId, newFile)
+      await uploadFileToAirtable(documentsRecordId, fieldName, newFile)
       uploaded.push({ name: newFile.name, size: newFile.size, type: newFile.type })
     }
 
@@ -98,7 +98,7 @@ export async function POST(request, { params }) {
         userName: session.userName,
         userRole: session.userRole,
         userIdentifier: session.userEmail,
-        detailedMessage: `Uploaded ${uploaded.length} file(s) to Documents.${fieldId} for applicant ${id} (documentsRecordId: ${documentsRecordId})`,
+        detailedMessage: `Uploaded ${uploaded.length} file(s) to Documents.${fieldName} for applicant ${id} (documentsRecordId: ${documentsRecordId})`,
         request,
       })
     } catch (e) {

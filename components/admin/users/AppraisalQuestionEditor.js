@@ -223,14 +223,14 @@ export default function AppraisalQuestionEditor({
           </DialogHeader>
 
           {externalError && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-error-muted text-error text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-md bg-red-500/10 text-red-600 text-sm">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{externalError}</span>
             </div>
           )}
 
           {validation.warnings.length > 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-warning-muted text-warning text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-md bg-amber-500/10 text-amber-600 text-sm">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{validation.warnings.join(". ")}</span>
             </div>
@@ -298,7 +298,7 @@ export default function AppraisalQuestionEditor({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-error hover:text-error/80 hover:bg-error-muted"
+                          className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                           onClick={() => handleDeleteQuestion(idx)}
                           disabled={isLoading}
                         >
@@ -375,7 +375,7 @@ export default function AppraisalQuestionEditor({
             <AlertDialogAction
               onClick={confirmDeleteQuestion}
               disabled={isLoading}
-              className="bg-error hover:bg-error/90 text-error-foreground"
+              className="bg-red-600 hover:bg-red-700"
             >
               Delete
             </AlertDialogAction>

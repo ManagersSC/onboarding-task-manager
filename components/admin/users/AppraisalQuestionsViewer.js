@@ -132,7 +132,7 @@ export default function AppraisalQuestionsViewer({
         <ScrollArea className="flex-1 pr-4 -mr-4">
           {!isValid ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <AlertCircle className="h-10 w-10 text-warning mb-3" />
+              <AlertCircle className="h-10 w-10 text-amber-500 mb-3" />
               <p className="text-sm text-muted-foreground">{error}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Questions may not have been set when this appraisal was created.

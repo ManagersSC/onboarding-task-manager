@@ -11,9 +11,9 @@ import Link from "next/link"
 // Urgency configuration
 const urgencyConfig = {
   Critical: {
-    color: "text-error",
-    bgColor: "bg-error-muted",
-    borderColor: "border-error/20",
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-50 dark:bg-red-900/20",
+    borderColor: "border-red-200 dark:border-red-800",
   },
   High: {
     color: "text-orange-600 dark:text-orange-400",
@@ -21,14 +21,14 @@ const urgencyConfig = {
     borderColor: "border-orange-200 dark:border-orange-800",
   },
   Medium: {
-    color: "text-warning",
-    bgColor: "bg-warning-muted",
-    borderColor: "border-warning/20",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-900/20",
+    borderColor: "border-amber-200 dark:border-amber-800",
   },
   Low: {
-    color: "text-success",
-    bgColor: "bg-success-muted",
-    borderColor: "border-success/20",
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-900/20",
+    borderColor: "border-green-200 dark:border-green-800",
   },
 }
 
@@ -47,15 +47,15 @@ export function TaskCard({ task, onComplete }) {
     overdue: {
       icon: <AlertCircle className="h-4 w-4" />,
       label: "Overdue",
-      badgeClass: "bg-error-muted text-error border-error/20",
-      accentClass: "border-l-4 border-error",
+      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+      accentClass: "border-l-4 border-red-500 dark:border-red-400",
     },
     completed: {
       icon: <Check className="h-4 w-4" />,
       label: "Completed",
       badgeClass:
-        "bg-success-muted text-success border-success/20",
-      accentClass: "border-l-4 border-success",
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+      accentClass: "border-l-4 border-green-500 dark:border-green-400",
     },
   }
 
@@ -170,7 +170,7 @@ export function TaskCard({ task, onComplete }) {
               <Button
                 variant={task.overdue ? "default" : "outline"}
                 size="sm"
-                className={cn(task.overdue && "bg-error hover:bg-error/90 text-error-foreground")}
+                className={cn(task.overdue && "bg-red-600 hover:bg-red-700 text-white")}
                 disabled={isCompleting}
                 onClick={handleComplete}
               >

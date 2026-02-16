@@ -144,7 +144,7 @@ export function NewTaskModal({ open, onOpenChange, onTaskCreate }) {
         </DialogHeader>
 
         {fetchUserError && (
-          <div className="mb-4 p-2 bg-error-muted text-error rounded text-sm">
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">
             {fetchUserError}
           </div>
         )}

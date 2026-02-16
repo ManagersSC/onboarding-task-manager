@@ -16,12 +16,12 @@ export default function QuizResults({ results, quizTitle, passingScore }) {
   }
 
   const statusIcon = passed ? (
-    <CheckCircle className="h-12 w-12 text-success" />
+    <CheckCircle className="h-12 w-12 text-green-500" />
   ) : (
-    <XCircle className="h-12 w-12 text-error" />
+    <XCircle className="h-12 w-12 text-red-500" />
   )
   const statusText = passed ? "Congratulations! You Passed!" : "Keep Trying! You Did Not Pass."
-  const statusColor = passed ? "text-success" : "text-error"
+  const statusColor = passed ? "text-green-500" : "text-red-500"
 
   return (
     <motion.div
@@ -31,7 +31,8 @@ export default function QuizResults({ results, quizTitle, passingScore }) {
       className="mb-8"
     >
       <Card
-        className={`shadow-xl border-t-4 ${passed ? "border-t-success" : "border-t-error"}`}
+        className="shadow-xl border-t-4"
+        style={{ borderColor: passed ? "var(--color-green-500)" : "var(--color-red-500)" }}
       >
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">{statusIcon}</div>
@@ -47,12 +48,12 @@ export default function QuizResults({ results, quizTitle, passingScore }) {
               <span>Your Score: {percentage}%</span>
               {passingScore !== undefined && <span>Passing Score: {passingScoreDisplay}%</span>}
             </div>
-            <Progress value={percentage} className="h-3" indicatorClassName={passed ? "bg-success" : "bg-error"} />
+            <Progress value={percentage} className="h-3" indicatorClassName={passed ? "bg-green-500" : "bg-red-500"} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 text-left">
             <div className="flex items-center p-4 bg-muted/50 rounded-lg">
-              <Award className="h-6 w-6 text-warning mr-3" />
+              <Award className="h-6 w-6 text-yellow-500 mr-3" />
               <div>
                 <p className="font-semibold">Points Earned</p>
                 <p className="text-muted-foreground">
@@ -61,7 +62,7 @@ export default function QuizResults({ results, quizTitle, passingScore }) {
               </div>
             </div>
             <div className="flex items-center p-4 bg-muted/50 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-info mr-3" />
+              <TrendingUp className="h-6 w-6 text-blue-500 mr-3" />
               <div>
                 <p className="font-semibold">Percentage</p>
                 <p className="text-muted-foreground">{percentage}% achieved.</p>

@@ -33,7 +33,7 @@ function formatApplicant(record) {
 
 // Enhanced filter building with better search logic
 function buildFilterFormula(params) {
-  const { search, stage, job } = params
+  const { search, stage } = params
   let filters = []
   
   // Enhanced search across multiple fields
@@ -80,11 +80,6 @@ function buildFilterFormula(params) {
     }
   }
   
-  // Job filtering
-  if (job && job !== 'all' && job.trim()) {
-    filters.push(`{Job Name} = '${job.trim()}'`)
-  }
-
   // Combine all filters
   if (filters.length === 0) {
     return ''
@@ -121,12 +116,11 @@ export async function GET(request) {
     const pageSize = Math.min(parseInt(searchParams.get('pageSize')) || 25, 100)
     const search = searchParams.get('search') || ''
     const stage = searchParams.get('stage') || 'all'
-    const job = searchParams.get('job') || 'all'
     const sortBy = searchParams.get('sortBy') || 'Created Time'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
     // Build filter formula
-    const filterFormula = buildFilterFormula({ search, stage, job })
+    const filterFormula = buildFilterFormula({ search, stage })
     
     // Create cache key for this filter combination
     const cacheKey = `${filterFormula}-${stage}-${search}`

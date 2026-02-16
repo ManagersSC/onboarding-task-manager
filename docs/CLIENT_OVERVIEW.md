@@ -1,6 +1,6 @@
 # Client Overview
 
-Welcome to the Smile Cliniq Onboarding Task Manager!
+Welcome to the Smile Clinique Onboarding Task Manager!
 
 ## What does this project enable for your business?
 - **Automates onboarding workflows** for new hires and staff

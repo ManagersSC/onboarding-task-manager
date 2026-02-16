@@ -1,39 +1,40 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, Folder, AlertCircle, Loader2, Star, Flag, Paperclip } from "lucide-react"
+import { Check, Clock, Folder, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Card, CardContent, CardFooter, CardHeader } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
+import { Progress } from "@components/ui/progress"
 import { cn } from "@components/lib/utils"
 
-// Urgency configuration using semantic tokens
+// Urgency configuration
 const urgencyConfig = {
   Critical: {
-    color: "text-error",
-    bgColor: "bg-error-muted",
-    borderColor: "border-error/20",
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-50 dark:bg-red-900/20",
+    borderColor: "border-red-200 dark:border-red-800",
   },
   High: {
-    color: "text-warning",
-    bgColor: "bg-warning-muted",
-    borderColor: "border-warning/20",
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-50 dark:bg-orange-900/20",
+    borderColor: "border-orange-200 dark:border-orange-800",
   },
   Medium: {
-    color: "text-warning",
-    bgColor: "bg-warning-muted",
-    borderColor: "border-warning/20",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-900/20",
+    borderColor: "border-amber-200 dark:border-amber-800",
   },
   Low: {
-    color: "text-success",
-    bgColor: "bg-success-muted",
-    borderColor: "border-success/20",
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-900/20",
+    borderColor: "border-green-200 dark:border-green-800",
   },
 }
 
-function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disableActions }) {
+function TaskModal({ folderName, tasks, onClose, onComplete, disableActions }) {
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
   const handleCompleteTask = async (taskId) => {
@@ -46,22 +47,24 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
     }
   }
 
-  // Status configuration using semantic tokens
+  // Status configuration
   const statusConfig = {
     assigned: {
       icon: <Clock className="h-4 w-4" />,
       label: "Assigned",
-      badgeClass: "bg-info-muted text-info border-info/20",
+      badgeClass:
+        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     },
     overdue: {
       icon: <AlertCircle className="h-4 w-4" />,
       label: "Overdue",
-      badgeClass: "bg-error-muted text-error border-error/20",
+      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
     },
     completed: {
       icon: <Check className="h-4 w-4" />,
       label: "Completed",
-      badgeClass: "bg-success-muted text-success border-success/20",
+      badgeClass:
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     },
   }
 
@@ -70,7 +73,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
       <DialogContent className="sm:max-w-[800px] p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center gap-2">
-            <Folder className="h-5 w-5 text-primary" />
+            <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             {folderName}
           </DialogTitle>
         </DialogHeader>
@@ -79,10 +82,10 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[45%]">Task</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Files</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="w-[40%]">Task</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Type/Urgency</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -90,11 +93,12 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
                 tasks.map((task) => {
                   const status = task.completed ? "completed" : task.overdue ? "overdue" : "assigned"
                   const statusDetails = statusConfig[status]
+                  const urgencyInfo = urgencyConfig[task.urgency] || urgencyConfig.Medium
 
                   return (
                     <TableRow key={task.id}>
                       <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell>
                         <Badge variant="outline" className={statusDetails.badgeClass}>
                           <span className="flex items-center gap-1">
                             {statusDetails.icon}
@@ -102,46 +106,76 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        {onOpenFiles && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => onOpenFiles(task.id, task.title)}
-                          >
-                            <Paperclip className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {task.isCustom && (
+                            <Badge
+                              variant="outline"
+                              className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">Custom</span>
+                            </Badge>
+                          )}
+
+                          {task.urgency && task.urgency !== "Medium" && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "flex items-center gap-1",
+                                urgencyInfo.color,
+                                urgencyInfo.bgColor,
+                                urgencyInfo.borderColor,
+                              )}
+                            >
+                              <Flag className="h-3 w-3" />
+                              <span className="hidden sm:inline">{task.urgency}</span>
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        {!task.completed && (
-                          <Button
-                            variant={task.overdue ? "default" : "outline"}
-                            size="sm"
-                            className={cn(
-                              task.overdue && "bg-error hover:bg-error/90 text-error-foreground",
-                              disableActions && "opacity-50 cursor-not-allowed pointer-events-none"
-                            )}
-                            disabled={completingTaskId === task.id || disableActions}
-                            onClick={() => {
-                              if (disableActions) return;
-                              handleCompleteTask(task.id)
-                            }}
-                          >
-                            {completingTaskId === task.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-                                <span className="hidden sm:inline">Completing...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Check className="h-4 w-4 sm:mr-1.5" />
-                                <span className="hidden sm:inline">Complete</span>
-                              </>
-                            )}
-                          </Button>
-                        )}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {task.resourceUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                              onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                            >
+                              <ExternalLink className="h-4 w-4 sm:mr-1.5" />
+                              <span className="hidden sm:inline">Resource</span>
+                            </Button>
+                          )}
+
+                          {!task.completed && (
+                            <Button
+                              variant={task.overdue ? "default" : "outline"}
+                              size="sm"
+                              className={cn(
+                                task.overdue && "bg-red-600 hover:bg-red-700 text-white",
+                                disableActions && "opacity-50 cursor-not-allowed pointer-events-none"
+                              )}
+                              disabled={completingTaskId === task.id || disableActions}
+                              onClick={() => {
+                                if (disableActions) return;
+                                handleCompleteTask(task.id)
+                              }}
+                            >
+                              {completingTaskId === task.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+                                  <span className="hidden sm:inline">Completing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-4 w-4 sm:mr-1.5" />
+                                  <span className="hidden sm:inline">Complete</span>
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -161,7 +195,7 @@ function TaskModal({ folderName, tasks, onClose, onComplete, onOpenFiles, disabl
   )
 }
 
-export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles, status, disableActions }) {
+export default function FolderCard({ folderName, tasks, onComplete, status, disableActions }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -190,28 +224,30 @@ export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles,
   const showUrgency = highestUrgencyTask && highestUrgencyTask !== "Medium" && highestUrgencyTask !== "Low"
   const urgencyInfo = highestUrgencyTask ? urgencyConfig[highestUrgencyTask] : null
 
-  // Status styling using semantic tokens
+  // Status styling
   const statusConfig = {
     assigned: {
       icon: <Clock className="h-4 w-4" />,
       label: "Assigned",
-      badgeClass: "bg-info-muted text-info border-info/20",
-      accentClass: "status-border-info",
-      progressClass: "progress-gradient-info",
+      badgeClass:
+        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      accentClass: "border-l-4 border-blue-500 dark:border-blue-400",
+      progressClass: "bg-blue-500 dark:bg-blue-400",
     },
     overdue: {
       icon: <AlertCircle className="h-4 w-4" />,
       label: "Overdue",
-      badgeClass: "bg-error-muted text-error border-error/20",
-      accentClass: "status-border-error",
-      progressClass: "progress-gradient-warning",
+      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+      accentClass: "border-l-4 border-red-500 dark:border-red-400",
+      progressClass: "bg-red-500 dark:bg-red-400",
     },
     completed: {
       icon: <Check className="h-4 w-4" />,
       label: "Completed",
-      badgeClass: "bg-success-muted text-success border-success/20",
-      accentClass: "status-border-success",
-      progressClass: "progress-gradient-success",
+      badgeClass:
+        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+      accentClass: "border-l-4 border-green-500 dark:border-green-400",
+      progressClass: "bg-green-500 dark:bg-green-400",
     },
   }
 
@@ -236,10 +272,10 @@ export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles,
     <>
       <Card
         className={cn(
-          "cursor-pointer border-border/60 hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-base ease-out-expo",
+          "cursor-pointer transition-all hover:shadow-md",
           statusInfo.accentClass,
-          isHovered && "shadow-elevated",
-          hasCustomTasks && "ring-1 ring-primary/20",
+          isHovered && "shadow-md",
+          hasCustomTasks && "ring-1 ring-purple-300 dark:ring-purple-800",
         )}
         onClick={() => setIsOpen(true)}
         onMouseEnter={() => setIsHovered(true)}
@@ -248,12 +284,12 @@ export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles,
         <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Folder className="h-5 w-5 text-primary" />
+              <Folder className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h3 className="font-medium text-foreground">{folderName}</h3>
               {hasCustomTasks && (
                 <Badge
                   variant="outline"
-                  className="bg-primary/10 text-primary border-primary/20"
+                  className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
                 >
                   <Star className="h-3 w-3" />
                 </Badge>
@@ -294,14 +330,9 @@ export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles,
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Progress</span>
-              <span className={cn("font-semibold", progress >= 75 ? "text-success" : progress >= 50 ? "text-info" : "text-warning")}>{progress}%</span>
+              <span className="font-medium text-foreground">{progress}%</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn("h-full rounded-full transition-all duration-slower ease-out-expo", statusInfo.progressClass)}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <Progress value={progress} className="h-2" indicatorClassName={statusInfo.progressClass} />
           </div>
         </CardContent>
         <CardFooter className="p-4 pt-2">
@@ -312,7 +343,7 @@ export default function FolderCard({ folderName, tasks, onComplete, onOpenFiles,
       </Card>
 
       {isOpen && (
-        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
+        <TaskModal folderName={folderName} tasks={tasks} onClose={() => setIsOpen(false)} onComplete={onComplete} disableActions={disableActions} />
       )}
     </>
   )

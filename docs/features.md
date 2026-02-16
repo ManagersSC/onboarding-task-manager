@@ -1,4 +1,4 @@
-# Smile Cliniq Onboarding Task Manager - Features & Architecture Documentation
+# Smile Clinique Onboarding Task Manager - Features & Architecture Documentation
 
 ## Table of Contents
 1. [System Overview](#system-overview)
@@ -10,7 +10,7 @@
 
 ## System Overview
 
-The Smile Cliniq Onboarding Task Manager is a comprehensive web application designed to streamline the onboarding process for dental clinics. Built with Next.js 13+ and modern web technologies, it provides a robust platform for managing tasks, users, and clinic onboarding workflows.
+The Smile Clinique Onboarding Task Manager is a comprehensive web application designed to streamline the onboarding process for dental clinics. Built with Next.js 13+ and modern web technologies, it provides a robust platform for managing tasks, users, and clinic onboarding workflows.
 
 ### Key Objectives
 - Streamline clinic onboarding process
