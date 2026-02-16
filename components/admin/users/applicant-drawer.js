@@ -409,7 +409,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="right"
-          className={`w-[420px] sm:w-[720px] pl-2 pr-4 md:pl-2 md:pr-6 transition-all duration-300`}
+          className={`w-[420px] sm:w-[720px] max-w-2xl pl-2 pr-4 md:pl-2 md:pr-6 transition-all duration-slow ease-out-expo border-l border-border/30`}
           style={wideView ? { width: "95vw", maxWidth: "1280px" } : undefined}
         >
           {/* Accessibility: provide required DialogTitle for SheetContent */}
@@ -436,7 +436,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center justify-between gap-3 border-b px-4 py-2 md:px-5 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+                    className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-2 md:px-5 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
@@ -481,28 +481,29 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                 )}
               </AnimatePresence>
             ) : (
-            <div className="border-b px-4 py-3 md:px-5">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
+            <div className="border-b border-border/30 px-4 py-4 md:px-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-14 w-14 bg-primary/5">
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <AvatarFallback className="bg-primary/5 text-primary text-title font-bold"><Initials name={applicant?.name} /></AvatarFallback>}
                 </Avatar>
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold leading-none">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-title font-semibold leading-tight">
                     {isLoading ? "Loading..." : applicant?.name || "Applicant"}
                   </h2>
                   {!!applicant?.email && (
-                    <div className="text-xs text-muted-foreground truncate">{applicant.email}</div>
+                    <div className="text-body-sm text-muted-foreground truncate mt-0.5">{applicant.email}</div>
                   )}
+                  <div className="mt-2 flex items-center gap-2">
+                    {renderStageBadge()}
+                    {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                {renderStageBadge()}
-                {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="mt-2">
+              {/* Action buttons - sticky bottom style */}
+              <div className="mt-3 flex items-center gap-2">
                 {!isHiredStage && (
                   <Button
                     size="sm"
@@ -518,7 +519,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="h-8 ml-2"
+                    className="h-8"
                     title="Reject applicant"
                     onClick={() => setRejectOpen(true)}
                   >
@@ -536,7 +537,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {/* Z - Left vertical summary */}
                     <aside className="md:col-span-3 space-y-4">
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-start gap-3">
                           <Avatar className="h-10 w-10">
                             {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
@@ -552,8 +553,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           </div>
                         </div>
                       </div>
-                      <div className="rounded-lg border p-4 space-y-3">
-                        <div className="text-sm font-semibold">Quick Facts</div>
+                      <div className="rounded-lg border border-border/30 p-4 space-y-3">
+                        <div className="text-body-sm font-semibold">Quick Facts</div>
                         <InfoRow label="Phone" value={applicant?.phone} />
                         <InfoRow label="Email" value={applicant?.email} />
                         <InfoRow label="Applied For" value={applicant?.job} />
@@ -607,7 +608,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     {/* Right main content */}
                     <section className="md:col-span-9 space-y-4">
                       {/* A - Title */}
-                      <div className="rounded-lg border px-3 py-2 flex items-center justify-between">
+                      <div className="rounded-lg border border-border/30 px-3 py-2 flex items-center justify-between">
                         <h3 className="text-base font-semibold">Applicant Detail</h3>
                         <div className="flex items-center gap-2">
                           {renderStageBadge()}
@@ -640,7 +641,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       </div>
 
                       {/* B - Applicant Information */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           <InfoRow label="Interview Date" value={applicant?.interviewDate ? formatDate(applicant.interviewDate) : '—'} />
                           <InfoRow label="Second Interview" value={applicant?.secondInterviewDate ? formatDate(applicant.secondInterviewDate) : '—'} />
@@ -679,15 +680,15 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           return dt.toLocaleString('default', { month: 'short', year: 'numeric' })
                         }
                         return (
-                          <div className="rounded-lg border p-4">
+                          <div className="rounded-lg border border-border/30 p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold">Monthly Review</h4>
+                              <h4 className="text-body-sm font-semibold">Monthly Review</h4>
                               <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} applicantEmail={applicant?.email} onDone={async () => { await mutate?.() }} />
                             </div>
                             {reviews.length === 0 ? (
                               <div className="text-sm text-muted-foreground">No monthly reviews yet.</div>
                             ) : (
-                              <ul className="divide-y rounded-md border bg-background">
+                              <ul className="divide-y divide-border/20 rounded-md border border-border/30 bg-background">
                                 {reviews.map((r) => {
                                   const title = r.title || formatPeriod(r.period)
                                   const completed = !!r.hasDocs
@@ -756,9 +757,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       {(() => {
                         if (!isOnboardingActive) return null
                         return (
-                          <div className="rounded-lg border p-4">
+                          <div className="rounded-lg border border-border/30 p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold">Onboarding Quizzes</h4>
+                              <h4 className="text-body-sm font-semibold">Onboarding Quizzes</h4>
                             <div className="flex items-center gap-1">
                               <Link
                                 href={`/admin/quizzes?tab=submissions&applicantId=${encodeURIComponent(applicant?.id || "")}`}
@@ -781,7 +782,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                 <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
                               </div>
                             ) : (Array.isArray(quizSubmissions) && quizSubmissions.length > 0) ? (
-                              <ul className="divide-y rounded-md border bg-background">
+                              <ul className="divide-y divide-border/20 rounded-md border border-border/30 bg-background">
                                 {quizSubmissions.map((s) => {
                                   const submitted = s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "—"
                                   const total = s.totalScore || 0
@@ -824,9 +825,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
                       {/* D3 - Appraisals (visible only when Hired) */}
                       {isHiredStage && (
-                        <div className="rounded-lg border p-4">
+                        <div className="rounded-lg border border-border/30 p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-semibold">Appraisals</h4>
+                            <h4 className="text-body-sm font-semibold">Appraisals</h4>
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="ghost"
@@ -900,7 +901,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                   const status = getStatus(a)
                                   const isCurrent = idx === 0
                                   return (
-                                    <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border p-3">
+                                    <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border border-border/30 p-3">
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                           <div className="flex items-center gap-2">
@@ -1035,9 +1036,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       )}
 
                       {/* E - Feedback Documents */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-semibold">Feedback Documents</div>
+                          <div className="text-body-sm font-semibold">Feedback Documents</div>
                           <div className="flex items-center gap-2">
                             <Select value={selectedFeedbackStage} onValueChange={setSelectedFeedbackStage}>
                               <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Select feedback stage" /></SelectTrigger>
@@ -1107,9 +1108,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       </div>
 
                       {/* C - Documents Grid + Add */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-semibold">Documents</div>
+                          <div className="text-body-sm font-semibold">Documents</div>
                           <div className="flex items-center gap-2">
                             {(() => {
                               const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldId}` : ""
@@ -1265,7 +1266,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Confirm Stage Change */}
       <Dialog open={confirmOpen} onOpenChange={(v) => { if (!confirming) setConfirmOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Confirm Stage Change</DialogTitle>
             <DialogDescription>
@@ -1286,7 +1287,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Reject Confirmation */}
       <Dialog open={rejectOpen} onOpenChange={(v) => { if (!rejecting) setRejectOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Reject Applicant</DialogTitle>
             <DialogDescription>
@@ -1331,7 +1332,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Stage Override Flow */}
       <Dialog open={overrideOpen} onOpenChange={(v) => { if (!overrideSubmitting) { setOverrideOpen(v); if (!v) { setOverrideConfirmed(false); setOverrideAction("") } } }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Override Stage</DialogTitle>
             <DialogDescription>
@@ -1411,7 +1412,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Delete Scheduled Monthly Review */}
       <Dialog open={deleteReviewOpen} onOpenChange={(v) => { if (!deletingReview) setDeleteReviewOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Delete scheduled review?</DialogTitle>
             <DialogDescription>
@@ -1639,7 +1640,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
         + New Review
       </Button>
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setDate(""); setUploadMode(false); setHasFiles(false) } }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>New Monthly Review</DialogTitle>
             <DialogDescription>
@@ -1679,7 +1680,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
               />
               {/* Selected day details and time selection */}
               {date && (
-                <div className="rounded-md border p-3">
+                <div className="rounded-md border border-border/30 p-3">
                   <div className="text-sm font-medium mb-2">{date}</div>
                   {dayEvents.length > 0 ? (
                     <div className="space-y-1 mb-3">
@@ -1863,7 +1864,7 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
   }
 
   return (
-    <div className="rounded-md border p-3">
+    <div className="rounded-md border border-border/30 p-3">
       <div className="flex items-center justify-between mb-2">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month - 1, 1); setCurrent(d); onMonthChange?.(d) }}>
           <ChevronLeftIcon className="h-4 w-4" />
@@ -2243,7 +2244,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
               eventsByDate={eventsByDate}
             />
             {date && (
-              <div className="rounded-md border p-3">
+              <div className="rounded-md border border-border/30 p-3">
                 <div className="text-sm font-medium mb-2">{date}</div>
                 {dayEvents.length > 0 ? (
                   <div className="space-y-1 mb-3">

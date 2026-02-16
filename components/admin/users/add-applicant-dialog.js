@@ -108,7 +108,7 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
         <div>
           <div className="font-semibold">Invites submitted</div>
           <div className="text-sm opacity-80">
-            {totalProcessed} applicant{totalProcessed > 1 ? 's' : ''} queued for “{jobTitleForToast}”.
+            {totalProcessed} applicant{totalProcessed > 1 ? 's' : ''} queued for &quot;{jobTitleForToast}&quot;.
           </div>
         </div>
       )
@@ -245,7 +245,7 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
         onOpenChange?.(v)
       }}
     >
-      <DialogContent>
+      <DialogContent className="rounded-xl max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Applicants</DialogTitle>
           <DialogDescription>Invite applicants by email, or create a hired candidate.</DialogDescription>
@@ -258,12 +258,12 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
           </TabsList>
 
           <TabsContent value="invite" className="mt-4">
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="invite-job">Job <span className="text-error">*</span></Label>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="invite-job" className="text-body-sm font-medium">Job <span className="text-error">*</span></Label>
                 <select
                   id="invite-job"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="flex h-10 w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-body-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
                   value={inviteJobId}
                   onChange={(e) => setInviteJobId(e.target.value)}
                   disabled={jobsLoading}
@@ -273,18 +273,19 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
                     <option key={j.id} value={j.id}>{j.title}</option>
                   ))}
                 </select>
-                {jobsError ? (<div className="text-xs text-error">{jobsError}</div>) : null}
+                {jobsError ? (<div className="text-caption text-error mt-1">{jobsError}</div>) : null}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="emails">Emails</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="emails" className="text-body-sm font-medium">Emails</Label>
                 <Textarea
                   id="emails"
                   placeholder="jane@example.com, john@example.com"
                   rows={5}
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
+                  className="rounded-lg"
                 />
-                <div className="text-xs text-muted-foreground">
+                <div className="text-caption text-muted-foreground">
                   {parsed.emails.length} valid {parsed.invalid.length > 0 ? `• ${parsed.invalid.length} invalid ignored` : ""}
                 </div>
               </div>
@@ -292,20 +293,20 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
           </TabsContent>
 
           <TabsContent value="hired" className="mt-4">
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="hired-name">Full Name <span className="text-error">*</span></Label>
-                <Input id="hired-name" value={hiredName} onChange={(e) => setHiredName(e.target.value)} placeholder="Jane Doe" />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="hired-name" className="text-body-sm font-medium">Full Name <span className="text-error">*</span></Label>
+                <Input id="hired-name" value={hiredName} onChange={(e) => setHiredName(e.target.value)} placeholder="Jane Doe" className="h-10 rounded-lg" />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="hired-email">Email <span className="text-error">*</span></Label>
-                <Input id="hired-email" type="email" value={hiredEmail} onChange={(e) => setHiredEmail(e.target.value)} placeholder="jane@example.com" />
+              <div className="space-y-1.5">
+                <Label htmlFor="hired-email" className="text-body-sm font-medium">Email <span className="text-error">*</span></Label>
+                <Input id="hired-email" type="email" value={hiredEmail} onChange={(e) => setHiredEmail(e.target.value)} placeholder="jane@example.com" className="h-10 rounded-lg" />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="hired-job">Job <span className="text-error">*</span></Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="hired-job" className="text-body-sm font-medium">Job <span className="text-error">*</span></Label>
                 <select
                   id="hired-job"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="flex h-10 w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-body-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
                   value={hiredJobId}
                   onChange={(e) => setHiredJobId(e.target.value)}
                   disabled={jobsLoading}
@@ -315,20 +316,20 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
                     <option key={j.id} value={j.id}>{j.title}</option>
                   ))}
                 </select>
-                {jobsError ? (<div className="text-xs text-error">{jobsError}</div>) : null}
+                {jobsError ? (<div className="text-caption text-error mt-1">{jobsError}</div>) : null}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="hired-phone">Phone</Label>
-                <Input id="hired-phone" value={hiredPhone} onChange={(e) => setHiredPhone(e.target.value)} placeholder="+44 7123 456789" />
+              <div className="space-y-1.5">
+                <Label htmlFor="hired-phone" className="text-body-sm font-medium">Phone</Label>
+                <Input id="hired-phone" value={hiredPhone} onChange={(e) => setHiredPhone(e.target.value)} placeholder="+44 7123 456789" className="h-10 rounded-lg" />
               </div>
-              <div className="text-xs text-muted-foreground">
-                Stage will be set to "Hired".
+              <div className="text-caption text-muted-foreground">
+                Stage will be set to &quot;Hired&quot;.
               </div>
             </div>
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="gap-2">
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-border/30 mt-2">
           <Button variant="outline" onClick={() => onOpenChange?.(false)} className="cursor-pointer">
             Cancel
           </Button>
@@ -358,28 +359,28 @@ export default function AddApplicantDialog({ open, onOpenChange, onAdded, onAppl
                 : "Create Candidate"}
             </Button>
           )}
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
     {/* Confirmation dialog for existing applicant */}
     <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-      <DialogContent>
+      <DialogContent className="rounded-xl">
         <DialogHeader>
           <DialogTitle>Existing applicant found</DialogTitle>
           <DialogDescription>We found a record with the same email. Do you want to set their status to Hired?</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-1 text-sm">
+        <div className="grid gap-1.5 text-body-sm">
           <div><span className="text-muted-foreground">Name:</span> {existingApplicant?.name || "—"}</div>
           <div><span className="text-muted-foreground">Email:</span> {existingApplicant?.email || "—"}</div>
           <div><span className="text-muted-foreground">Job:</span> {existingApplicant?.jobTitle || "—"}</div>
           <div><span className="text-muted-foreground">Current Stage:</span> {existingApplicant?.stage || "—"}</div>
         </div>
-        <DialogFooter className="gap-2">
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-border/30 mt-2">
           <Button variant="outline" onClick={() => setConfirmOpen(false)} className="cursor-pointer">Cancel</Button>
           <Button onClick={handleConfirmHireExisting} disabled={submitting} className="cursor-pointer">
             {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</> : "Mark as Hired"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
     </>
