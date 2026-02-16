@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut, FileSearch, ListChecks, ChevronLeft } from "lucide-react"
 import { handleLogout } from "@/lib/utils/logout"
@@ -51,27 +52,6 @@ const navGroups = [
 // Flat list for backward compat
 const navItems = navGroups.flatMap((g) => g.items)
 
-// Small tooth/smile SVG icon for branding
-function SmileIcon({ className }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <rect x="1" y="1" width="14" height="14" rx="4" fill="currentColor" fillOpacity="0.1" />
-      <path
-        d="M5 9.5C5.5 10.5 6.5 11.5 8 11.5C9.5 11.5 10.5 10.5 11 9.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="6" cy="6.5" r="0.75" fill="currentColor" />
-      <circle cx="10" cy="6.5" r="0.75" fill="currentColor" />
-    </svg>
-  )
-}
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -120,20 +100,20 @@ export function AdminSidebar() {
 
     if (collapsed) {
       return (
-        <TooltipProvider key={item.href} delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SidebarMenuItem>
+        <SidebarMenuItem key={item.href}>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <SidebarMenuButton asChild isActive={isActive}>
                   {linkContent}
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-body-sm">
-              {item.title}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+                {item.title}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </SidebarMenuItem>
       )
     }
 
@@ -166,20 +146,20 @@ export function AdminSidebar() {
 
     if (collapsed) {
       return (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SidebarMenuItem>
+        <SidebarMenuItem>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <SidebarMenuButton asChild isActive={isActive}>
                   {linkContent}
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-body-sm">
-              Profile
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+                Profile
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </SidebarMenuItem>
       )
     }
 
@@ -205,20 +185,20 @@ export function AdminSidebar() {
 
     if (collapsed) {
       return (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SidebarMenuItem>
+        <SidebarMenuItem>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <SidebarMenuButton asChild>
                   {btnContent}
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-body-sm">
-              Logout
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+                Logout
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </SidebarMenuItem>
       )
     }
 
@@ -250,7 +230,7 @@ export function AdminSidebar() {
               transition={{ duration: 0.3 }}
               className="flex items-center gap-2.5 w-full overflow-hidden"
             >
-              <SmileIcon className="h-5 w-5 shrink-0 text-primary" />
+              <Image src="/logo.png" alt="Smile Cliniq" width={24} height={24} className="shrink-0 rounded" />
               {!isCollapsed && (
                 <span className="text-body-sm font-semibold truncate tracking-tight text-foreground">
                   Smile Cliniq
@@ -309,7 +289,7 @@ export function AdminSidebar() {
               transition={{ duration: 0.3 }}
               className="flex items-center gap-2.5 w-full overflow-hidden"
             >
-              <SmileIcon className="h-5 w-5 shrink-0 text-primary" />
+              <Image src="/logo.png" alt="Smile Cliniq" width={24} height={24} className="shrink-0 rounded" />
               <span className="text-body-sm font-semibold truncate tracking-tight text-foreground">
                 Smile Cliniq
               </span>
