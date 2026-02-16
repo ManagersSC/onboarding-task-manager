@@ -295,7 +295,7 @@ function AuditLogsClient() {
   const hasActiveFilters = q || eventTypes.length > 0 || statuses.length > 0 || dateFrom || dateTo
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-6 md:p-8 space-y-6 animate-fade-in-up">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -720,7 +720,7 @@ export default function AuditLogsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-4 md:p-6">
+        <div className="p-6 md:p-8">
           <Card>
             <CardHeader>
               <CardTitle>Audit Logs</CardTitle>

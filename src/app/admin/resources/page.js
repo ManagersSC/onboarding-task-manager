@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function AdminResourcesPage() {
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8 animate-fade-in-up">
       <ResourcePage />
     </div>
   )

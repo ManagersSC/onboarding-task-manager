@@ -213,7 +213,7 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="flex flex-col w-full min-h-screen bg-background p-4 md:p-6">
+      <div className="flex flex-col w-full min-h-screen bg-background p-6 md:p-8">
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -225,7 +225,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-background">
-      <div className="p-4 md:p-6 w-full">
+      <div className="p-6 md:p-8 w-full animate-fade-in-up">
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="w-full mx-auto">
           <motion.div variants={itemVariants}>
             <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>

@@ -434,99 +434,17 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
 
 ---
 
-### Phase D: Admin Assigned Tasks Page Redesign
-
-- [ ] **Task D1: Redesign AssignedTasksLogsPage (`components/tasks/AssignedTasksLogsPage.js`)**
-**File:** `components/tasks/AssignedTasksLogsPage.js`
-**Current state:** Simple wrapper with header + AssignedTasksLogsTable.
-**Changes:**
-  - [ ] Page header: `flex items-center justify-between mb-6`. Title: `text-headline` "Assigned Tasks". Description: `text-body-sm text-muted-foreground` "Track task assignments across all applicants". Primary action button on right.
-  - [ ] Add `animate-fade-in-up` on the content.
-
-- [ ] **Task D2: Redesign AssignedTasksLogsTable (`components/tasks/AssignedTasksLogsTable.js`)**
-**File:** `components/tasks/AssignedTasksLogsTable.js`
-**Current state:** Table with resizable columns, filters, pagination. Very similar structure to TasksTable.
-**Changes:**
-  - [ ] Apply same table styling as Task C2 (UsersTable): clean lines, no cell borders, `bg-muted/20` header, `h-14` row height, `hover:bg-muted/20` rows.
-  - [ ] Filter bar: inline toolbar above table. Search input (`w-72 h-10 rounded-lg`), filter dropdowns as `Select` components with `h-9 rounded-lg`, clear filters as `ghost` button.
-  - [ ] Active filter chips: `inline-flex items-center gap-1.5 bg-muted/40 rounded-full px-2.5 py-1 text-caption`. X button to remove.
-  - [ ] Status column: use semantic `Badge` variants (same mapping as task cards).
-  - [ ] Date columns: `text-body-sm text-muted-foreground`. Format as relative ("2 days ago") with tooltip showing full date.
-  - [ ] Actions: `ghost size="icon"` buttons.
-  - [ ] Wrap table in `Card variant="elevated"` with no header padding.
-  - [ ] Pagination: same style as Task C2.
-  - [ ] Loading: skeleton rows matching column layout.
-
----
-
-### Phase E: Admin Resources Page Redesign
-
-- [ ] **Task E1: Redesign ResourcePage (`components/tasks/ResourcePage.js`)**
-**File:** `components/tasks/ResourcePage.js`
-**Current state:** Simple wrapper with header + TasksTable + CreateTaskDialog.
-**Changes:**
-  - [ ] Page header: `flex items-center justify-between mb-6`. Title: `text-headline` "Resources". Description: `text-body-sm text-muted-foreground` "Manage task templates and onboarding resources". "Create Resource" button on right as `default` variant with `Plus` icon.
-  - [ ] Add `animate-fade-in-up` on content.
-
-- [ ] **Task E2: Redesign TasksTable (`components/tasks/TasksTable.js`)**
-**File:** `components/tasks/TasksTable.js`
-**Current state:** Table with resizable columns, AnimatedSearchBar, filters, sorting, pagination.
-**Changes:**
-  - [ ] Apply same table styling pattern as Tasks C2 and D2.
-  - [ ] Filter toolbar: horizontal row above table. Search: `Input w-72 h-10 rounded-lg pl-9` with Search icon. Filter dropdowns (Week, Day, Job, Folder): `Select h-9 rounded-lg` components with `min-w-[120px]`. Active filter pills below toolbar.
-  - [ ] Table header: `bg-muted/20 sticky top-0`. Header cells: `text-overline text-muted-foreground/70 uppercase tracking-wider font-medium`.
-  - [ ] Column resizing: keep the resize handles but make them subtler — `w-1 bg-transparent hover:bg-primary/30 cursor-col-resize` (visible only on hover).
-  - [ ] Sort indicators: use `ChevronUp`/`ChevronDown` icons (h-3.5 w-3.5) next to sorted column header, `text-primary` when active.
-  - [ ] Row styling: `h-14 hover:bg-muted/20 transition-colors`. Text in `text-body-sm`.
-  - [ ] Wrap in `Card variant="elevated"`.
-  - [ ] Pagination: consistent with other tables.
-  - [ ] Empty state: centered AnimatedEmptyState.
-
----
-
-### Phase F: Admin Quizzes Page Redesign
-
-- [ ] **Task F1: Redesign Quizzes Page Layout (`src/app/admin/quizzes/page.js` — outer structure)**
-**File:** `src/app/admin/quizzes/page.js` (1,132 lines)
-**IMPORTANT:** This is a monolithic file. Only change CSS classes and minor JSX wrappers. Do not restructure state/logic.
-**Changes — Page header + tabs:**
-  - [ ] Page header: `flex items-center justify-between mb-6`. Title: `text-headline` "Quizzes". Description: `text-body-sm text-muted-foreground`.
-  - [ ] Tabs: restyle TabsList to use the pill-group pattern: `inline-flex items-center gap-1 bg-muted/30 rounded-lg p-1`. TabsTrigger: `rounded-md px-4 py-1.5 text-body-sm font-medium`. Active: `bg-background text-foreground shadow-sm`. Inactive: `text-muted-foreground`.
-  - [ ] Search + Filters row: `flex items-center gap-3 mt-4`. Input: `h-10 w-72 rounded-lg pl-9` with Search icon. Filters popover trigger: `outline` button with Filter icon.
-  - [ ] Active filter chips below search (same style as Phase D).
-
-- [ ] **Task F2: Redesign Submissions Tab (within quizzes page)**
-**Changes — Submissions grid:**
-  - [ ] Submission cards: `Card variant="interactive"` with `p-4 rounded-xl`. Grid: `grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4`.
-  - [ ] Card top: quiz title in `text-body-sm font-medium truncate`, date in `text-caption text-muted-foreground`.
-  - [ ] Pass/Fail badge: use semantic `Badge variant="success-subtle"` or `Badge variant="error-subtle"`.
-  - [ ] Score section: `text-caption` label, `text-body-sm font-semibold` score, clean `h-1.5 rounded-full bg-muted` progress bar with `bg-success`/`bg-error` fill.
-  - [ ] View button: `ghost size="sm"` with Eye icon.
-  - [ ] Card hover: `hover:shadow-elevated hover:border-border/60 transition-all duration-base`.
-  - [ ] Viewer dialog: restyle with `rounded-xl` content, consistent padding, semantic badges.
-
-- [ ] **Task F3: Redesign Quizzes Tab (within quizzes page)**
-**Changes — Quizzes grid:**
-  - [ ] Quiz cards: `Card variant="interactive"` with `p-4 rounded-xl`. Same grid as submissions.
-  - [ ] Card: quiz title in `text-body-sm font-medium`, passing score in `text-caption text-muted-foreground`.
-  - [ ] Edit button: `outline size="sm"`.
-  - [ ] Edit dialog: ensure `rounded-xl` content, consistent field spacing (`space-y-4`), `text-body-sm` labels, `h-10` inputs.
-  - [ ] Quiz items in edit: each item card uses `rounded-lg border border-border/30 p-4`. Dirty indicator: `border-warning/40 bg-warning/3`. Error indicator: `border-error/40 bg-error/3`.
-  - [ ] Save/Preview buttons: `flex items-center gap-2`. Save as `default`, Preview as `outline`.
-
----
-
 ### Phase G: Cross-Cutting Improvements
 
-- [ ] **Task G1: Create Consistent Page Header Component**
+- [x] **Task G1: Create Consistent Page Header Component**
 **New file:** `components/admin/page-header.js`
 **Purpose:** Extract the repeated page header pattern into a reusable component.
-**Props:** `title` (string), `description` (string), `children` (React node — for action buttons on the right).
+**Props:** `title` (string), `description` (string), `children` (React node — for action buttons on the right), `className` (optional).
 **Structure:**
 ```jsx
 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
   <div>
-    <h1 className="text-headline">{title}</h1>
+    <h1 className="text-headline font-semibold tracking-tight">{title}</h1>
     {description && <p className="text-body-sm text-muted-foreground mt-1">{description}</p>}
   </div>
   {children && <div className="flex items-center gap-2">{children}</div>}
@@ -534,35 +452,36 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
 ```
 **Usage:** Replace page headers in all admin pages with `<PageHeader>`.
 
-- [ ] **Task G2: Create Consistent Table Toolbar Component**
+- [x] **Task G2: Create Consistent Table Toolbar Component**
 **New file:** `components/admin/table-toolbar.js`
 **Purpose:** Extract the repeated search + filter toolbar pattern.
-**Props:** `searchValue`, `onSearchChange`, `searchPlaceholder`, `children` (for filter controls).
-**Structure:** Horizontal flex row with search input and slot for filter controls.
+**Props:** `searchValue`, `onSearchChange`, `searchPlaceholder`, `children` (for filter controls), `className` (optional).
+**Structure:** Horizontal flex row with search input (Search icon, `h-10 w-72 rounded-lg pl-9 border-border/40`) and slot for filter controls.
 **Usage:** Replace filter sections in UsersPage, TasksTable, AssignedTasksLogsTable, QuizzesPage.
 
-- [ ] **Task G3: Update All Admin Page Wrappers**
-**Files:** `src/app/admin/assigned-tasks/page.js`, `src/app/admin/resources/page.js`, `src/app/admin/users/page.js`, `src/app/admin/quizzes/page.js`
+- [x] **Task G3: Update All Admin Page Wrappers**
+**Files:** `src/app/admin/assigned-tasks/page.js`, `src/app/admin/resources/page.js`, `src/app/admin/users/page.js`, `src/app/admin/quizzes/page.js`, `src/app/admin/audit-logs/page.js`, `src/app/admin/profile/page.js`
 **Changes:**
-  - [ ] All page wrappers: set consistent padding `p-6 md:p-8`, `bg-background-subtle` (inherits from layout), `space-y-0` (spacing is managed by components inside).
-  - [ ] Add `animate-fade-in-up` on the main content div.
+  - [x] All page wrappers: set consistent padding `p-6 md:p-8`.
+  - [x] Add `animate-fade-in-up` on the main content div.
 
-- [ ] **Task G4: Mobile Page Header Integration (`components/admin/mobile-page-header.js`)**
-**File:** `components/admin/mobile-page-header.js` (28 lines)
+- [x] **Task G4: Mobile Page Header Integration (`components/admin/mobile-page-header.js`)**
+**File:** `components/admin/mobile-page-header.js`
 **Changes:**
-  - [ ] Style: `sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border/30 px-4 py-3`.
-  - [ ] Title: `text-title-sm font-semibold`.
-  - [ ] Add a small breadcrumb-style back arrow on sub-pages (profile, etc.).
+  - [x] Style: `sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border/30 px-4 py-3`.
+  - [x] Title: `text-title-sm font-semibold`.
+  - [x] Added Quizzes and Audit Logs to page names map.
+  - [x] Back arrow on sub-pages (profile, audit-logs) using `ChevronLeft` + `router.back()`.
 
 ---
 
 ## Implementation Order
 
-Execute in phase order (A → B → C → D → E → F → G). Within each phase, tasks can be done in parallel EXCEPT where noted. Task G1 and G2 should ideally be done first in Phase G, then G3 uses them.
+Execute in phase order (A → B → C → G). Within each phase, tasks can be done in parallel EXCEPT where noted. Task G1 and G2 should ideally be done first in Phase G, then G3 uses them.
 
 **Phase dependencies:**
 - Phase A (layout/navigation) should be done FIRST as it affects all pages.
-- Phases B, C, D, E, F can be done in parallel after Phase A.
+- Phases B, C can be done in parallel after Phase A.
 - Phase G should be done LAST to extract common patterns after individual pages are styled.
 
 ## Files in Scope (Complete List)
@@ -585,11 +504,6 @@ Execute in phase order (A → B → C → D → E → F → G). Within each phas
 | `components/admin/users/users-table.js` | C | C2 |
 | `components/admin/users/applicant-drawer.js` | C | C3 |
 | `components/admin/users/add-applicant-dialog.js` | C | C4 |
-| `components/tasks/AssignedTasksLogsPage.js` | D | D1 |
-| `components/tasks/AssignedTasksLogsTable.js` | D | D2 |
-| `components/tasks/ResourcePage.js` | E | E1 |
-| `components/tasks/TasksTable.js` | E | E2 |
-| `src/app/admin/quizzes/page.js` | F | F1, F2, F3 |
 | `components/admin/page-header.js` (NEW) | G | G1 |
 | `components/admin/table-toolbar.js` (NEW) | G | G2 |
 | `src/app/admin/assigned-tasks/page.js` | G | G3 |

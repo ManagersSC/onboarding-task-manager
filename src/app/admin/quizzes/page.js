@@ -357,7 +357,7 @@ function AdminQuizzesPageContent() {
   }
 
   return (
-    <div className="p-5 md:p-6">
+    <div className="p-6 md:p-8 animate-fade-in-up">
       <Tabs value={tab} onValueChange={(v) => {
         const usp = new URLSearchParams(params.toString())
         usp.set("tab", v)
@@ -1118,7 +1118,7 @@ export default function AdminQuizzesPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-5 md:p-6">
+        <div className="p-6 md:p-8">
           <div className="rounded-md border p-6 flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading...
