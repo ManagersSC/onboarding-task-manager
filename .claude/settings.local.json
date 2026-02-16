@@ -20,7 +20,9 @@
       "Bash(npx next lint:*)",
       "Bash(git pull:*)",
       "Bash(gh pr create:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
