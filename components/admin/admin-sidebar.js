@@ -108,7 +108,7 @@ export function AdminSidebar() {
                   {linkContent}
                 </SidebarMenuButton>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm bg-foreground text-background">
                 {item.title}
               </TooltipContent>
             </Tooltip>
@@ -154,7 +154,7 @@ export function AdminSidebar() {
                   {linkContent}
                 </SidebarMenuButton>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm bg-foreground text-background">
                 Profile
               </TooltipContent>
             </Tooltip>
@@ -193,7 +193,7 @@ export function AdminSidebar() {
                   {btnContent}
                 </SidebarMenuButton>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="text-body-sm">
+              <TooltipContent side="right" sideOffset={8} className="text-body-sm bg-foreground text-background">
                 Logout
               </TooltipContent>
             </Tooltip>
@@ -223,14 +223,14 @@ export function AdminSidebar() {
           style={{ width: sidebarWidth }}
         >
           {/* Header / Brand */}
-          <SidebarHeader className="h-14 flex items-center px-3 border-b border-border/40">
+          <SidebarHeader className={`h-14 flex items-center border-b border-border/40 ${isCollapsed ? "justify-center px-2" : "px-3"}`}>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center gap-2.5 w-full overflow-hidden"
+              className={`flex items-center w-full overflow-hidden ${isCollapsed ? "justify-center" : "gap-2.5"}`}
             >
-              <Image src="/logo.png" alt="Smile Cliniq" width={24} height={24} className="shrink-0 rounded" />
+              <Image src="/logo.png" alt="Smile Cliniq" width={isCollapsed ? 20 : 24} height={isCollapsed ? 20 : 24} className="shrink-0 rounded" />
               {!isCollapsed && (
                 <span className="text-body-sm font-semibold truncate tracking-tight text-foreground">
                   Smile Cliniq
