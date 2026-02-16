@@ -120,24 +120,24 @@ const FileIcon = ({ file }) => {
   
   // Special handling for Office documents
   if (extension === "docx" || extension === "doc") {
-    return <FileText className="h-6 w-6 text-blue-600" />
+    return <FileText className="h-6 w-6 text-info" />
   }
   if (extension === "xlsx" || extension === "xls") {
-    return <FileText className="h-6 w-6 text-green-600" />
+    return <FileText className="h-6 w-6 text-success" />
   }
   if (extension === "pptx" || extension === "ppt") {
-    return <FileText className="h-6 w-6 text-orange-600" />
+    return <FileText className="h-6 w-6 text-warning" />
   }
-  
+
   switch (fileType) {
     case "pdf":
-      return <FileText className="h-6 w-6 text-red-500" />
+      return <FileText className="h-6 w-6 text-error" />
     case "image":
-      return <ImageIcon className="h-6 w-6 text-blue-500" />
+      return <ImageIcon className="h-6 w-6 text-info" />
     case "text":
-      return <FileText className="h-6 w-6 text-green-500" />
+      return <FileText className="h-6 w-6 text-success" />
     default:
-      return <File className="h-6 w-6 text-gray-500" />
+      return <File className="h-6 w-6 text-muted-foreground" />
   }
 }
 
@@ -168,7 +168,7 @@ const FilePreview = ({ file, isLoading, error }) => {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px]">
-        <AlertCircle className="h-8 w-8 text-destructive mb-4" />
+        <AlertCircle className="h-8 w-8 text-error mb-4" />
         <p className="text-muted-foreground mb-2">Failed to load file preview</p>
         <p className="text-sm text-muted-foreground">{error}</p>
       </div>

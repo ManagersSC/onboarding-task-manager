@@ -21,6 +21,8 @@ import {
   Edit,
   Users,
   Plus,
+  ExternalLink,
+  ListTodo,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -126,6 +128,26 @@ export function NewHireTracker({ initialNewHires = [] }) {
     setShowResumeDatePicker(false)
     setResumeDateOverride("")
   }
+
+  // Task preview state for modal
+  const [hireTasks, setHireTasks] = useState({})
+  const [hireTasksLoading, setHireTasksLoading] = useState({})
+
+  const fetchHireTasks = useCallback(async (hireId) => {
+    if (hireTasks[hireId] || hireTasksLoading[hireId]) return
+    setHireTasksLoading((prev) => ({ ...prev, [hireId]: true }))
+    try {
+      const response = await fetch(`/api/admin/dashboard/new-hires/${hireId}/tasks`)
+      if (!response.ok) throw new Error("Failed to fetch tasks")
+      const data = await response.json()
+      setHireTasks((prev) => ({ ...prev, [hireId]: data }))
+    } catch (error) {
+      console.error("Error fetching hire tasks:", error)
+      setHireTasks((prev) => ({ ...prev, [hireId]: { tasks: [], hasMore: false } }))
+    } finally {
+      setHireTasksLoading((prev) => ({ ...prev, [hireId]: false }))
+    }
+  }, [hireTasks, hireTasksLoading])
 
   const emailTemplates = [
     {
@@ -446,6 +468,13 @@ export function NewHireTracker({ initialNewHires = [] }) {
       console.error("Error fetching current user:", error)
     }
   }
+
+  // Fetch tasks when a hire is selected (modal opens)
+  useEffect(() => {
+    if (selectedHire?.id) {
+      fetchHireTasks(selectedHire.id)
+    }
+  }, [selectedHire?.id])
 
   // Fetch new hires data
   useEffect(() => {
@@ -825,10 +854,13 @@ export function NewHireTracker({ initialNewHires = [] }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <Card>
+        <Card variant="elevated">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle>New Hire Progress</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-title-sm">New Hire Progress</CardTitle>
+                <Badge variant="secondary">0</Badge>
+              </div>
               <div className="flex gap-1">
                 <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
                   <ChevronLeft className="h-4 w-4" />
@@ -877,15 +909,18 @@ export function NewHireTracker({ initialNewHires = [] }) {
         </Breadcrumb>
       </div>
 
-      <Card>
+      <Card variant="elevated">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle>New Hire Progress</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-title-sm">New Hire Progress</CardTitle>
+              <Badge variant="secondary">{newHires.length}</Badge>
+            </div>
             <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -893,14 +928,18 @@ export function NewHireTracker({ initialNewHires = [] }) {
         </CardHeader>
         <CardContent>
           {newHires.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No active new hires found</p>
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-medium">No active new hires</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">New hires will appear here once onboarding starts</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
+            <div className="relative">
+              <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
               {newHires.map((hire, index) => (
                 <Dialog key={hire.id}>
                   <DialogTrigger asChild>
@@ -908,14 +947,14 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex-shrink-0 w-full sm:w-60 bg-card rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
-                      whileHover={{ scale: 1.02 }}
+                      className="flex-shrink-0 w-full sm:w-60 rounded-lg p-4 cursor-pointer hover:bg-muted/20 -mx-2 px-2 transition-colors border-b border-border/20 last:border-0"
+                      whileHover={{ scale: 1.01 }}
                       onClick={() => setSelectedHire(hire)}
                     >
-                      <div className="flex items-center gap-3 justify-between">
-                        <Avatar className="h-10 w-10">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-9 w-9 rounded-full">
                           <AvatarImage src={hire.avatar || "/placeholder.svg"} alt={hire.name} />
-                          <AvatarFallback>
+                          <AvatarFallback className="bg-primary/5 text-primary text-caption font-semibold">
                             {hire.name
                               .split(" ")
                               .map((n) => n[0])
@@ -923,15 +962,15 @@ export function NewHireTracker({ initialNewHires = [] }) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm">{hire.name}</h4>
-                          <p className="text-xs text-muted-foreground">{hire.role}</p>
+                          <h4 className="text-body-sm font-medium">{hire.name}</h4>
+                          <p className="text-caption text-muted-foreground">{hire.role}</p>
                         </div>
                         <div className="flex-shrink-0">
                           {hire.onboardingPaused ? (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-green-500 hover:text-green-600"
+                              className="h-6 w-6 text-success hover:text-success/80"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleResume(hire)
@@ -945,7 +984,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-amber-500 hover:text-amber-600"
+                              className="h-6 w-6 text-warning hover:text-warning/80"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openPauseConfirm(hire)
@@ -959,11 +998,16 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       </div>
 
                       <div className="mt-4">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>Onboarding Progress</span>
-                          <span className="font-medium">{hire.progress}%</span>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-caption text-muted-foreground">Progress</span>
+                          <span className={`text-caption font-medium ${hire.progress >= 75 ? 'text-success' : hire.progress >= 50 ? 'text-info' : hire.progress >= 25 ? 'text-warning' : 'text-error'}`}>{hire.progress}%</span>
                         </div>
-                        <Progress value={hire.progress} className="h-2" />
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-slower ease-out-expo ${hire.progress >= 75 ? 'bg-success' : hire.progress >= 50 ? 'bg-info' : hire.progress >= 25 ? 'bg-warning' : 'bg-error'}`}
+                            style={{ width: `${hire.progress}%` }}
+                          />
+                        </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
@@ -993,7 +1037,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
 
                       {/* Paused meta */}
                       {hire.onboardingPaused && (
-                        <div className="mt-2 text-[11px] text-amber-500">
+                        <div className="mt-2 text-[11px] text-warning">
                           Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
                           {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` : ""}
                           {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}
@@ -1047,7 +1091,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                       <DialogTitle className="text-xl font-semibold">New Hire Details</DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-120px)] pr-2 custom-scrollbar">
+                    <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-220px)] pr-2 custom-scrollbar">
                       {/* Employee Info Card */}
                       <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-lg">
                         <Avatar className="h-16 w-16 flex-shrink-0">
@@ -1066,7 +1110,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 bg-transparent text-green-600 border-green-600"
+                                className="h-7 px-2 bg-transparent text-success border-success"
                                 onClick={() => handleResume(hire)}
                                 disabled={resuming}
                               >
@@ -1076,7 +1120,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 bg-transparent text-amber-600 border-amber-600"
+                                className="h-7 px-2 bg-transparent text-warning border-warning"
                                 onClick={() => openPauseConfirm(hire)}
                               >
                                 <PauseCircle className="h-4 w-4 mr-1" /> Pause
@@ -1113,6 +1157,81 @@ export function NewHireTracker({ initialNewHires = [] }) {
                         </p>
                       </div>
 
+                      {/* Upcoming Tasks */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <ListTodo className="h-4 w-4 text-muted-foreground" />
+                            Upcoming Tasks
+                          </h4>
+                          {hireTasks[hire.id]?.tasks?.length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {hire.tasks?.total - hire.tasks?.completed || 0} remaining
+                            </span>
+                          )}
+                        </div>
+                        <div className="rounded-lg border border-border/50 overflow-hidden">
+                          {hireTasksLoading[hire.id] ? (
+                            <div className="p-3 space-y-2.5">
+                              {[...Array(3)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-3 animate-pulse">
+                                  <div className="h-2 w-2 rounded-full bg-muted flex-shrink-0" />
+                                  <div className="h-3.5 bg-muted rounded flex-1" />
+                                  <div className="h-4 w-10 bg-muted rounded" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : hireTasks[hire.id]?.tasks?.length > 0 ? (
+                            <>
+                              <div className="divide-y divide-border/30">
+                                {hireTasks[hire.id].tasks.map((task, taskIdx) => (
+                                  <motion.div
+                                    key={task.id}
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.2, delay: taskIdx * 0.04 }}
+                                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted/20 transition-colors"
+                                  >
+                                    <div
+                                      className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                                        task.status === "Overdue"
+                                          ? "bg-destructive"
+                                          : "bg-amber-500"
+                                      }`}
+                                    />
+                                    <span className="text-sm truncate flex-1">{task.title}</span>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-normal"
+                                    >
+                                      {task.type}
+                                    </Badge>
+                                  </motion.div>
+                                ))}
+                              </div>
+                              <div className="flex items-center justify-between px-3 py-1.5 border-t border-border/30 bg-muted/10">
+                                {hireTasks[hire.id].hasMore && (
+                                  <span className="text-xs text-muted-foreground/60 tracking-widest">...</span>
+                                )}
+                                <a
+                                  href={`/admin/users?applicantId=${hire.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors ml-auto"
+                                >
+                                  See more
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="p-4 text-center">
+                              <p className="text-xs text-muted-foreground">No pending tasks</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Contact Information */}
                       <div className="space-y-3">
                         <h4 className="font-medium">Contact Information</h4>
@@ -1127,8 +1246,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                         </div>
                       </div>
 
-                      {/* Status Badge */
-                      }
+                      {/* Status Badge */}
                       <div className="flex justify-center">
                         {hire.onboardingStarted ? (
                           <Badge variant="default" className="px-4 py-2">
@@ -1145,7 +1263,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
 
                       {/* Paused/Active meta text */}
                       {hire.onboardingPaused ? (
-                        <div className="text-xs text-amber-600 text-center mt-2">
+                        <div className="text-xs text-warning text-center mt-2">
                           Paused{hire.lastPausedByName ? ` by ${hire.lastPausedByName}` : ""}
                           {hire.onboardingPausedAt ? ` at ${new Date(hire.onboardingPausedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : ""}
                           {hire.onboardingPausedReason ? ` — Reason: ${hire.onboardingPausedReason}` : ""}
@@ -1188,10 +1306,6 @@ export function NewHireTracker({ initialNewHires = [] }) {
                     {/* Action Buttons - Fixed at bottom */}
                     <div className="flex flex-col gap-2 pt-4 border-t mt-4">
                       <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1 bg-transparent" size="sm">
-                          <Briefcase className="h-4 w-4 mr-2" />
-                          View Tasks
-                        </Button>
                         <Button
                           variant="outline"
                           className="flex-1 bg-transparent"
@@ -1200,6 +1314,21 @@ export function NewHireTracker({ initialNewHires = [] }) {
                         >
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 bg-transparent"
+                          size="sm"
+                          asChild
+                        >
+                          <a
+                            href={`/admin/users?applicantId=${hire.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View Profile
+                          </a>
                         </Button>
                       </div>
                       {!hire.onboardingStarted && (
@@ -1212,6 +1341,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
                   </DialogContent>
                 </Dialog>
               ))}
+            </div>
             </div>
           )}
         </CardContent>

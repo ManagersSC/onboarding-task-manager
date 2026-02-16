@@ -230,7 +230,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     return { backgroundColor: bg, color: text, borderColor: bg }
   }, [applicant?.stage])
 
-  const hiredBadgeClass = "bg-emerald-500/15 text-emerald-600 border-emerald-500/20"
+  const hiredBadgeClass = "bg-success-muted text-success border-success/20"
   const renderStageBadge = () => {
     const label = applicant?.stage || "—"
     if (label === "Hired") {
@@ -395,7 +395,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
         <SheetContent side="right" className="w-full max-w-3xl p-0">
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <p className="text-destructive mb-2">Error loading applicant</p>
+              <p className="text-error mb-2">Error loading applicant</p>
               <p className="text-sm text-muted-foreground">{error.message}</p>
             </div>
           </div>
@@ -409,7 +409,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="right"
-          className={`w-[420px] sm:w-[720px] pl-2 pr-4 md:pl-2 md:pr-6 transition-all duration-300`}
+          className={`w-[420px] sm:w-[720px] max-w-2xl pl-2 pr-4 md:pl-2 md:pr-6 transition-all duration-slow ease-out-expo border-l border-border/30`}
           style={wideView ? { width: "95vw", maxWidth: "1280px" } : undefined}
         >
           {/* Accessibility: provide required DialogTitle for SheetContent */}
@@ -436,7 +436,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center justify-between gap-3 border-b px-4 py-2 md:px-5 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+                    className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-2 md:px-5 sticky top-0 z-30 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
@@ -481,28 +481,29 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                 )}
               </AnimatePresence>
             ) : (
-            <div className="border-b px-4 py-3 md:px-5">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
+            <div className="border-b border-border/30 px-4 py-4 md:px-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-14 w-14 bg-primary/5">
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <AvatarFallback className="bg-primary/5 text-primary text-title font-bold"><Initials name={applicant?.name} /></AvatarFallback>}
                 </Avatar>
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold leading-none">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-title font-semibold leading-tight">
                     {isLoading ? "Loading..." : applicant?.name || "Applicant"}
                   </h2>
                   {!!applicant?.email && (
-                    <div className="text-xs text-muted-foreground truncate">{applicant.email}</div>
+                    <div className="text-body-sm text-muted-foreground truncate mt-0.5">{applicant.email}</div>
                   )}
+                  <div className="mt-2 flex items-center gap-2">
+                    {renderStageBadge()}
+                    {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                {renderStageBadge()}
-                {applicant?.job && <Badge variant="outline">{applicant.job}</Badge>}
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Override stage…" onClick={() => { setOverrideOpen(true); setOverrideConfirmed(false); setOverrideAction("") }}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="mt-2">
+              {/* Action buttons - sticky bottom style */}
+              <div className="mt-3 flex items-center gap-2">
                 {!isHiredStage && (
                   <Button
                     size="sm"
@@ -518,7 +519,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="h-8 ml-2"
+                    className="h-8"
                     title="Reject applicant"
                     onClick={() => setRejectOpen(true)}
                   >
@@ -536,7 +537,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {/* Z - Left vertical summary */}
                     <aside className="md:col-span-3 space-y-4">
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-start gap-3">
                           <Avatar className="h-10 w-10">
                             {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Initials name={applicant?.name} />}
@@ -552,8 +553,8 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           </div>
                         </div>
                       </div>
-                      <div className="rounded-lg border p-4 space-y-3">
-                        <div className="text-sm font-semibold">Quick Facts</div>
+                      <div className="rounded-lg border border-border/30 p-4 space-y-3">
+                        <div className="text-body-sm font-semibold">Quick Facts</div>
                         <InfoRow label="Phone" value={applicant?.phone} />
                         <InfoRow label="Email" value={applicant?.email} />
                         <InfoRow label="Applied For" value={applicant?.job} />
@@ -607,7 +608,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                     {/* Right main content */}
                     <section className="md:col-span-9 space-y-4">
                       {/* A - Title */}
-                      <div className="rounded-lg border px-3 py-2 flex items-center justify-between">
+                      <div className="rounded-lg border border-border/30 px-3 py-2 flex items-center justify-between">
                         <h3 className="text-base font-semibold">Applicant Detail</h3>
                         <div className="flex items-center gap-2">
                           {renderStageBadge()}
@@ -640,7 +641,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       </div>
 
                       {/* B - Applicant Information */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           <InfoRow label="Interview Date" value={applicant?.interviewDate ? formatDate(applicant.interviewDate) : '—'} />
                           <InfoRow label="Second Interview" value={applicant?.secondInterviewDate ? formatDate(applicant.secondInterviewDate) : '—'} />
@@ -679,15 +680,15 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           return dt.toLocaleString('default', { month: 'short', year: 'numeric' })
                         }
                         return (
-                          <div className="rounded-lg border p-4">
+                          <div className="rounded-lg border border-border/30 p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold">Monthly Review</h4>
+                              <h4 className="text-body-sm font-semibold">Monthly Review</h4>
                               <MonthlyReviewActions applicantId={applicant?.id} applicantName={applicant?.name} applicantEmail={applicant?.email} onDone={async () => { await mutate?.() }} />
                             </div>
                             {reviews.length === 0 ? (
                               <div className="text-sm text-muted-foreground">No monthly reviews yet.</div>
                             ) : (
-                              <ul className="divide-y rounded-md border bg-background">
+                              <ul className="divide-y divide-border/20 rounded-md border border-border/30 bg-background">
                                 {reviews.map((r) => {
                                   const title = r.title || formatPeriod(r.period)
                                   const completed = !!r.hasDocs
@@ -700,7 +701,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                       <div className="flex items-center gap-2 shrink-0">
                                         {completed ? (
                                           <>
-                                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">Completed</Badge>
+                                            <Badge variant="outline" className="bg-success-muted text-success border-success/20">Completed</Badge>
                                             {Array.isArray(r.docs) && r.docs[0]?.url && (
                                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View document" onClick={() => {
                                                 const d = r.docs[0]
@@ -721,7 +722,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                           </>
                                         ) : (
                                           <>
-                                            <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Scheduled</Badge>
+                                            <Badge variant="outline" className="bg-warning-muted text-warning border-warning/20">Scheduled</Badge>
                                             <Button size="sm" className="h-8" onClick={() => {
                                               // Open the upload modal prefilled to upload against this scheduled review
                                               // Reuse the existing modal by setting the default title
@@ -756,9 +757,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       {(() => {
                         if (!isOnboardingActive) return null
                         return (
-                          <div className="rounded-lg border p-4">
+                          <div className="rounded-lg border border-border/30 p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-sm font-semibold">Onboarding Quizzes</h4>
+                              <h4 className="text-body-sm font-semibold">Onboarding Quizzes</h4>
                             <div className="flex items-center gap-1">
                               <Link
                                 href={`/admin/quizzes?tab=submissions&applicantId=${encodeURIComponent(applicant?.id || "")}`}
@@ -773,7 +774,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             </div>
                             </div>
                             {quizError ? (
-                              <div className="text-sm text-destructive">Failed to load quiz submissions.</div>
+                              <div className="text-sm text-error">Failed to load quiz submissions.</div>
                             ) : quizLoading ? (
                               <div className="space-y-2">
                                 <div className="h-4 bg-muted animate-pulse rounded" />
@@ -781,7 +782,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                 <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
                               </div>
                             ) : (Array.isArray(quizSubmissions) && quizSubmissions.length > 0) ? (
-                              <ul className="divide-y rounded-md border bg-background">
+                              <ul className="divide-y divide-border/20 rounded-md border border-border/30 bg-background">
                                 {quizSubmissions.map((s) => {
                                   const submitted = s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "—"
                                   const total = s.totalScore || 0
@@ -794,7 +795,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                         <div className="text-xs mt-1">Score: {score} / {total}</div>
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
-                                        <Badge variant={s.passed ? "outline" : "outline"} className={s.passed ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : "bg-red-500/15 text-red-600 border-red-500/20"}>{s.passed ? "Passed" : "Failed"}</Badge>
+                                        <Badge variant={s.passed ? "outline" : "outline"} className={s.passed ? "bg-success-muted text-success border-success/20" : "bg-error-muted text-error border-error/20"}>{s.passed ? "Passed" : "Failed"}</Badge>
                                         <Button
                                           variant="ghost"
                                           size="sm"
@@ -824,9 +825,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
                       {/* D3 - Appraisals (visible only when Hired) */}
                       {isHiredStage && (
-                        <div className="rounded-lg border p-4">
+                        <div className="rounded-lg border border-border/30 p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-semibold">Appraisals</h4>
+                            <h4 className="text-body-sm font-semibold">Appraisals</h4>
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="ghost"
@@ -880,14 +881,14 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                               const appraisalDt = a?.appraisalDate ? new Date(a.appraisalDate) : null
                               const overdue = !allDone && appraisalDt && appraisalDt < now
                               if (allDone) return { label: "Completed", tone: "success" }
-                              if (overdue) return { label: "Overdue", tone: "destructive" }
+                              if (overdue) return { label: "Overdue", tone: "error" }
                               if (appraisalDt && appraisalDt > now) return { label: "Upcoming", tone: "secondary" }
                               return { label: "In Progress", tone: "info" }
                             }
                             const renderStatusBadge = (status) => {
-                              if (status.tone === "success") return <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">{status.label}</Badge>
-                              if (status.tone === "destructive") return <Badge variant="outline" className="bg-red-500/15 text-red-600 border-red-500/20">{status.label}</Badge>
-                              if (status.tone === "info") return <Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/20">{status.label}</Badge>
+                              if (status.tone === "success") return <Badge variant="outline" className="bg-success-muted text-success border-success/20">{status.label}</Badge>
+                              if (status.tone === "error") return <Badge variant="outline" className="bg-error-muted text-error border-error/20">{status.label}</Badge>
+                              if (status.tone === "info") return <Badge variant="outline" className="bg-info-muted text-info border-info/20">{status.label}</Badge>
                               return <Badge variant="secondary">{status.label}</Badge>
                             }
 
@@ -900,12 +901,12 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                   const status = getStatus(a)
                                   const isCurrent = idx === 0
                                   return (
-                                    <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border p-3">
+                                    <li key={`${a?.year || 'y'}-${idx}`} className="rounded-md border border-border/30 p-3">
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                           <div className="flex items-center gap-2">
                                             <div className="text-sm font-semibold truncate">Year {a?.year || '—'}</div>
-                                            {isCurrent && <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/20">Current</Badge>}
+                                            {isCurrent && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Current</Badge>}
                                           </div>
                                           <div className="text-xs text-muted-foreground">
                                             Appraisal: {a?.appraisalDate ? formatDate(a.appraisalDate) : '—'}
@@ -966,9 +967,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                                 <li key={`${s?.id || 'step'}-${i}`} className="flex items-start gap-2">
                                                   <div className="pt-0.5">
                                                     {done ? (
-                                                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                      <CheckCircle2 className="h-4 w-4 text-success" />
                                                     ) : isActive ? (
-                                                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                                                      <AlertCircle className="h-4 w-4 text-warning" />
                                                     ) : (
                                                       <Circle className="h-4 w-4 text-muted-foreground" />
                                                     )}
@@ -1035,9 +1036,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       )}
 
                       {/* E - Feedback Documents */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-semibold">Feedback Documents</div>
+                          <div className="text-body-sm font-semibold">Feedback Documents</div>
                           <div className="flex items-center gap-2">
                             <Select value={selectedFeedbackStage} onValueChange={setSelectedFeedbackStage}>
                               <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Select feedback stage" /></SelectTrigger>
@@ -1073,7 +1074,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                       {rating > 0 && (
                                         <div className="flex items-center gap-0.5">
                                           {[1,2,3,4,5].map((n) => (
-                                            <Star key={n} className={`h-4 w-4 ${n <= rating ? "fill-yellow-400 stroke-yellow-500" : "stroke-muted-foreground"}`} />
+                                            <Star key={n} className={`h-4 w-4 ${n <= rating ? "fill-warning stroke-warning" : "stroke-muted-foreground"}`} />
                                           ))}
                                         </div>
                                       )}
@@ -1107,19 +1108,19 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                       </div>
 
                       {/* C - Documents Grid + Add */}
-                      <div className="rounded-lg border p-4">
+                      <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-semibold">Documents</div>
+                          <div className="text-body-sm font-semibold">Documents</div>
                           <div className="flex items-center gap-2">
                             {(() => {
-                              const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldName}` : ""
+                              const valueKey = selectedDocMeta ? `${selectedDocMeta.table}::${selectedDocMeta.fieldId}` : ""
                               return (
                                 <Select
                                   value={valueKey}
                                   onValueChange={(val) => {
-                                    const [table, fieldName] = String(val).split("::")
+                                    const [table, fieldId] = String(val).split("::")
                                     const all = [...docCoreOptions, ...docDocumentsOptions]
-                                    const meta = all.find((o) => o.table === table && o.fieldName === fieldName)
+                                    const meta = all.find((o) => o.table === table && o.fieldId === fieldId)
                                     setSelectedDocMeta(meta || null)
                                     setSelectedDocType(meta?.label || "")
                                     setShowAddDropzone(true)
@@ -1131,12 +1132,12 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                   <SelectContent>
                                     <div className="px-2 py-1 text-xs text-muted-foreground">Core</div>
                                     {docCoreOptions.map((o) => (
-                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                      <SelectItem key={`${o.table}::${o.fieldId}`} value={`${o.table}::${o.fieldId}`}>{o.label}</SelectItem>
                                     ))}
                                     <Separator className="my-1" />
                                     <div className="px-2 py-1 text-xs text-muted-foreground">Documents</div>
                                     {docDocumentsOptions.map((o) => (
-                                      <SelectItem key={`${o.table}::${o.fieldName}`} value={`${o.table}::${o.fieldName}`}>{o.label}</SelectItem>
+                                      <SelectItem key={`${o.table}::${o.fieldId}`} value={`${o.table}::${o.fieldId}`}>{o.label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
@@ -1147,13 +1148,13 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         </div>
                         {selectedDocType && (
                           <div ref={addDocRef} className="mb-3">
-                            <div className="text-xs text-muted-foreground mb-2">Upload files for <span className="text-red-500">{selectedDocType}</span></div>
+                            <div className="text-xs text-muted-foreground mb-2">Upload files for <span className="text-error">{selectedDocType}</span></div>
                             <UploadDropzone registerSubmit={(fn) => { dropzoneSubmitRef.current = fn }} onFilesChange={(files) => setHasPendingFiles(files.length > 0)} showActions={false} onSubmit={async (files) => {
                               const optimistic = files.map((f, i) => ({ id: `optimistic-${Date.now()}-${i}`, name: `${selectedDocType} - ${f.name}`, category: selectedDocMeta?.table || 'Application', source: 'Upload', uploadedAt: new Date().toISOString(), fileUrl: '', status: 'Uploading…', type: f.type || 'Unknown', field: selectedDocType, originalName: f.name, size: f.size || 0 }))
                               setOptimisticDocs((prev) => [...prev, ...optimistic])
                               try {
                                 if (!applicant || !files?.length || !selectedDocType || !selectedDocMeta) return
-                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldName', selectedDocMeta.fieldName)
+                                const fd = new FormData(); files.forEach((f) => fd.append('files', f)); fd.append('fieldId', selectedDocMeta.fieldId)
                                 const endpoint = selectedDocMeta.table === 'Documents'
                                   ? `/api/admin/users/${applicant.id}/documents/attachments`
                                   : `/api/admin/users/${applicant.id}/attachments`
@@ -1265,7 +1266,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Confirm Stage Change */}
       <Dialog open={confirmOpen} onOpenChange={(v) => { if (!confirming) setConfirmOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Confirm Stage Change</DialogTitle>
             <DialogDescription>
@@ -1286,7 +1287,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Reject Confirmation */}
       <Dialog open={rejectOpen} onOpenChange={(v) => { if (!rejecting) setRejectOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Reject Applicant</DialogTitle>
             <DialogDescription>
@@ -1331,7 +1332,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Stage Override Flow */}
       <Dialog open={overrideOpen} onOpenChange={(v) => { if (!overrideSubmitting) { setOverrideOpen(v); if (!v) { setOverrideConfirmed(false); setOverrideAction("") } } }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Override Stage</DialogTitle>
             <DialogDescription>
@@ -1411,7 +1412,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
 
       {/* Delete Scheduled Monthly Review */}
       <Dialog open={deleteReviewOpen} onOpenChange={(v) => { if (!deletingReview) setDeleteReviewOpen(v) }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Delete scheduled review?</DialogTitle>
             <DialogDescription>
@@ -1435,7 +1436,7 @@ function RatingStars({ value = 0, onChange }) {
     <div className="flex items-center gap-1">
       {[1,2,3,4,5].map((n) => (
         <button key={n} type="button" className="h-6 w-6 flex items-center justify-center" onClick={() => onChange?.(n)} aria-label={`${n} stars`}>
-          <Star className={`h-5 w-5 ${n <= value ? "fill-yellow-400 stroke-yellow-500" : "stroke-muted-foreground"}`} />
+          <Star className={`h-5 w-5 ${n <= value ? "fill-warning stroke-warning" : "stroke-muted-foreground"}`} />
         </button>
       ))}
     </div>
@@ -1639,7 +1640,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
         + New Review
       </Button>
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setDate(""); setUploadMode(false); setHasFiles(false) } }}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>New Monthly Review</DialogTitle>
             <DialogDescription>
@@ -1679,7 +1680,7 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
               />
               {/* Selected day details and time selection */}
               {date && (
-                <div className="rounded-md border p-3">
+                <div className="rounded-md border border-border/30 p-3">
                   <div className="text-sm font-medium mb-2">{date}</div>
                   {dayEvents.length > 0 ? (
                     <div className="space-y-1 mb-3">
@@ -1717,10 +1718,10 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
                     </Select>
                   </div>
                   {hasConflict && (
-                    <div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>
+                    <div className="mt-2 text-xs text-error">Selected time overlaps with an existing event.</div>
                   )}
                   {startTime && endTime && endTime <= startTime && (
-                    <div className="mt-1 text-xs text-red-500">End time must be after start time.</div>
+                    <div className="mt-1 text-xs text-error">End time must be after start time.</div>
                   )}
                 </div>
               )}
@@ -1863,7 +1864,7 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
   }
 
   return (
-    <div className="rounded-md border p-3">
+    <div className="rounded-md border border-border/30 p-3">
       <div className="flex items-center justify-between mb-2">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const d = new Date(year, month - 1, 1); setCurrent(d); onMonthChange?.(d) }}>
           <ChevronLeftIcon className="h-4 w-4" />
@@ -1901,7 +1902,7 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
               >
                 <span>{cell.day}</span>
                 {(eventsByDate[cell.dateString]?.length || 0) > 0 && (
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-success" />
                 )}
               </Button>
             ))}
@@ -2243,7 +2244,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
               eventsByDate={eventsByDate}
             />
             {date && (
-              <div className="rounded-md border p-3">
+              <div className="rounded-md border border-border/30 p-3">
                 <div className="text-sm font-medium mb-2">{date}</div>
                 {dayEvents.length > 0 ? (
                   <div className="space-y-1 mb-3">
@@ -2276,8 +2277,8 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                     </SelectContent>
                   </Select>
                 </div>
-                {hasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
-                {startTime && endTime && endTime <= startTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+                {hasConflict && (<div className="mt-2 text-xs text-error">Selected time overlaps with an existing event.</div>)}
+                {startTime && endTime && endTime <= startTime && (<div className="mt-1 text-xs text-error">End time must be after start time.</div>)}
               </div>
             )}
             <div className="flex justify-end gap-2">
@@ -2309,10 +2310,10 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
             
             {/* Warning banner */}
             {templateWarning && (
-              <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3">
+              <div className="rounded-md bg-warning-muted border border-warning/20 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div className="text-sm text-amber-700 dark:text-amber-400">{templateWarning}</div>
+                  <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                  <div className="text-sm text-warning">{templateWarning}</div>
                 </div>
               </div>
             )}
@@ -2396,7 +2397,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10" 
+                                className="h-7 w-7 text-error hover:text-error/80 hover:bg-error-muted" 
                                 onClick={() => handleDeleteQuestion(idx)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />

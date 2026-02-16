@@ -338,7 +338,7 @@ export function DynamicTaskEditSheet({
                               {file.isNew && (
                                 <Badge
                                   variant="outline"
-                                  className="bg-blue-100 text-blue-800 border-blue-200 text-xs"
+                                  className="bg-info-muted text-info border-info/20 text-xs"
                                 >
                                   New
                                 </Badge>
@@ -407,8 +407,8 @@ export function DynamicTaskEditSheet({
               </SheetHeader>
               {error ? (
                 <div className="py-6 text-center">
-                  <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
-                  <p className="text-destructive font-medium">Error: {error}</p>
+                  <AlertCircle className="h-10 w-10 text-error mx-auto mb-2" />
+                  <p className="text-error font-medium">Error: {error}</p>
                   <Button onClick={() => onOpenChange(false)} variant="outline" className="mt-4">
                     Close
                   </Button>
@@ -419,8 +419,8 @@ export function DynamicTaskEditSheet({
                     {fields.map(renderField)}
                     <div className="pt-4 border-t mt-6">
                       {formModified && (
-                        <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800">
-                          <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center">
+                        <div className="mb-4 p-2 bg-info-muted rounded-md border border-info/20">
+                          <p className="text-sm text-info flex items-center">
                             <Info className="h-4 w-4 mr-2" />
                             You have unsaved changes
                           </p>

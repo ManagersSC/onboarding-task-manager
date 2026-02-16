@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(for f in src/app/admin/*.js src/app/admin/**/*.js)",
+      "Bash(do [ -f \"$f\" ])",
+      "Bash(done)",
+      "Bash(for f in components/admin/*.js components/admin/**/*.js)",
+      "Skill(ralph-loop:ralph-loop)",
+      "Bash(npm run lint)",
+      "Bash(npx next build:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx next lint:*)",
+      "Bash(git pull:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git status:*)"
+    ]
+  }
+}

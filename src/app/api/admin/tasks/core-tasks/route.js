@@ -57,6 +57,7 @@ export async function GET(request) {
     const rawDay = searchParams.get("day") || ""
     const week = rawWeek &&  rawWeek !== "all" ? rawWeek : ""
     const day = rawDay &&  rawDay !== "all" ? rawDay : ""
+    const hasDocuments = searchParams.get("hasDocuments") || ""
 
     // 3. Airtable credentials check (unchanged)
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
@@ -109,6 +110,13 @@ export async function GET(request) {
       logger.error('Error building folder name filter:', e)
       conditions.push('FALSE()')
     }
+  }
+
+  // Filter: has documents (attachments or resource link)
+  if (hasDocuments === "yes") {
+    conditions.push(`OR({File(s)} != '', {Link} != '')`)
+  } else if (hasDocuments === "no") {
+    conditions.push(`AND({File(s)} = '', {Link} = '')`)
   }
 
   const filterByFormula = `AND(${conditions.join(",")})`
@@ -264,6 +272,7 @@ export async function GET(request) {
         createdTime:  rec.fields['Created Time'] || '',
         attachments:  rec.fields['File(s)'] || [],
         attachmentCount: rawAttachments.length,
+        hasDocuments: rawAttachments.length > 0 || Boolean(rec.fields['Link']),
       }
     })
 

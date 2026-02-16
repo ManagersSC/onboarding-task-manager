@@ -4,59 +4,57 @@ import { useState } from "react"
 import { Card, CardContent, CardFooter } from "@components/ui/card"
 import { Button } from "@components/ui/button"
 import { Badge } from "@components/ui/badge"
-import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag } from "lucide-react"
+import { Check, Clock, AlertCircle, ExternalLink, Loader2, Star, Flag, Paperclip } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@components/lib/utils"
 import Link from "next/link"
 
-// Urgency configuration
+// Urgency configuration using semantic tokens
 const urgencyConfig = {
   Critical: {
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-50 dark:bg-red-900/20",
-    borderColor: "border-red-200 dark:border-red-800",
+    color: "text-error",
+    bgColor: "bg-error-muted",
+    borderColor: "border-error/20",
   },
   High: {
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-orange-50 dark:bg-orange-900/20",
-    borderColor: "border-orange-200 dark:border-orange-800",
+    color: "text-warning",
+    bgColor: "bg-warning-muted",
+    borderColor: "border-warning/20",
   },
   Medium: {
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-50 dark:bg-amber-900/20",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    color: "text-warning",
+    bgColor: "bg-warning-muted",
+    borderColor: "border-warning/20",
   },
   Low: {
-    color: "text-green-600 dark:text-green-400",
-    bgColor: "bg-green-50 dark:bg-green-900/20",
-    borderColor: "border-green-200 dark:border-green-800",
+    color: "text-success",
+    bgColor: "bg-success-muted",
+    borderColor: "border-success/20",
   },
 }
 
-export function TaskCard({ task, onComplete, disableActions, compact = false }) {
+export function TaskCard({ task, onComplete, onOpenFiles, disableActions, compact = false }) {
   const [isCompleting, setIsCompleting] = useState(false)
 
-  // Status configuration
+  // Status configuration using semantic tokens
   const statusConfig = {
     assigned: {
       icon: <Clock className="h-4 w-4" />,
       label: "Assigned",
-      badgeClass:
-        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-      accentClass: "border-l-4 border-blue-500 dark:border-blue-400",
+      badgeClass: "bg-info-muted text-info border-info/20",
+      accentClass: "status-border-info",
     },
     overdue: {
       icon: <AlertCircle className="h-4 w-4" />,
       label: "Overdue",
-      badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-      accentClass: "border-l-4 border-red-500 dark:border-red-400",
+      badgeClass: "bg-error-muted text-error border-error/20",
+      accentClass: "status-border-error",
     },
     completed: {
       icon: <Check className="h-4 w-4" />,
       label: "Completed",
-      badgeClass:
-        "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
-      accentClass: "border-l-4 border-green-500 dark:border-green-400",
+      badgeClass: "bg-success-muted text-success border-success/20",
+      accentClass: "status-border-success",
     },
   }
 
@@ -119,13 +117,13 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
   const secondaryMeta = renderSecondaryMeta()
 
   return (
-    <Card className={cn("overflow-hidden h-full flex flex-col", statusInfo.accentClass, task.isQuiz && "border-2 border-blue-500 shadow-lg")}>
+    <Card className={cn("overflow-hidden h-full flex flex-col border-border/60 hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-base ease-out-expo", statusInfo.accentClass, task.isQuiz && "border-2 border-info shadow-sm")}>
       <CardContent className="p-4 flex-1">
         <div className="flex justify-between items-start gap-2 mb-2">
           <h3 className="font-medium text-foreground">
             {task.title}
             {task.isQuiz && (
-              <Badge variant="default" className="ml-2 bg-blue-600 text-white">Quiz</Badge>
+              <Badge variant="info-solid" className="ml-2">Quiz</Badge>
             )}
           </h3>
           <div className="flex flex-wrap gap-1">
@@ -139,7 +137,7 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
             {task.isCustom && (
               <Badge
                 variant="outline"
-                className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                className="bg-primary/10 text-primary border-primary/20"
               >
                 <Star className="h-3 w-3 mr-1" />
                 <span className="hidden sm:inline">Custom</span>
@@ -177,19 +175,18 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
           <div className="flex w-full justify-end">
             {task.quizId ? (
               <Link href={`/quizzes/${task.quizId}`}>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                <Button
+                  variant="default"
+                  size="sm"
                 >
                   {task.completed ? "View Results" : "Get Started"}
                 </Button>
               </Link>
             ) : (
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="bg-gray-400 cursor-not-allowed" 
+              <Button
+                variant="outline"
+                size="sm"
+                className="opacity-50 cursor-not-allowed"
                 disabled
               >
                 Quiz Unavailable
@@ -198,13 +195,29 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
           </div>
         ) : (
           <div className="w-full flex items-center justify-between">
-            <div>
-              {task.resourceUrl && (
+            <div className="flex items-center gap-1">
+              {task.hasDocuments && onOpenFiles && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                  onClick={() => window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
+                  className="text-muted-foreground hover:text-foreground relative"
+                  onClick={() => onOpenFiles(task.id, task.title)}
+                >
+                  <Paperclip className="h-4 w-4 mr-1.5" />
+                  Files
+                  {task.attachmentCount > 0 && (
+                    <span className="ml-1 text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
+                      {task.attachmentCount + (task.resourceUrl ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              )}
+              {task.resourceUrl && !task.hasDocuments && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-info hover:text-info/80"
+                  onClick={() => onOpenFiles ? onOpenFiles(task.id, task.title) : window.open(task.resourceUrl, "_blank", "noopener,noreferrer")}
                 >
                   <ExternalLink className="h-4 w-4 mr-1.5" />
                   Resource
@@ -220,7 +233,7 @@ export function TaskCard({ task, onComplete, disableActions, compact = false }) 
                   variant={task.overdue ? "default" : "outline"}
                   size="sm"
                   className={cn(
-                    task.overdue && "bg-red-600 hover:bg-red-700 text-white",
+                    task.overdue && "bg-error hover:bg-error/90 text-error-foreground",
                     disableActions && "opacity-50 cursor-not-allowed pointer-events-none",
                   )}
                   disabled={isCompleting || disableActions}

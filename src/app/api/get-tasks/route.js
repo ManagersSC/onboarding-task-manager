@@ -86,9 +86,12 @@ export async function GET(request) {
       return Response.json([])
     }
 
+    // Filter by "Applicant Email" lookup field instead of "Assigned" link field
+    const filterFormula = `FIND("${applicantEmail}", ARRAYJOIN({Applicant Email}))`;
+    
     const taskLogRecords = await base("Onboarding Tasks Logs")
     .select({
-      filterByFormula: `FIND("${applicantRecords[0]._rawJson.fields.Email}", ARRAYJOIN({fldqftlVTfZ5sSkrs}))`,
+      filterByFormula: filterFormula,
       fields: [
         "Task", 
         "Status", 
@@ -114,6 +117,41 @@ export async function GET(request) {
       return Response.json([]);
     }
 
+    // Batch-fetch linked core tasks to check for file attachments
+    const coreTaskIds = new Set()
+    taskLogRecords.forEach((rec) => {
+      const linked = rec.get("Task")
+      if (Array.isArray(linked)) linked.forEach((id) => coreTaskIds.add(id))
+    })
+
+    const coreTaskFileMap = new Map() // coreTaskId -> { hasFiles, hasLink }
+    if (coreTaskIds.size > 0) {
+      try {
+        const chunks = []
+        const ids = Array.from(coreTaskIds)
+        for (let i = 0; i < ids.length; i += 100) {
+          chunks.push(ids.slice(i, i + 100))
+        }
+        for (const chunk of chunks) {
+          const formula = `OR(${chunk.map((id) => `RECORD_ID() = '${id}'`).join(",")})`
+          const recs = await base("Onboarding Tasks")
+            .select({ filterByFormula: formula, fields: ["File(s)", "Link"] })
+            .all()
+          recs.forEach((r) => {
+            const files = r.fields["File(s)"] || []
+            const link = r.fields["Link"] || ""
+            coreTaskFileMap.set(r.id, {
+              hasFiles: files.length > 0,
+              attachmentCount: files.length,
+              hasLink: Boolean(link),
+            })
+          })
+        }
+      } catch (e) {
+        logger.error("Error batch-fetching core task file info:", e)
+      }
+    }
+
     // Map each task log record to an object with proper status flags.
     const tasks = taskLogRecords.map((record) => {
       const logId= record.id;
@@ -130,6 +168,12 @@ export async function GET(request) {
         weekValue = rawWeek;
       }
       
+      // Resolve file info from linked core task
+      const linkedTaskIds = record.get("Task") || []
+      const coreTaskId = Array.isArray(linkedTaskIds) && linkedTaskIds.length > 0 ? linkedTaskIds[0] : null
+      const fileInfo = coreTaskId ? coreTaskFileMap.get(coreTaskId) : null
+      const resourceUrl = record.get("Display Resource Link") || null
+
       return {
         id: logId,
         title: record.get("Display Title") || "Untitled Task",
@@ -140,12 +184,14 @@ export async function GET(request) {
         paused: applicantPaused,
         pausedUntil: applicantPaused ? applicantPausedUntil : null,
         overdue: taskType === 'Quiz' ? false : status === "Overdue",
-        resourceUrl: record.get("Display Resource Link") || null,
+        resourceUrl,
         isCustom,
         urgency,
         lastStatusChange: record.get("Last Status Change Time") || null,
         week: weekValue,
-        folder: record.get("Folder Name") || null
+        folder: record.get("Folder Name") || null,
+        attachmentCount: fileInfo?.attachmentCount || 0,
+        hasDocuments: (fileInfo?.hasFiles || fileInfo?.hasLink || Boolean(resourceUrl)),
       };
     });
 
