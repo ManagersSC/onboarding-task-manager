@@ -383,7 +383,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
 
 ### Phase C: Admin Users Page Redesign
 
-- [ ] **Task C1: Redesign UsersPage Container (`components/admin/users/users-page.js`)**
+- [x] **Task C1: Redesign UsersPage Container (`components/admin/users/users-page.js`)**
 **File:** `components/admin/users/users-page.js` (225 lines)
 **Current state:** Header + Card with filters + Card with table. Separate "Search & Filters" card.
 **Changes:**
@@ -395,7 +395,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Bulk delete: when items selected, show a `bg-error/5 border border-error/20 rounded-lg px-3 py-2` bar above the table with selected count + Delete button.
   - [ ] Table wrapped in a single `Card variant="elevated"` with no CardHeader — table starts immediately with proper spacing.
 
-- [ ] **Task C2: Redesign UsersTable (`components/admin/users/users-table.js`)**
+- [x] **Task C2: Redesign UsersTable (`components/admin/users/users-table.js`)**
 **File:** `components/admin/users/users-table.js` (253 lines)
 **Current state:** Standard table with checkboxes, avatar+name, stage badges, multiple columns.
 **Changes:**
@@ -410,7 +410,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Loading state: replace Loader2 spinner with skeleton rows (6 rows matching column layout).
   - [ ] Empty state: centered in table area. Muted `Users` icon (48x48), "No applicants found" in `text-body-sm text-muted-foreground`, "Try adjusting your filters" in `text-caption text-muted-foreground/60`.
 
-- [ ] **Task C3: Restyle ApplicantDrawer (`components/admin/users/applicant-drawer.js`)**
+- [x] **Task C3: Restyle ApplicantDrawer (`components/admin/users/applicant-drawer.js`)**
 **File:** `components/admin/users/applicant-drawer.js` (2,453 lines)
 **IMPORTANT:** This is the largest component. Only cosmetic CSS class changes. Do not restructure JSX or logic.
 **Changes:**
@@ -423,7 +423,7 @@ Every admin page follows this structure. The page header is ALWAYS a flex row wi
   - [ ] Action buttons at bottom of drawer: `sticky bottom-0 bg-background border-t border-border/30 p-4 flex items-center gap-2`.
   - [ ] All inner Badges: ensure they use semantic variants consistently.
 
-- [ ] **Task C4: Restyle AddApplicantDialog (`components/admin/users/add-applicant-dialog.js`)**
+- [x] **Task C4: Restyle AddApplicantDialog (`components/admin/users/add-applicant-dialog.js`)**
 **File:** `components/admin/users/add-applicant-dialog.js` (387 lines)
 **Changes:**
   - [ ] Dialog content: `rounded-xl max-w-lg`.

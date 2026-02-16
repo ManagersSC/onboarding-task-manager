@@ -8,7 +8,7 @@
 
 ## Sub-tasks
 
-- [ ] **C1:** Redesign UsersPage Container (`components/admin/users/users-page.js`)
-- [ ] **C2:** Redesign UsersTable (`components/admin/users/users-table.js`)
-- [ ] **C3:** Restyle ApplicantDrawer (`components/admin/users/applicant-drawer.js`)
-- [ ] **C4:** Restyle AddApplicantDialog (`components/admin/users/add-applicant-dialog.js`)
+- [x] **C1:** Redesign UsersPage Container (`components/admin/users/users-page.js`)
+- [x] **C2:** Redesign UsersTable (`components/admin/users/users-table.js`)
+- [x] **C3:** Restyle ApplicantDrawer (`components/admin/users/applicant-drawer.js`)
+- [x] **C4:** Restyle AddApplicantDialog (`components/admin/users/add-applicant-dialog.js`)
