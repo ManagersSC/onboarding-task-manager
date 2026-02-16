@@ -5,7 +5,7 @@ import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Card } from "@components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { Plus, RotateCw, Loader2, Search, Trash2 } from "lucide-react"
+import { Plus, RotateCw, Loader2, Search, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import UsersTable from "./users-table"
 import AddApplicantDialog from "./add-applicant-dialog"
 import BulkDeleteModal from "./bulk-delete-modal"
@@ -20,6 +20,8 @@ export default function ApplicantsPage({
 }) {
   const [query, setQuery] = useState("")
   const [stagePreset, setStagePreset] = useState("all")
+  const [sortBy, setSortBy] = useState("Created Time")
+  const [sortOrder, setSortOrder] = useState("desc")
   const [addOpen, setAddOpen] = useState(false)
   const [selectedApplicants, setSelectedApplicants] = useState([])
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -39,9 +41,28 @@ export default function ApplicantsPage({
     onParamsChange(prev => ({ ...prev, search: value, page: 1 }))
   }, [onParamsChange])
 
+  const sortOptions = useMemo(() => [
+    { value: 'Created Time', label: 'Date Created' },
+    { value: 'Name', label: 'Name' },
+    { value: 'Stage', label: 'Stage' },
+  ], [])
+
   const handleStageChange = useCallback((stage) => {
     setStagePreset(stage)
     onParamsChange(prev => ({ ...prev, stage, page: 1 }))
+  }, [onParamsChange])
+
+  const handleSortByChange = useCallback((value) => {
+    setSortBy(value)
+    onParamsChange(prev => ({ ...prev, sortBy: value, page: 1 }))
+  }, [onParamsChange])
+
+  const handleSortOrderToggle = useCallback(() => {
+    setSortOrder(prev => {
+      const next = prev === "desc" ? "asc" : "desc"
+      onParamsChange(p => ({ ...p, sortOrder: next, page: 1 }))
+      return next
+    })
   }, [onParamsChange])
 
   const handleRefresh = useCallback(() => {
@@ -125,6 +146,41 @@ export default function ApplicantsPage({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Sort By Dropdown */}
+        <Select
+          value={sortBy}
+          onValueChange={handleSortByChange}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="h-10 w-40 rounded-lg border-border/40">
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {sortOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Sort Order Toggle */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleSortOrderToggle}
+          disabled={isLoading}
+          className="h-10 w-10 rounded-lg border-border/40"
+          title={sortOrder === "desc" ? "Newest first" : "Oldest first"}
+        >
+          {sortOrder === "desc" ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUp className="h-4 w-4" />
+          )}
+        </Button>
 
         {/* Page Size Selector */}
         <div className="flex items-center gap-2 text-body-sm text-muted-foreground ml-auto">
