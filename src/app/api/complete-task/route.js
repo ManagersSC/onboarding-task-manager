@@ -173,7 +173,6 @@ export async function POST(request) {
           // fldyq3GebxaY3S9oM = "Onboarding Task ID"
           // flddxTSDbSiHOD0a2 = "Completed Date"
           // fldcXwC0PBEjUX9ZB = "Flagged Reason"
-          // fldf8A3QyMjHKxnKR = "Onboarding Tasks Logs" (linked record; Display Resource Link is looked up from this)
           
           // 📌 Task - Admin-facing, clear, professional
           // Example: "Verify completion – Shannon Mantle: Online payments via Stripe"
@@ -187,7 +186,6 @@ export async function POST(request) {
           "fldo7oJ0uwiwhNzmH": [applicantId], // 👤 Assigned Applicant - The hire who completed it
           "fldJ6mb4TsamGXMFh": dueDate, // 📆 Due Date - 2 working days from today
           "fldyq3GebxaY3S9oM": taskId, // Onboarding Task ID - Original Onboarding Tasks Logs record ID
-          "fldf8A3QyMjHKxnKR": [taskId], // Onboarding Tasks Logs (linked record) - Lookup "Display Resource Link" pulls from this
           "flddxTSDbSiHOD0a2": currentDate, // Completed Date - When it was completed
           "fldcXwC0PBEjUX9ZB": "" // Flagged Reason - Empty for completed tasks
         }

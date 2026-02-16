@@ -1,33 +1,42 @@
+import path from "path"
+import { promises as fs } from "fs"
 import logger from "@/lib/utils/logger"
-
-const AIRTABLE_META_URL = `https://api.airtable.com/v0/meta/bases/${process.env.AIRTABLE_BASE_ID}/tables`
 
 export async function GET() {
   try {
-    const resp = await fetch(AIRTABLE_META_URL, {
-      headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
-    })
-    if (!resp.ok) {
-      const text = await resp.text()
-      throw new Error(`Airtable Meta API ${resp.status}: ${text}`)
-    }
+    const schemaPath = path.join(process.cwd(), "docs", "ATS_schema.txt")
+    const raw = await fs.readFile(schemaPath, "utf8")
+    const json = JSON.parse(raw)
+    const tables = Array.isArray(json?.tables) ? json.tables : []
 
-    const { tables } = await resp.json()
-    const findTable = (name) => tables?.find((t) => t?.name === name)
-
+    const findTable = (name) => tables.find((t) => String(t?.name) === name)
     const pickAttachmentFields = (table) =>
       Array.isArray(table?.fields)
         ? table.fields
             .filter((f) => f?.type === "multipleAttachments")
-            .map((f) => ({ fieldId: f.id, label: f.name }))
+            .map((f) => ({ fieldName: f.name, label: f.name }))
         : []
 
-    const core = pickAttachmentFields(findTable("Applicants"))
-    const docs = pickAttachmentFields(findTable("Documents"))
+    const applicants = findTable("Applicants")
+    const documents = findTable("Documents")
 
-    return Response.json({ core, documents: docs })
+    const core = pickAttachmentFields(applicants) // Applicants → Core
+    const docs = pickAttachmentFields(documents) // Documents
+
+    return new Response(
+      JSON.stringify({
+        core,
+        documents: docs,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
   } catch (e) {
-    logger?.error?.("Failed to fetch attachment fields from Airtable Meta API", e)
-    return Response.json({ error: "Failed to load attachment fields" }, { status: 500 })
+    logger?.error?.("Failed to read ATS_schema for attachment fields", e)
+    return new Response(JSON.stringify({ error: "Failed to load attachment fields" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 }
+
+

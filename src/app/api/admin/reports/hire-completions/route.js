@@ -21,14 +21,12 @@ export async function GET(req) {
     // fldBSR0tivzKCwIYX = 📌 Task
     // fldv9LfTsox0hlbYK = Task Type
     // fld7fsKOvSDOQrgqn = Completed By
-    // flduO7hnHXoRRyiqo = Display Resource Link (lookup from Onboarding Tasks Logs)
     const F_STATUS = "fldcOYboUu2vDASCl";
     const F_APPLICANT = "fldo7oJ0uwiwhNzmH";
     const F_COMPLETED_DATE = "flddxTSDbSiHOD0a2";
     const F_TASK = "fldBSR0tivzKCwIYX";
     const F_TASK_TYPE = "fldv9LfTsox0hlbYK";
     const F_COMPLETED_BY = "fld7fsKOvSDOQrgqn";
-    const F_TASK_DOCUMENT_URL = "flduO7hnHXoRRyiqo";
 
     // Filter: Completed status (+ optional date window). Applicant filtering is done in code.
     // Why: Airtable formulas evaluate linked-record fields as display values, not record IDs,
@@ -38,7 +36,7 @@ export async function GET(req) {
     if (to) parts.push(`IS_BEFORE({${F_COMPLETED_DATE}}, DATETIME_PARSE('${to}'))`);
     const filterByFormula = `AND(${parts.join(",")})`;
 
-    const fields = [F_TASK, F_TASK_TYPE, F_APPLICANT, F_COMPLETED_BY, F_COMPLETED_DATE, F_TASK_DOCUMENT_URL];
+    const fields = [F_TASK, F_TASK_TYPE, F_APPLICANT, F_COMPLETED_BY, F_COMPLETED_DATE];
 
     // Fetch a larger window than `limit` so we can filter by applicant in code without returning empty results.
     const scanLimit = applicantId ? Math.min(Math.max(limit * 10, 50), 200) : limit;
@@ -94,8 +92,6 @@ export async function GET(req) {
             }
           })()
         : "—";
-      const rawUrl = r.fields[F_TASK_DOCUMENT_URL];
-      const taskDocumentUrl = Array.isArray(rawUrl) && rawUrl.length > 0 ? (rawUrl[0] || "") : (typeof rawUrl === "string" ? rawUrl : "");
       return {
         id: r.id,
         title,
@@ -105,7 +101,6 @@ export async function GET(req) {
         completedById: sId,
         completedByName,
         completedAt,
-        taskDocumentUrl: taskDocumentUrl || "",
         // A professional, presentable per-record message for UI display
         message: `Task "${title}" was completed by ${completedByName} on ${completedDateLabel}.`,
       };

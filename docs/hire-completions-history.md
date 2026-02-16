@@ -40,32 +40,6 @@ The API returns items shaped like:
 If `Completed By` is empty, the API returns:
 - `completedByName: "-"` (and the UI also renders `"-"` as a fallback)
 
-## Task document link (View task document)
-
-Admins can open the **task document** (resource URL the hire used) from the Hire Completions modal.
-
-### Data model
-- **Tasks** table has a linked record **Onboarding Tasks Logs** (`fldf8A3QyMjHKxnKR`) and a **Lookup** **Display Resource Link** (`flduO7hnHXoRRyiqo`) that pulls the current URL from the linked Onboarding Tasks Logs record.
-- **Onboarding Tasks Logs** has the inverse field **Verification Tasks** (`fld7GzNO0qjuSeHuh`).
-
-The URL is never copied into Tasks; it is read via the Lookup so if the link is updated in Onboarding Tasks Logs, the modal shows the updated URL.
-
-### Write path (when a hire completes a task)
-`POST /api/complete-task` creates a verification record in Tasks and sets **Onboarding Tasks Logs** to `[taskId]` (the log record that was completed). The Lookup **Display Resource Link** then reflects the document URL from that log.
-
-### Read path
-- **Dashboard tasks** (`GET /api/dashboard/tasks`): includes **Display Resource Link**; each task is mapped with `taskDocumentUrl` (normalized from the lookup value).
-- **Hire-completions** (`GET /api/admin/reports/hire-completions`): includes the same lookup; each history item has `taskDocumentUrl`.
-
-### UI
-In **Task Management → Hire Completions** modal:
-- **Task list** (unclaimed/claimed tasks): each task row shows a “View task document” link when `taskDocumentUrl` is present; opens in a new tab.
-- **History**: each history item shows the same link when `taskDocumentUrl` is present.
-
-Existing verification records created before this feature have no linked Onboarding Tasks Logs record, so they have no document link (the UI simply does not show the link).
-
----
-
 ## Notes / Backfill
 Existing completed tasks may not have `Completed By` populated (e.g. older records, completions done directly in Airtable, or sessions missing `userStaffId` at the time). Those will show `"-"` until the record is completed through the app with a valid admin session.
 
