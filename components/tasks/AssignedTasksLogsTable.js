@@ -642,7 +642,7 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
                 renderSkeletonRows()
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-red-500">
+                  <TableCell colSpan={9} className="h-24 text-center text-error">
                     Error: {error}
                   </TableCell>
                 </TableRow>

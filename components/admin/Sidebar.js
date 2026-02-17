@@ -214,7 +214,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             className={cn(
-              "w-full flex items-center text-red-600 hover:text-red-700 hover:bg-red-50/50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20",
+              "w-full flex items-center text-error hover:text-error/80 hover:bg-error-muted",
               isCollapsed && "justify-center",
             )}
             onClick={() => setIsLogoutDialogOpen(true)}

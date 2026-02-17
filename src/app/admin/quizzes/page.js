@@ -501,7 +501,7 @@ function AdminQuizzesPageContent() {
   }
 
   return (
-    <div className="p-5 md:p-6">
+    <div className="p-6 md:p-8 animate-fade-in-up">
       <Tabs value={tab} onValueChange={(v) => {
         const usp = new URLSearchParams(params.toString())
         usp.set("tab", v)
@@ -670,7 +670,7 @@ function AdminQuizzesPageContent() {
                           <div className="text-sm font-medium truncate">{s.quizTitle || "Quiz"}</div>
                           <div className="text-xs text-muted-foreground">{date}</div>
                         </div>
-                        <Badge variant="outline" className={s.passed ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : "bg-red-500/15 text-red-600 border-red-500/20"}>
+                        <Badge variant="outline" className={s.passed ? "bg-success-muted text-success border-success/20" : "bg-error-muted text-error border-error/20"}>
                           {s.passed ? "Passed" : "Failed"}
                         </Badge>
                       </div>
@@ -681,7 +681,7 @@ function AdminQuizzesPageContent() {
                         </div>
                         <div className="mt-1 h-2 w-full rounded bg-muted overflow-hidden">
                           <motion.div
-                            className={`h-full ${s.passed ? "bg-emerald-500" : "bg-red-500"}`}
+                            className={`h-full ${s.passed ? "bg-success" : "bg-error"}`}
                             initial={{ width: 0 }}
                             animate={{ width: `${pct}%` }}
                             transition={{ duration: 0.4 }}
@@ -719,7 +719,7 @@ function AdminQuizzesPageContent() {
                 <motion.div className="rounded-md border p-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div className="text-xs text-muted-foreground">Result</div>
                   <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="outline" className={viewerSubmission?.passed ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : "bg-red-500/15 text-red-600 border-red-500/20"}>
+                    <Badge variant="outline" className={viewerSubmission?.passed ? "bg-success-muted text-success border-success/20" : "bg-error-muted text-error border-error/20"}>
                       {viewerSubmission?.passed ? "Passed" : "Failed"}
                     </Badge>
                     <div className="text-sm font-medium">
@@ -728,7 +728,7 @@ function AdminQuizzesPageContent() {
                   </div>
                   <div className="mt-2 h-2 w-full rounded bg-muted overflow-hidden">
                     <motion.div
-                      className={`h-full ${viewerSubmission?.passed ? "bg-emerald-500" : "bg-red-500"}`}
+                      className={`h-full ${viewerSubmission?.passed ? "bg-success" : "bg-error"}`}
                       initial={{ width: 0 }}
                       animate={{ width: `${(viewerSubmission?.totalScore ? Math.round((viewerSubmission?.score / viewerSubmission?.totalScore) * 100) : 0)}%` }}
                       transition={{ duration: 0.4 }}
@@ -780,7 +780,7 @@ function AdminQuizzesPageContent() {
                             <div className="text-[11px] text-muted-foreground">Question {i + 1}</div>
                             <div className="text-sm font-medium leading-5">{q}</div>
                           </div>
-                          {showCheck ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-amber-600" />}
+                          {showCheck ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertCircle className="h-4 w-4 text-warning" />}
                         </div>
                         <div className="mt-2 rounded-md bg-muted/60 p-2 text-[13px] whitespace-pre-wrap leading-6">
                           {Array.isArray(ans) ? ans.join(", ") : String(ans || "—")}
@@ -932,7 +932,7 @@ function AdminQuizzesPageContent() {
                 <div className="text-sm font-semibold">Questions & Information</div>
                 <div className="flex items-center gap-2">
                   {editQuizDirty || editItems.some((i) => i._dirty) ? (
-                    <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/20">Unsaved changes</Badge>
+                    <Badge variant="outline" className="bg-warning-muted text-warning border-warning/20">Unsaved changes</Badge>
                   ) : (
                     <Badge variant="outline" className="text-muted-foreground">No changes</Badge>
                   )}
@@ -1064,7 +1064,7 @@ function AdminQuizzesPageContent() {
                                     <div className={`${hasDup ? "relative" : ""}`}>
                                       <div className="text-[11px] text-muted-foreground mb-1">Order</div>
                                   <Input value={String(it.order ?? "")} onChange={(e) => markItemChangeById(it.id, { order: e.target.value })} className="h-8" />
-                                      {hasDup && <div className="text-[11px] text-red-500 mt-1">Duplicate order</div>}
+                                      {hasDup && <div className="text-[11px] text-error mt-1">Duplicate order</div>}
                                     </div>
                                     {String(it.type || "").toLowerCase() !== "information" && (
                                       <div className="mt-2">
@@ -1673,7 +1673,7 @@ export default function AdminQuizzesPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-5 md:p-6">
+        <div className="p-6 md:p-8">
           <div className="rounded-md border p-6 flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading...

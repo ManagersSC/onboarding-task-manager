@@ -86,7 +86,7 @@ export default function BulkDeleteTasksModal({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
+            <Trash2 className="h-5 w-5 text-error" />
             Delete Selected Tasks
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
@@ -106,7 +106,7 @@ export default function BulkDeleteTasksModal({
                 )}
               </pre>
             </div>
-            <p className="text-destructive text-sm font-medium">
+            <p className="text-error text-sm font-medium">
               This action cannot be undone. All associated data will be permanently deleted.
             </p>
           </AlertDialogDescription>
