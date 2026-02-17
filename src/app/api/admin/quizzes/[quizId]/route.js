@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
+import { logAuditEvent } from "@/lib/auditLogger"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -32,4 +33,73 @@ export async function PUT(request, { params }) {
   }
 }
 
+export async function DELETE(request, { params }) {
+  let userEmail, userRole, userName
 
+  try {
+    const cookieStore = await cookies()
+    const sealedSession = cookieStore.get("session")?.value
+    if (!sealedSession) return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: { "Content-Type": "application/json" } })
+    const session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET })
+    if (!session || session.userRole !== "admin") return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } })
+
+    userEmail = session.userEmail
+    userRole = session.userRole
+    userName = session.userName || userEmail?.split("@")[0]
+
+    const { quizId } = await params
+    if (!quizId) return new Response(JSON.stringify({ error: "quizId required" }), { status: 400, headers: { "Content-Type": "application/json" } })
+
+    // Fetch quiz title before deleting for audit log
+    let quizTitle = quizId
+    try {
+      const quizRecord = await base("Onboarding Quizzes").find(quizId)
+      quizTitle = quizRecord.get("Quiz Title") || quizId
+    } catch {}
+
+    // Delete associated quiz items first
+    const safe = String(quizId).replace(/'/g, "\\'")
+    const items = await base("Onboarding Quiz Items").select({
+      filterByFormula: `FIND('${safe}', ARRAYJOIN({Quiz ID}))`,
+      fields: []
+    }).all()
+
+    const deletedItemCount = items.length
+    if (items.length > 0) {
+      const chunkSize = 10
+      const itemIds = items.map((r) => r.id)
+      for (let i = 0; i < itemIds.length; i += chunkSize) {
+        await base("Onboarding Quiz Items").destroy(itemIds.slice(i, i + chunkSize))
+      }
+    }
+
+    // Delete the quiz record
+    await base("Onboarding Quizzes").destroy([quizId])
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'quizzes/[quizId]/route.js:beforeLogAudit',message:'about to call logAuditEvent Quiz Deleted Success',data:{quizId},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    await logAuditEvent({
+      eventType: "Quiz Deleted",
+      eventStatus: "Success",
+      userRole,
+      userName,
+      userIdentifier: userEmail,
+      detailedMessage: `Admin: ${userName}. Quiz deleted: "${quizTitle}" (${quizId}). ${deletedItemCount} associated item(s) also removed.`,
+      request,
+    })
+
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+  } catch (e) {
+    await logAuditEvent({
+      eventType: "Quiz Deleted",
+      eventStatus: "Error",
+      userRole: userRole || "Unknown",
+      userName: userName || "Unknown",
+      userIdentifier: userEmail || "Unknown",
+      detailedMessage: `Failed to delete quiz ${params?.quizId || "unknown"}: ${e?.message || "Unknown error"}`,
+      request,
+    })
+    return new Response(JSON.stringify({ error: "Failed to delete quiz" }), { status: 500, headers: { "Content-Type": "application/json" } })
+  }
+}

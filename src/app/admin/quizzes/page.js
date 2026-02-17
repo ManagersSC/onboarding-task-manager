@@ -10,7 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Popover, PopoverTrigger, PopoverContent } from "@components/ui/popover"
 import { CustomCalendar } from "@components/dashboard/subComponents/custom-calendar"
 import useSWR from "swr"
-import { Loader2, Eye, X, Filter, CheckCircle2, AlertCircle, Calendar as CalendarIcon } from "lucide-react"
+import { Loader2, Eye, X, Filter, CheckCircle2, AlertCircle, Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react"
 import { Badge } from "@components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@components/ui/dialog"
 import { ScrollArea } from "@components/ui/scroll-area"
@@ -134,6 +134,18 @@ function AdminQuizzesPageContent() {
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // Create quiz state
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createQuiz, setCreateQuiz] = useState({ title: "", pageTitle: "", passingScore: "", week: "" })
+  const [createItems, setCreateItems] = useState([])
+  const [createSaving, setCreateSaving] = useState(false)
+  const [createPreviewOpen, setCreatePreviewOpen] = useState(false)
+
+  // Delete quiz state
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   // Helpers to convert between fraction (0-1) and percent (0-100) displays
   const toPercentDisplay = (value) => {
     const n = Number(value)
@@ -241,6 +253,127 @@ function AdminQuizzesPageContent() {
     })
   }
 
+  // Add a new empty item to the edit modal
+  const addEditItem = () => {
+    const tempId = `_new_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    const maxOrder = editItems.reduce((max, it) => Math.max(max, Number(it.order) || 0), 0)
+    setEditItems(prev => [...prev, {
+      id: tempId,
+      _isNew: true,
+      type: "Question",
+      qType: "Radio",
+      content: "",
+      uiOptions: [""],
+      uiCorrectIndices: [],
+      order: maxOrder + 1,
+      points: 1,
+      _dirty: true
+    }])
+  }
+
+  const removeEditItem = (id) => {
+    setEditItems(prev => prev.filter(it => it.id !== id))
+  }
+
+  // Create quiz helpers
+  const openCreateModal = () => {
+    setCreateQuiz({ title: "", pageTitle: "", passingScore: "", week: "" })
+    setCreateItems([])
+    setCreateOpen(true)
+  }
+
+  const addCreateItem = () => {
+    const tempId = `_new_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    setCreateItems(prev => [...prev, {
+      _tempId: tempId,
+      type: "Question",
+      qType: "Radio",
+      content: "",
+      uiOptions: [""],
+      uiCorrectIndices: [],
+      order: prev.length + 1,
+      points: 1,
+    }])
+  }
+
+  const removeCreateItem = (tempId) => {
+    setCreateItems(prev => prev.filter(it => it._tempId !== tempId))
+  }
+
+  const updateCreateItem = (tempId, patch) => {
+    setCreateItems(prev => prev.map(it => it._tempId === tempId ? { ...it, ...patch } : it))
+  }
+
+  const isCreateItemValid = (it) => {
+    if (!it.content || !String(it.content).trim()) return false
+    const isInfo = String(it.type || "").toLowerCase() === "information"
+    if (!isInfo) {
+      const opts = (it.uiOptions || []).filter(o => String(o).trim())
+      if (opts.length === 0) return false
+      if (!it.uiCorrectIndices || it.uiCorrectIndices.length === 0) return false
+    }
+    return true
+  }
+
+  const isCreateFormValid = createQuiz.title.trim() && createQuiz.pageTitle.trim() && createQuiz.passingScore && createQuiz.week && createItems.length > 0 && createItems.every(isCreateItemValid)
+
+  const saveNewQuiz = async () => {
+    if (!isCreateFormValid) return false
+
+    const itemsPayload = createItems.map(it => {
+      const isInfo = String(it.type || "").toLowerCase() === "information"
+      const options = isInfo ? [] : (it.uiOptions || []).filter(o => String(o).trim())
+      const correctIndices = isInfo ? [] : (it.uiCorrectIndices || [])
+      const correct = isInfo ? "" : (
+        String(it.qType || "").toLowerCase() === "checkbox"
+          ? correctIndices.map(i => options[i]).filter(Boolean).join("<br>")
+          : (correctIndices.length > 0 ? options[correctIndices[0]] || "" : "")
+      )
+      return {
+        type: it.type || "Question",
+        qType: isInfo ? undefined : (it.qType || "Radio"),
+        content: it.content || "",
+        options: isInfo ? undefined : options,
+        correctAnswer: isInfo ? undefined : correct,
+        order: typeof it.order === "number" ? it.order : 1,
+        points: isInfo ? undefined : (typeof it.points === "number" ? it.points : 1)
+      }
+    })
+
+    const normalizedPassing = fromPercentInput(createQuiz.passingScore)
+
+    try {
+      const res = await fetch("/api/admin/quizzes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: createQuiz.title.trim(),
+          pageTitle: createQuiz.pageTitle.trim(),
+          passingScore: normalizedPassing,
+          week: Number(createQuiz.week),
+          items: itemsPayload
+        })
+      })
+      if (!res.ok) return false
+      await refreshQuizzes?.()
+      setCreateOpen(false)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const deleteQuiz = async (quizId) => {
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quizId}`, { method: "DELETE" })
+      if (!res.ok) return false
+      await refreshQuizzes?.()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const saveQuizEdits = async () => {
     if (!editQuiz) return false
     // validate before save
@@ -291,7 +424,7 @@ function AdminQuizzesPageContent() {
           body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: normalizedPassing })
         })
       }
-      // Save dirty items
+      // Save dirty items (update existing, create new)
       for (const it of editItems) {
         if (!it._dirty) continue
         const isInfo = String(it.type || "").toLowerCase() === "information"
@@ -303,21 +436,32 @@ function AdminQuizzesPageContent() {
           : (String(it.qType || "").toLowerCase() === "checkbox"
               ? (Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices.map((i) => options[i]).filter((s) => typeof s === "string") : [])
               : [Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? options[it.uiCorrectIndices[0]] : ""])
-        await fetch(`/api/admin/quizzes/items/${it.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: it.type,
-            qType: it.qType,
-            content: it.content,
-            options,
-            correctAnswer: String(it.qType || "").toLowerCase() === "checkbox"
-              ? correct.join("<br>")
-              : (correct[0] || ""),
-            order: it.order,
-            points: it.points
+        const payload = {
+          type: it.type,
+          qType: it.qType,
+          content: it.content,
+          options,
+          correctAnswer: String(it.qType || "").toLowerCase() === "checkbox"
+            ? correct.join("<br>")
+            : (correct[0] || ""),
+          order: it.order,
+          points: it.points
+        }
+        if (it._isNew) {
+          // Create new item via POST
+          await fetch(`/api/admin/quizzes/${editQuiz.id}/items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
           })
-        })
+        } else {
+          // Update existing item via PUT
+          await fetch(`/api/admin/quizzes/items/${it.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+        }
       }
       await refreshQuizzes?.()
       setEditOpen(false)
@@ -365,10 +509,18 @@ function AdminQuizzesPageContent() {
       }}>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Quizzes Admin</h1>
-          <TabsList>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-3">
+            {tab === "quizzes" && (
+              <Button onClick={openCreateModal} size="sm" className="h-8">
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Quiz
+              </Button>
+            )}
+            <TabsList>
+              <TabsTrigger value="submissions">Submissions</TabsTrigger>
+              <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
+            </TabsList>
+          </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -647,15 +799,33 @@ function AdminQuizzesPageContent() {
         <TabsContent value="quizzes" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {quizzes.map((q) => (
-              <div key={q.id} className="rounded-md border p-3">
+              <motion.div
+                key={q.id}
+                className="rounded-md border p-3 bg-background hover:shadow-sm transition"
+                whileHover={{ y: -2 }}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate">{q.title || "Untitled Quiz"}</div>
-                    <div className="text-xs text-muted-foreground">Passing Score: {formatPassingScoreLabel(q.passingScore)}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Passing Score: {formatPassingScoreLabel(q.passingScore)}
+                      {q.week != null && <span className="ml-2">· Week {q.week}</span>}
+                    </div>
                   </div>
-                  <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                      onClick={() => { setDeleteTarget(q); setDeleteConfirmOpen(true) }}
+                      title="Delete quiz"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </TabsContent>
@@ -830,7 +1000,7 @@ function AdminQuizzesPageContent() {
                   ) : (
                     <>
                       {editItems.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">No items found.</div>
+                        <div className="text-sm text-muted-foreground">No items found. Add one below.</div>
                       ) : (
                         editItems
                           .slice()
@@ -849,7 +1019,21 @@ function AdminQuizzesPageContent() {
                             const hasDup = v.hasDuplicateOrder
                             const hasErrs = v.errors.length > 0
                             return (
-                            <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-amber-500/30" : ""} ${hasDup || hasErrs ? "border-red-500/40" : ""}`}>
+                            <div key={it.id} className={`rounded-md border p-3 ${it._dirty ? "border-warning/30" : ""} ${hasDup || hasErrs ? "border-error/40" : ""}`}>
+                              {it._isNew && (
+                                <div className="flex items-center justify-between mb-2">
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">New item</Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                                    onClick={() => removeEditItem(it.id)}
+                                    title="Remove this item"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              )}
                               <div className="flex flex-col gap-3">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex flex-wrap items-start gap-3">
@@ -1027,6 +1211,19 @@ function AdminQuizzesPageContent() {
                             </div>)
                           })
                       )}
+                      {!itemsLoading && (
+                        <motion.div
+                          className="pt-3"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.1 }}
+                        >
+                          <Button size="sm" variant="outline" className="h-9 w-full border-dashed" onClick={addEditItem}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Item
+                          </Button>
+                        </motion.div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1105,6 +1302,364 @@ function AdminQuizzesPageContent() {
               }}
             >
               Auto-resequence
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Quiz Modal */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Create New Quiz</DialogTitle>
+            <DialogDescription>Set up a new quiz with questions and information items.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Quiz metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Quiz Title <span className="text-destructive">*</span></div>
+                <Input
+                  value={createQuiz.title}
+                  onChange={(e) => setCreateQuiz(q => ({ ...q, title: e.target.value }))}
+                  placeholder="e.g., Week 1 – Clinic Policies"
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Page Title <span className="text-destructive">*</span></div>
+                <Input
+                  value={createQuiz.pageTitle}
+                  onChange={(e) => setCreateQuiz(q => ({ ...q, pageTitle: e.target.value }))}
+                  placeholder="Displayed at the top of the quiz page"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Passing Score <span className="text-destructive">*</span></div>
+                <div className="relative">
+                  <Input
+                    value={String(createQuiz.passingScore ?? "")}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d.]/g, "")
+                      let next = raw
+                      const num = Number(raw)
+                      if (Number.isFinite(num)) {
+                        if (num > 100) next = "100"
+                        if (num < 0) next = "0"
+                      }
+                      setCreateQuiz(q => ({ ...q, passingScore: next }))
+                    }}
+                    placeholder="e.g., 70"
+                    className="h-9 pr-7"
+                    inputMode="decimal"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-muted-foreground text-sm">%</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Week <span className="text-destructive">*</span></div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[1, 2, 3, 4, 5].map((w) => (
+                    <Button
+                      key={w}
+                      size="sm"
+                      variant={String(createQuiz.week) === String(w) ? "default" : "outline"}
+                      className="h-8 w-10 p-0"
+                      onClick={() => setCreateQuiz(q => ({ ...q, week: q.week === String(w) ? "" : String(w) }))}
+                    >
+                      {w}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Items header */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">
+                Questions & Information
+                {createItems.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">({createItems.length} item{createItems.length !== 1 ? "s" : ""})</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {createItems.length > 0 && (
+                  <Button size="sm" variant="secondary" className="h-8" onClick={() => setCreatePreviewOpen(true)}>Preview</Button>
+                )}
+                <Button
+                  size="sm"
+                  className="h-8"
+                  disabled={!isCreateFormValid || createSaving}
+                  onClick={async () => {
+                    setCreateSaving(true)
+                    const ok = await saveNewQuiz()
+                    setCreateSaving(false)
+                    if (ok) {
+                      toast.success("Quiz created successfully")
+                    } else {
+                      toast.error("Failed to create quiz. Please check the fields and try again.")
+                    }
+                  }}
+                >
+                  {createSaving ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating…</>) : "Create Quiz"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Items list */}
+            <ScrollArea className="h-[45vh]">
+              <div className="space-y-3 pr-2">
+                <AnimatePresence initial={false}>
+                  {createItems.length === 0 ? (
+                    <motion.div
+                      className="flex flex-col items-center justify-center py-12 text-center"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <div className="text-sm text-muted-foreground mb-2">No items yet</div>
+                      <div className="text-xs text-muted-foreground mb-4">Add questions or information blocks to your quiz.</div>
+                      <Button size="sm" variant="secondary" onClick={addCreateItem}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Item
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    createItems
+                      .slice()
+                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                      .map((it, idx) => {
+                        const isInfo = String(it.type || "").toLowerCase() === "information"
+                        return (
+                          <motion.div
+                            key={it._tempId}
+                            className="rounded-md border p-3"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-xs font-medium text-muted-foreground">Item {idx + 1}</div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeCreateItem(it._tempId)}
+                                title="Remove item"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex flex-wrap items-start gap-3">
+                                  <div>
+                                    <div className="text-[11px] text-muted-foreground mb-1">Type</div>
+                                    <Select value={it.type || "Question"} onValueChange={(v) => updateCreateItem(it._tempId, { type: v })}>
+                                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Question">Question</SelectItem>
+                                        <SelectItem value="Information">Information</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {!isInfo && (
+                                    <div>
+                                      <div className="text-[11px] text-muted-foreground mb-1">Question Type</div>
+                                      <Select value={it.qType || "Radio"} onValueChange={(v) => updateCreateItem(it._tempId, { qType: v })}>
+                                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Radio">Radio</SelectItem>
+                                          <SelectItem value="Checkbox">Checkbox</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="w-44 shrink-0">
+                                  <div>
+                                    <div className="text-[11px] text-muted-foreground mb-1">Order</div>
+                                    <Input
+                                      value={String(it.order ?? "")}
+                                      onChange={(e) => updateCreateItem(it._tempId, { order: Number(e.target.value) || 0 })}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  {!isInfo && (
+                                    <div className="mt-2">
+                                      <div className="text-[11px] text-muted-foreground mb-1">Points</div>
+                                      <Input
+                                        value={String(it.points ?? "")}
+                                        onChange={(e) => updateCreateItem(it._tempId, { points: Number(e.target.value) || 0 })}
+                                        className="h-8"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[11px] text-muted-foreground mb-1">Content</div>
+                                <RichTextEditor
+                                  value={it.content || ""}
+                                  onChange={(html) => {
+                                    if (String(it.content || "") === String(html || "")) return
+                                    updateCreateItem(it._tempId, { content: html })
+                                  }}
+                                />
+                              </div>
+                              {!isInfo && (
+                                <>
+                                  <div>
+                                    <div className="text-[11px] text-muted-foreground mb-1">Options</div>
+                                    <div className="space-y-2">
+                                      {Array.isArray(it.uiOptions) && it.uiOptions.length > 0 ? it.uiOptions.map((opt, oi) => (
+                                        <div key={oi} className="flex items-center gap-2">
+                                          <Input
+                                            value={opt}
+                                            onChange={(e) => {
+                                              const next = [...(it.uiOptions || [])]
+                                              next[oi] = e.target.value
+                                              updateCreateItem(it._tempId, { uiOptions: next })
+                                            }}
+                                            className="h-8 flex-1"
+                                            placeholder={`Option ${oi + 1}`}
+                                          />
+                                          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                            const arr = (it.uiOptions || []).filter((_, k) => k !== oi)
+                                            const oldSel = Array.isArray(it.uiCorrectIndices) ? it.uiCorrectIndices : []
+                                            const newSel = oldSel.filter((v) => v !== oi).map((v) => (v > oi ? v - 1 : v))
+                                            updateCreateItem(it._tempId, { uiOptions: arr, uiCorrectIndices: newSel })
+                                          }} title="Remove option">
+                                            <X className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )) : <div className="text-xs text-muted-foreground">No options. Add some below.</div>}
+                                      <Button size="sm" variant="secondary" className="h-8" onClick={() => {
+                                        const next = [...(it.uiOptions || []), ""]
+                                        updateCreateItem(it._tempId, { uiOptions: next })
+                                      }}>+ Add option</Button>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[11px] text-muted-foreground mb-1">Correct Answer</div>
+                                    {String(it.qType || "").toLowerCase() === "checkbox" ? (
+                                      <div className="space-y-2">
+                                        {(it.uiOptions || []).map((opt, oi) => {
+                                          const cbId = `create-cb-${idx}-${oi}`
+                                          const checked = Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.includes(oi)
+                                          return (
+                                            <div key={cbId} className="flex items-center gap-2 text-sm">
+                                              <Checkbox
+                                                id={cbId}
+                                                checked={!!checked}
+                                                onCheckedChange={(c) => {
+                                                  const cur = Array.isArray(it.uiCorrectIndices) ? [...it.uiCorrectIndices] : []
+                                                  if (c && !cur.includes(oi)) cur.push(oi)
+                                                  if (!c && cur.includes(oi)) cur.splice(cur.indexOf(oi), 1)
+                                                  cur.sort((a, b) => a - b)
+                                                  updateCreateItem(it._tempId, { uiCorrectIndices: cur })
+                                                }}
+                                              />
+                                              <Label htmlFor={cbId} className="cursor-pointer">{opt || `Option ${oi + 1}`}</Label>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <RadioGroup
+                                        value={Array.isArray(it.uiCorrectIndices) && it.uiCorrectIndices.length > 0 ? String(it.uiCorrectIndices[0]) : ""}
+                                        onValueChange={(v) => {
+                                          updateCreateItem(it._tempId, { uiCorrectIndices: [Number(v)] })
+                                        }}
+                                      >
+                                        {(it.uiOptions || []).map((opt, oi) => {
+                                          const raId = `create-ra-${idx}-${oi}`
+                                          return (
+                                            <div key={raId} className="flex items-center gap-2 text-sm">
+                                              <RadioGroupItem value={String(oi)} id={raId} />
+                                              <Label htmlFor={raId} className="cursor-pointer">{opt || `Option ${oi + 1}`}</Label>
+                                            </div>
+                                          )
+                                        })}
+                                      </RadioGroup>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </motion.div>
+                        )
+                      })
+                  )}
+                </AnimatePresence>
+
+                {createItems.length > 0 && (
+                  <motion.div
+                    className="pt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <Button size="sm" variant="outline" className="h-9 w-full border-dashed" onClick={addCreateItem}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </motion.div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Quiz Preview Modal */}
+      <Dialog open={createPreviewOpen} onOpenChange={setCreatePreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{createQuiz.pageTitle || createQuiz.title || "Quiz Preview"}</DialogTitle>
+            <DialogDescription>This is how the quiz will look to users.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            <div className="pr-2">
+              <PreviewRenderer items={(createItems || []).map((it) => ({ ...it, options: it.uiOptions }))} />
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Quiz Confirmation Modal */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => { if (!deleting) { setDeleteConfirmOpen(open); if (!open) setDeleteTarget(null) } }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete quiz</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.title || "this quiz"}</span>? This will also remove all associated questions and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setDeleteConfirmOpen(false); setDeleteTarget(null) }} disabled={deleting}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deleteTarget) return
+                setDeleting(true)
+                const ok = await deleteQuiz(deleteTarget.id)
+                setDeleting(false)
+                if (ok) {
+                  setDeleteConfirmOpen(false)
+                  setDeleteTarget(null)
+                  toast.success("Quiz deleted successfully")
+                } else {
+                  toast.error("Failed to delete quiz")
+                }
+              }}
+            >
+              {deleting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting…</>) : "Delete"}
             </Button>
           </div>
         </DialogContent>
