@@ -7,6 +7,10 @@ export async function POST(request) {
   let userEmail, userRole, userName
 
   try {
+    if (process.env.NODE_ENV === "production") {
+      return new Response(JSON.stringify({ error: "Not available in production" }), { status: 404 })
+    }
+
     // Authentication check
     const sessionCookie = (await cookies()).get("session")?.value
     if (!sessionCookie) {

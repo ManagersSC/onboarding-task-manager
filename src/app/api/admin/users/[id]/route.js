@@ -690,14 +690,16 @@ export async function GET(request, { params }) {
         recordId: id,
         totalDocuments: allDocuments.length,
         documentCategories: Object.keys(applicant.documentsByCategory || {}),
-        debug: {
-          availableFields,
-          cvFieldType: typeof cvField,
-          cvFieldValue: cvField,
-          portfolioFieldType: typeof portfolioField,
-          portfolioFieldValue: portfolioField,
-          documentRecordsCount: documentRecords.length
-        }
+        ...(process.env.NODE_ENV === "development" ? {
+          debug: {
+            availableFields,
+            cvFieldType: typeof cvField,
+            cvFieldValue: cvField,
+            portfolioFieldType: typeof portfolioField,
+            portfolioFieldValue: portfolioField,
+            documentRecordsCount: documentRecords.length
+          }
+        } : {})
       }
     }), {
       status: 200,

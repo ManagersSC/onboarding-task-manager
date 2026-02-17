@@ -18,7 +18,8 @@ const validateStartDate = (dateString) => {
   return startDate.toISOString().split('T')[0] // Return YYYY-MM-DD format
 }
 
-export async function POST(request, { params }) {
+export async function POST(request, props) {
+  const { id: applicantId } = await props.params
   let userEmail, userRole, userName
 
   try {
@@ -88,7 +89,6 @@ export async function POST(request, { params }) {
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
     // 6. Get applicant record
-    const applicantId = params.id
     let applicantRecord
     try {
       applicantRecord = await base("Applicants").find(applicantId)
