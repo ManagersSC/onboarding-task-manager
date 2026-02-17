@@ -85,7 +85,7 @@ export function FileViewerModal({ file, open, onOpenChange }) {
     if (error) {
       return (
         <div className="flex flex-col items-center justify-center h-[400px]">
-          <AlertCircle className="h-8 w-8 text-destructive mb-4" />
+          <AlertCircle className="h-8 w-8 text-error mb-4" />
           <p className="text-muted-foreground mb-2">Failed to load file preview</p>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>

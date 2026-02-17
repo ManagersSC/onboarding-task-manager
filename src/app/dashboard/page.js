@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 // Assuming these paths are correct in your project. Adjust if necessary.
 import { TaskCard } from "@components/TaskCard"
 import FolderCard from "@components/FolderCard"
+import { UserFileViewerModal } from "@components/dashboard/UserFileViewerModal"
 import { ProfileActions } from "@components/ProfileActions"
 import UserDashboardTourClient from "@components/onboarding/UserDashboardTourClient"
 import { useTour } from "@components/onboarding/TourProvider"
@@ -36,6 +37,7 @@ import { Label } from "@components/ui/label"
 import { toast } from "sonner"
 import { AnimatePresence, motion } from "framer-motion"
 import { staggerContainer, fadeInUp } from "@components/lib/utils"
+import { AnimatedCounter, ProgressRing } from "@components/ui/animated-counter"
 
 function getFolderStatus(subtasks) {
   const hasOverdue = subtasks.some((t) => t.overdue)
@@ -57,7 +59,7 @@ function toSearchableString(value) {
   }
 }
 
-const TaskList = ({ tasks, onComplete, disableActions }) => {
+const TaskList = ({ tasks, onComplete, onOpenFiles, disableActions }) => {
   return (
     <div className="divide-y divide-border">
       <AnimatePresence>
@@ -70,11 +72,102 @@ const TaskList = ({ tasks, onComplete, disableActions }) => {
             transition={{ duration: 0.2, delay: i * 0.04 }}
             layout
           >
-            <TaskCard task={task} onComplete={onComplete} disableActions={disableActions} />
+            <TaskCard task={task} onComplete={onComplete} onOpenFiles={onOpenFiles} disableActions={disableActions} />
           </motion.div>
         ))}
       </AnimatePresence>
     </div>
+  )
+}
+
+// HelpControls component - defined outside DashboardPage to prevent recreation on every render
+function HelpControls() {
+  const { start } = useTour();
+  const [autoShow, setAutoShow] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" });
+        const d = res.ok ? await res.json() : {};
+        // introTooltip true => tour already completed => do NOT auto show
+        if (!cancelled) setAutoShow(!Boolean(d?.introTooltip));
+      } catch {}
+    })();
+    return () => { cancelled = true };
+  }, []);
+
+  const onToggle = async (checked) => {
+    setAutoShow(checked);
+    try {
+      // store inverse: autoShow=true means not completed
+      await fetch("/api/user/intro-tooltip", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ introTooltip: !checked })
+      });
+    } catch {}
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Help" data-tour="user.help">
+          <CircleHelp className="h-5 w-5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Show tips automatically</div>
+            <Checkbox checked={autoShow} onCheckedChange={onToggle} aria-label="Show tips automatically" />
+          </div>
+          <Button size="sm" className="w-full" onClick={() => start()}>Start tour</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Pulse animation wrapper for metric cards — triggers a scale pulse + ring glow on value change
+function MetricPulse({ value, enabled = true, ringClass = "ring-primary/30", children }) {
+  const prevValue = useRef(null)
+  const [animating, setAnimating] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) return
+    if (prevValue.current === null) {
+      // First value after data loads — store but don't pulse
+      prevValue.current = value
+      return
+    }
+    if (prevValue.current !== value) {
+      setAnimating(true)
+      prevValue.current = value
+    }
+  }, [value, enabled])
+
+  return (
+    <motion.div
+      animate={animating ? { scale: [1, 1.035, 1] } : { scale: 1 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      onAnimationComplete={() => setAnimating(false)}
+      className="relative"
+    >
+      {children}
+      <AnimatePresence>
+        {animating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className={`absolute inset-0 rounded-xl ring-2 ${ringClass} pointer-events-none`}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
 
@@ -87,6 +180,17 @@ export default function DashboardPage() {
   const [section, setSection] = useState("active") // active | completed
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [globalPaused, setGlobalPaused] = useState({ isPaused: false, pausedUntil: null })
+
+  // File viewer modal state
+  const [fileViewerOpen, setFileViewerOpen] = useState(false)
+  const [fileViewerTaskId, setFileViewerTaskId] = useState(null)
+  const [fileViewerTaskTitle, setFileViewerTaskTitle] = useState(null)
+
+  const handleOpenFiles = useCallback((taskId, taskTitle) => {
+    setFileViewerTaskId(taskId)
+    setFileViewerTaskTitle(taskTitle)
+    setFileViewerOpen(true)
+  }, [])
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -153,12 +257,14 @@ export default function DashboardPage() {
 
         // Process quiz data from API endpoint (primary source)
         const apiQuizTasks = quizzesData.map((quiz) => {
+          // Completed takes precedence — if quiz was submitted, it's not overdue
+          const isCompleted = Boolean(quiz.completed)
           return {
             id: `quiz-${quiz.quizId || quiz.logId}`,
             title: toSearchableString(quiz.title),
             description: toSearchableString(quiz.description),
-            completed: quiz.completed,
-            overdue: quiz.overdue || false,
+            completed: isCompleted,
+            overdue: isCompleted ? false : (quiz.overdue || false),
             resourceUrl: quiz.resourceUrl,
             lastStatusChange: quiz.lastStatusChange,
             completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
@@ -202,11 +308,13 @@ export default function DashboardPage() {
               null,
             week: task.week,
             folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
-            isQuiz: false
+            isQuiz: false,
+            attachmentCount: task.attachmentCount || 0,
+            hasDocuments: task.hasDocuments || false,
           }))
-  
+
         console.log("Regular tasks after quiz filtering:", regularTasks.length)
-  
+
         // Combine all tasks
         const allTasks = [...regularTasks, ...apiQuizTasks];
 
@@ -255,25 +363,28 @@ export default function DashboardPage() {
 
       const quizLogIds = new Set(quizzesData.map((q) => q.logId))
 
-      const apiQuizTasks = quizzesData.map((quiz) => ({
-        id: `quiz-${quiz.quizId || quiz.logId}`,
-        title: quiz.title,
-        description: quiz.description,
-        completed: quiz.completed,
-        overdue: quiz.overdue || false,
-        resourceUrl: quiz.resourceUrl,
-        lastStatusChange: quiz.lastStatusChange,
-        completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
-        week: quiz.week,
-        folder: null,
-        isQuiz: true,
-        quizId: quiz.quizId,
-        score: quiz.score,
-        passed: quiz.passed,
-        originalLogId: quiz.logId,
-        status: quiz.status,
-        type: "Quiz",
-      }))
+      const apiQuizTasks = quizzesData.map((quiz) => {
+        const isCompleted = Boolean(quiz.completed)
+        return {
+          id: `quiz-${quiz.quizId || quiz.logId}`,
+          title: quiz.title,
+          description: quiz.description,
+          completed: isCompleted,
+          overdue: isCompleted ? false : (quiz.overdue || false),
+          resourceUrl: quiz.resourceUrl,
+          lastStatusChange: quiz.lastStatusChange,
+          completedTime: quiz.completedTime || quiz.completed_time || quiz.lastStatusChange || null,
+          week: quiz.week,
+          folder: null,
+          isQuiz: true,
+          quizId: quiz.quizId,
+          score: quiz.score,
+          passed: quiz.passed,
+          originalLogId: quiz.logId,
+          status: quiz.status,
+          type: "Quiz",
+        }
+      })
 
       const regularTasks = tasksFromBackend
         .filter((task) => !quizLogIds.has(task.id))
@@ -303,6 +414,8 @@ export default function DashboardPage() {
           week: task.week,
           folder: Array.isArray(task.folder) ? task.folder[0] : task.folder,
           isQuiz: false,
+          attachmentCount: task.attachmentCount || 0,
+          hasDocuments: task.hasDocuments || false,
         }))
 
       const allTasks = [...regularTasks, ...apiQuizTasks]
@@ -482,8 +595,11 @@ export default function DashboardPage() {
 
   const totalTasks = tasks.length
   const completedTasksCount = tasks.filter((task) => task.completed).length
-  const overdueTasksCount = tasks.filter((task) => task.overdue && !task.isQuiz).length
+  // Overdue Tasks = tasks in the "Overdue" stage (includes all task types)
+  const overdueTasksCount = tasks.filter((task) => task.overdue).length
+  // Pending Tasks = tasks in the "Assigned" stage (not completed and not overdue)
   const assignedTasksCount = tasks.filter((task) => !task.completed && !task.overdue).length
+  // Completion Rate = (completed tasks / total tasks assigned) * 100
   const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0
 
   const availableWeeks = useMemo(
@@ -533,63 +649,14 @@ export default function DashboardPage() {
     }))
   }
 
-  function HelpControls() {
-    const { start } = useTour();
-    const [autoShow, setAutoShow] = useState(true);
-
-    useEffect(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const res = await fetch("/api/user/intro-tooltip", { cache: "no-store" });
-          const d = res.ok ? await res.json() : {};
-          // introTooltip true => tour already completed => do NOT auto show
-          if (!cancelled) setAutoShow(!Boolean(d?.introTooltip));
-        } catch {}
-      })();
-      return () => { cancelled = true };
-    }, []);
-
-    const onToggle = async (checked) => {
-      setAutoShow(checked);
-      try {
-        // store inverse: autoShow=true means not completed
-        await fetch("/api/user/intro-tooltip", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ introTooltip: !checked })
-        });
-      } catch {}
-    };
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Help" data-tour="user.help">
-            <CircleHelp className="h-5 w-5" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-64">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Show tips automatically</div>
-              <Checkbox checked={autoShow} onCheckedChange={onToggle} aria-label="Show tips automatically" />
-            </div>
-            <Button size="sm" className="w-full" onClick={() => start()}>Start tour</Button>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  }
-
   return (
     <UserDashboardTourClient>
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
         {/* ... rest of your JSX remains the same ... */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex justify-between items-center animate-fade-in-up">
           <div data-tour="user.header">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Task Dashboard</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">Task Dashboard</h1>
             <p className="text-muted-foreground">Manage and track your onboarding tasks</p>
           </div>
           <div className="flex items-center gap-2">
@@ -598,55 +665,60 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-tour="user.metrics">
-          <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-foreground">{completionRate}%</span>
-                  <span className="text-sm text-muted-foreground ml-2">of tasks</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8" data-tour="user.metrics">
+          <MetricPulse value={completionRate} enabled={!loading} ringClass="ring-success/30">
+            <Card className="border-border/60 bg-gradient-to-br from-success/5 to-transparent animate-fade-in-up">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={completionRate} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-2xl font-bold text-foreground">%</span>
+                    <span className="text-sm text-muted-foreground ml-1">of tasks</span>
+                  </div>
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-foreground">{assignedTasksCount}</span>
-                  <span className="text-sm text-muted-foreground ml-2">assigned</span>
+                <ProgressRing value={completionRate} size={48} strokeWidth={4} />
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={assignedTasksCount} enabled={!loading} ringClass="ring-info/30">
+            <Card className="border-border/60 bg-gradient-to-br from-info/5 to-transparent animate-fade-in-up stagger-2">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Pending Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={assignedTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">assigned</span>
+                  </div>
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-foreground">{overdueTasksCount}</span>
-                  <span className="text-sm text-muted-foreground ml-2">need attention</span>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-info/15 to-info/5 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-info" />
                 </div>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-destructive" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </MetricPulse>
+          <MetricPulse value={overdueTasksCount} enabled={!loading} ringClass="ring-error/30">
+            <Card className="border-border/60 bg-gradient-to-br from-error/5 to-transparent animate-fade-in-up stagger-3">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Tasks</p>
+                  <div className="flex items-baseline gap-1">
+                    <AnimatedCounter value={overdueTasksCount} duration={0.6} className="text-2xl font-bold text-foreground" />
+                    <span className="text-sm text-muted-foreground ml-1">need attention</span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-error/15 to-error/5 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-error" />
+                </div>
+              </CardContent>
+            </Card>
+          </MetricPulse>
         </div>
 
         <div className="mb-6 flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="relative w-full md:w-80" data-tour="user.search">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="group relative w-full md:w-80 focus-within:md:w-96 transition-all duration-base" data-tour="user.search">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-base" />
               <Input
                 placeholder="Search tasks..."
                 className="pl-10"
@@ -662,22 +734,22 @@ export default function DashboardPage() {
                   onValueChange={(value) => setFilters({ ...filters, status: value })}
                   className="w-full md:w-auto"
                 >
-                  <TabsList className="grid grid-cols-3 w-full md:w-auto">
-                    <TabsTrigger value="all" className="text-xs md:text-sm">
+                  <TabsList className="grid grid-cols-3 w-full md:w-auto rounded-xl gap-1 bg-muted/50 p-1">
+                    <TabsTrigger value="all" className="text-xs md:text-sm rounded-lg transition-all duration-base">
                       All{" "}
-                      <Badge variant="secondary" className="ml-1 bg-muted">
+                      <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1.5">
                         {statusCounts.all}
                       </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="assigned" className="text-xs md:text-sm">
+                    <TabsTrigger value="assigned" className="text-xs md:text-sm rounded-lg transition-all duration-base">
                       Assigned{" "}
-                      <Badge variant="secondary" className="ml-1 bg-muted">
+                      <Badge variant="info" className="ml-1 text-[10px] h-5 px-1.5">
                         {statusCounts.assigned}
                       </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="overdue" className="text-xs md:text-sm">
+                    <TabsTrigger value="overdue" className="text-xs md:text-sm rounded-lg transition-all duration-base">
                       Overdue{" "}
-                      <Badge variant="secondary" className="ml-1 bg-muted">
+                      <Badge variant="error" className="ml-1 text-[10px] h-5 px-1.5">
                         {statusCounts.overdue}
                       </Badge>
                     </TabsTrigger>
@@ -782,6 +854,7 @@ export default function DashboardPage() {
                   disabled={isRefreshing || loading}
                   aria-label="Refresh"
                   title="Refresh"
+                  className="rounded-lg"
                 >
                   {isRefreshing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -789,44 +862,44 @@ export default function DashboardPage() {
                     <RefreshCw className="h-4 w-4" />
                   )}
                 </Button>
-                <Button
-                  variant={section === "active" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => switchSection("active")}
-                  className="h-9"
-                  data-tour="user.sectionToggle"
-                >
-                  Active
-                </Button>
-                <Button
-                  variant={section === "completed" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => switchSection("completed")}
-                  className="h-9"
-                  data-tour="user.sectionToggle"
-                >
-                  Completed
-                </Button>
-                <span data-tour="user.viewToggle" className="inline-flex gap-2">
+                <div className="flex rounded-lg bg-muted/50 p-0.5" data-tour="user.sectionToggle">
                   <Button
-                    variant={activeView === "kanban" ? "default" : "outline"}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => switchSection("active")}
+                    className={`h-8 rounded-md text-xs transition-all duration-base ${section === "active" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Active
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => switchSection("completed")}
+                    className={`h-8 rounded-md text-xs transition-all duration-base ${section === "completed" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Completed
+                  </Button>
+                </div>
+                <div className="flex rounded-lg bg-muted/50 p-0.5" data-tour="user.viewToggle">
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setActiveView("kanban")}
-                    className="h-9"
+                    className={`h-8 rounded-md text-xs transition-all duration-base ${activeView === "kanban" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
                   >
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    <LayoutDashboard className="h-4 w-4 mr-1.5" />
                     Kanban
                   </Button>
                   <Button
-                    variant={activeView === "list" ? "default" : "outline"}
+                    variant="ghost"
                     size="sm"
                     onClick={() => setActiveView("list")}
-                    className="h-9"
+                    className={`h-8 rounded-md text-xs transition-all duration-base ${activeView === "list" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
                   >
-                    <ListFilter className="h-4 w-4 mr-2" />
+                    <ListFilter className="h-4 w-4 mr-1.5" />
                     List
                   </Button>
-                </span>
+                </div>
               </div>
             </div>
           </div>
@@ -931,7 +1004,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className={filters.status === "assigned" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"}
+                      className={filters.status === "assigned" ? "bg-info-muted text-info border-info/20" : "bg-error-muted text-error border-error/20"}
                     >
                       {filters.status === "assigned" ? <Clock className="h-4 w-4 mr-1.5" /> : <AlertCircle className="h-4 w-4 mr-1.5" />}
                       {filters.status === "assigned" ? "Assigned" : "Overdue"}
@@ -946,7 +1019,7 @@ export default function DashboardPage() {
                     {filters.status === "assigned" ? (
                       <>
                         {assignedQuizTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                           <FolderCard
@@ -954,12 +1027,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {assignedTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(assignedTasks.length === 0 && foldersByStatus.assigned.length === 0 && assignedQuizTasks.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -975,12 +1049,13 @@ export default function DashboardPage() {
                             folderName={folderName}
                             tasks={tasksInFolder}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             status={status}
                             disableActions={globalPaused.isPaused}
                           />
                         ))}
                         {overdueTasks.map((task) => (
-                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                          <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                         ))}
                         {(overdueTasks.length === 0 && foldersByStatus.overdue.length === 0) && (
                           <div className="rounded-lg border border-dashed p-8 text-center col-span-full">
@@ -999,7 +1074,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                        className="bg-info-muted text-info border-info/20"
                       >
                         <Clock className="h-4 w-4 mr-1.5" />
                         Assigned
@@ -1010,7 +1085,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="space-y-4">
                       {assignedQuizTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {foldersByStatus.assigned.map(({ folderName, tasks: tasksInFolder, status }) => (
                         <FolderCard
@@ -1018,12 +1093,13 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
                       ))}
                       {assignedTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "assigned" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {assignedTasks.length === 0 &&
                         foldersByStatus.assigned.length === 0 &&
@@ -1040,7 +1116,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+                        className="bg-error-muted text-error border-error/20"
                       >
                         <AlertCircle className="h-4 w-4 mr-1.5" />
                         Overdue
@@ -1056,12 +1132,13 @@ export default function DashboardPage() {
                           folderName={folderName}
                           tasks={tasksInFolder}
                           onComplete={handleComplete}
+                          onOpenFiles={handleOpenFiles}
                           status={status}
                           disableActions={globalPaused.isPaused}
                         />
                       ))}
                       {overdueTasks.map((task) => (
-                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+                        <TaskCard key={task.id} task={{ ...task, status: "overdue" }} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
                       ))}
                       {overdueTasks.length === 0 && foldersByStatus.overdue.length === 0 && (
                         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -1073,14 +1150,14 @@ export default function DashboardPage() {
                 </div>
               )
             ) : section === "active" && activeView === "list" ? (
-              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} disableActions={globalPaused.isPaused} />
+              <TaskList tasks={[...filteredQuizTasks.filter(t=>!t.completed), ...filteredNormalTasks.filter(t=>!t.completed && !t.overdue), ...filteredNormalTasks.filter(t=>t.overdue)]} onComplete={handleComplete} onOpenFiles={handleOpenFiles} disableActions={globalPaused.isPaused} />
             ) : (
               // Completed Section - masonry layout sorted by completedTime
               <>
                 <div className="flex items-center gap-2 mb-4">
                   <Badge
                     variant="outline"
-                    className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+                    className="bg-success-muted text-success border-success/20"
                   >
                     <CheckCircle className="h-4 w-4 mr-1.5" />
                     Completed
@@ -1102,6 +1179,7 @@ export default function DashboardPage() {
                           <TaskCard
                             task={{ ...t, status: "completed" }}
                             onComplete={handleComplete}
+                            onOpenFiles={handleOpenFiles}
                             disableActions={globalPaused.isPaused}
                             compact={!t.description}
                           />
@@ -1121,6 +1199,14 @@ export default function DashboardPage() {
           </AnimatePresence>
         )}
       </main>
+
+      {/* File Viewer Modal */}
+      <UserFileViewerModal
+        isOpen={fileViewerOpen}
+        onClose={() => setFileViewerOpen(false)}
+        taskId={fileViewerTaskId}
+        taskTitle={fileViewerTaskTitle}
+      />
     </div>
     </UserDashboardTourClient>
   )

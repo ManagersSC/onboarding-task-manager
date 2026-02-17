@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   CheckCircle2,
@@ -22,6 +23,8 @@ import {
   Search,
   TrendingUp,
   Users,
+  ExternalLink,
+  FileText,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -46,22 +49,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 import { Checkbox } from "@components/ui/checkbox"
 
-// Enhanced priority colors with very high priority
+// Enhanced priority colors with very high priority - using semantic tokens
 const priorityColors = {
-  "very high": "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-white",
-  low: "bg-green-500 text-white",
-  "very low": "bg-blue-500 text-white",
+  "very high": "bg-error text-error-foreground",
+  high: "bg-warning text-warning-foreground",
+  medium: "bg-warning/80 text-warning-foreground",
+  low: "bg-success text-success-foreground",
+  "very low": "bg-info text-info-foreground",
 }
 
-// Status colors
+// Status colors - using semantic tokens
 const statusColors = {
-  "in-progress": "bg-emerald-500 text-white",
-  completed: "bg-blue-500 text-white",
-  flagged: "bg-amber-500 text-white",
-  overdue: "bg-red-500 text-white",
-  today: "bg-emerald-500 text-white",
+  "in-progress": "bg-info text-info-foreground",
+  completed: "bg-success text-success-foreground",
+  flagged: "bg-warning text-warning-foreground",
+  overdue: "bg-error text-error-foreground",
+  today: "bg-info text-info-foreground",
 }
 
 // Priority order
@@ -509,7 +512,25 @@ function isAppraisalActionPlanTask(task) {
     if (!initialTasks) {
       fetchTasks()
     }
-  }, []) 
+  }, [])
+
+  // Lock background scroll when hire completions modal is open
+  useEffect(() => {
+    if (showGroupsModal) {
+      const scrollY = window.scrollY
+      document.body.style.overflow = "hidden"
+      document.body.style.position = "fixed"
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = "100%"
+      return () => {
+        document.body.style.overflow = ""
+        document.body.style.position = ""
+        document.body.style.top = ""
+        document.body.style.width = ""
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [showGroupsModal])
 
   const openMonthlyReviewsModal = async (task) => {
     try {
@@ -940,6 +961,12 @@ function isAppraisalActionPlanTask(task) {
   const TaskItem = ({ task, index, tabId }) => {
     const PriorityIcon = priorityIcons[task.priority.toLowerCase().trim()] || Clock
     const normalizedStatusValue = normalizeStatus(task.status)
+    const priorityKey = task.priority.toLowerCase().trim()
+    const priorityBorderColor = priorityKey === "very high" || priorityKey === "high"
+      ? "border-l-error"
+      : priorityKey === "medium"
+        ? "border-l-warning"
+        : "border-l-info"
 
     return (
       <motion.div
@@ -950,7 +977,7 @@ function isAppraisalActionPlanTask(task) {
         className="group relative"
       >
         <div
-          className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 hover:border-border transition-all duration-200 cursor-pointer"
+          className={`flex items-center gap-3 py-3 border-b border-border/20 last:border-0 border-l-[3px] ${priorityBorderColor} pl-3 hover:bg-muted/30 transition-all duration-200 cursor-pointer`}
           onClick={(e) => {
             if (isMonthlyReviewsTask(task) && !isGlobalTask(task)) {
               e.stopPropagation()
@@ -976,13 +1003,13 @@ function isAppraisalActionPlanTask(task) {
             <PriorityIcon
               className={`h-4 w-4 flex-shrink-0 ${
                 task.priority.toLowerCase().trim() === "very high"
-                  ? "text-red-500"
+                  ? "text-error"
                   : task.priority.toLowerCase().trim() === "high"
-                    ? "text-orange-500"
+                    ? "text-warning"
                     : task.priority.toLowerCase().trim() === "medium"
-                      ? "text-yellow-500"
+                      ? "text-warning"
                       : task.priority.toLowerCase().trim() === "low"
-                        ? "text-green-500"
+                        ? "text-success"
                         : "text-blue-500"
               }`}
             />
@@ -991,16 +1018,16 @@ function isAppraisalActionPlanTask(task) {
           {/* Task Content - Allow it to grow and shrink */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium text-sm text-foreground truncate flex-1">{task.title}</h4>
+              <h4 className="text-body-sm font-medium text-foreground truncate flex-1">{task.title}</h4>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-caption text-muted-foreground">
               <div className="flex items-center gap-2 min-w-0">
                 <Badge
                   variant="secondary"
                   className={`text-[10px] px-2 py-0.5 font-medium border-0 ${
                     isGlobalTask(task)
                       ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                      : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                      : "bg-success-muted text-success"
                   }`}
                 >
                   {isGlobalTask(task) ? "Unclaimed" : "Claimed"}
@@ -1021,14 +1048,14 @@ function isAppraisalActionPlanTask(task) {
               <Separator orientation="vertical" className="h-3 flex-shrink-0" />
               <div className="flex items-center gap-1 flex-shrink-0">
                 <Clock className="h-3 w-3" />
-                <span className={tabId === "overdue" ? "text-red-500 font-medium" : task.rawDueDate ? "" : "text-muted-foreground italic"}>
+                <span className={tabId === "overdue" ? "text-error font-medium" : task.rawDueDate ? "" : "text-muted-foreground italic"}>
                   {formatDueDate(task.rawDueDate)}
                 </span>
               </div>
               {task.flaggedReason && (
                 <>
                   <Separator orientation="vertical" className="h-3 flex-shrink-0" />
-                  <div className="flex items-center gap-1 text-amber-600 min-w-0">
+                  <div className="flex items-center gap-1 text-warning min-w-0">
                     <AlertCircle className="h-3 w-3 flex-shrink-0" />
                     <span className="truncate">{task.flaggedReason}</span>
                   </div>
@@ -1040,16 +1067,16 @@ function isAppraisalActionPlanTask(task) {
           {/* Compact Status Pill */}
           <div className="ml-auto flex items-center flex-shrink-0">
             <Badge
-              className={`text-[10px] px-2 py-0.5 font-medium border-0 rounded-md ${
+              variant={
                 normalizedStatusValue === "overdue"
-                  ? "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                  ? "error"
                   : normalizedStatusValue === "in-progress" || normalizedStatusValue === "today"
-                    ? "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                    ? "info"
                     : normalizedStatusValue === "flagged"
-                      ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                      : "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-              }`}
-              variant="secondary"
+                      ? "warning"
+                      : "secondary"
+              }
+              className="text-caption px-2 py-0.5 font-medium"
             >
               {task.status?.trim() || task.status}
             </Badge>
@@ -1065,7 +1092,7 @@ function isAppraisalActionPlanTask(task) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                      className="h-7 w-7 p-0 hover:bg-success-muted hover:text-success"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isAppraisalTask(task)) {
@@ -1147,7 +1174,7 @@ function isAppraisalActionPlanTask(task) {
                         setDeleteTaskDialogOpen(true)
                         setTaskToDelete(task)
                       }}
-                      className="text-red-600 focus:text-red-600"
+                      className="text-error focus:text-error"
                     >
                       <Trash className="h-3 w-3 mr-2" />
                       Delete Task
@@ -1164,7 +1191,7 @@ function isAppraisalActionPlanTask(task) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400"
+                        className="h-7 w-7 p-0 hover:bg-success-muted hover:text-success"
                         onClick={(e) => {
                           e.stopPropagation()
                           completeTask(task.id)
@@ -1251,7 +1278,7 @@ function isAppraisalActionPlanTask(task) {
                         setDeleteTaskDialogOpen(true)
                         setTaskToDelete(task)
                       }}
-                      className="text-red-600 focus:text-red-600"
+                      className="text-error focus:text-error"
                     >
                       <Trash className="h-3 w-3 mr-2" />
                       Delete Task
@@ -1266,7 +1293,7 @@ function isAppraisalActionPlanTask(task) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                        className="h-7 w-7 p-0 hover:bg-warning-muted hover:text-warning"
                         onClick={(e) => {
                           e.stopPropagation()
                           openFlagDialog(task)
@@ -1291,7 +1318,7 @@ function isAppraisalActionPlanTask(task) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400"
+                      className="h-7 w-7 p-0 hover:bg-warning-muted hover:text-warning"
                       onClick={(e) => {
                         e.stopPropagation()
                         openFlagDialog(task)
@@ -1445,19 +1472,19 @@ function isAppraisalActionPlanTask(task) {
         icon: AlertTriangle,
         title: "No overdue tasks",
         description: "Excellent work! You're staying on top of your deadlines.",
-        color: "text-emerald-500",
+        color: "text-success",
       },
       flagged: {
         icon: Flag,
         title: "No flagged tasks",
         description: "All clear! No tasks require special attention right now.",
-        color: "text-amber-500",
+        color: "text-warning",
       },
       queue: {
         icon: Users,
         title: "No items in your queue",
         description: "Claim tasks to start reviewing.",
-        color: "text-emerald-500",
+        color: "text-success",
       },
     }
 
@@ -1511,8 +1538,8 @@ function isAppraisalActionPlanTask(task) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <AlertCircle className="h-8 w-8 text-destructive" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-error" />
             </div>
             <h3 className="text-lg font-semibold mb-2 text-foreground">Failed to load tasks</h3>
             <p className="text-sm text-muted-foreground mb-6">{error}</p>
@@ -1624,7 +1651,7 @@ function isAppraisalActionPlanTask(task) {
                 >
                   <span>{cell.day}</span>
                   {(eventsByDate[cell.dateString]?.length || 0) > 0 && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-success" />
                   )}
                 </Button>
               ))}
@@ -1691,28 +1718,28 @@ function isAppraisalActionPlanTask(task) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <Card className="shadow-sm border-border/50">
+        <Card variant="elevated" className="shadow-sm border-border/50">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold">Task Management</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <CardTitle className="text-title-sm font-semibold tracking-tight">Task Management</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {tabCounts.upcoming + tabCounts.overdue + tabCounts.flagged} total tasks
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="relative max-w-sm group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors duration-base group-focus-within:text-primary" />
                   <Input
                     placeholder="Search tasks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9 bg-background border-border/50 focus:border-primary/50"
+                    className="pl-9 h-9 bg-background border-border/50 focus:border-primary/50 w-48 focus:w-64 transition-all duration-slow"
                   />
                 </div>
                 <Button
@@ -1790,44 +1817,44 @@ function isAppraisalActionPlanTask(task) {
 
           <CardContent className="pt-0">
             <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/30 p-1 rounded-lg h-11">
+              <TabsList className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1 mb-6">
                 <TabsTrigger
                   value="upcoming"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Unclaimed</span>
-                  <Badge className="bg-blue-500 hover:bg-blue-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {unclaimedCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="overdue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Overdue</span>
-                  <Badge className="bg-red-500 hover:bg-red-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {tabCounts.overdue}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="flagged"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Flag className="h-4 w-4" />
+                  <Flag className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">Flagged</span>
-                  <Badge className="bg-amber-500 hover:bg-amber-500/90 text-white text-xs" variant="secondary">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {tabCounts.flagged}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="queue"
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-md px-3 py-1.5 text-body-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="h-4 w-4 mr-1.5" />
                   <span className="hidden sm:inline">My Queue</span>
-                  <Badge className="bg-emerald-600 hover:bg-emerald-600/90 text-white text-xs" variant="secondary">
+                  <Badge variant="secondary" className="ml-1.5 text-caption px-1.5">
                     {myQueue.length}
                   </Badge>
                 </TabsTrigger>
@@ -1852,293 +1879,409 @@ function isAppraisalActionPlanTask(task) {
           </CardContent>
         </Card>
 
-        {/* Hire Completions Modal */}
-        <AnimatePresence>
-          {showGroupsModal && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-5xl p-6 shadow-2xl my-4 max-h-[92vh] overflow-y-auto custom-scrollbar"
-                onClick={(e) => e.stopPropagation()}
+        {/* Hire Completions Modal — rendered via portal for global overlay */}
+        {typeof document !== "undefined" && createPortal(
+          <AnimatePresence>
+            {showGroupsModal && (
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                style={{ zIndex: 9999 }}
+                onClick={() => setShowGroupsModal(false)}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-primary/10">
-                      <Users className="h-4 w-4 text-primary" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-foreground">Hire Completions</h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={showHistory ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        const next = !showHistory
-                        setShowHistory(next)
-                        if (next) {
-                          // Ensure History is scoped to the currently selected applicant.
-                          // If none selected yet, default to the first applicant in the list.
-                          const fallbackApplicantId =
-                            selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
-                          if (!selectedApplicantId && fallbackApplicantId) {
-                            setSelectedApplicantId(fallbackApplicantId)
-                          } else {
-                            fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
-                          }
-                        }
-                      }}
-                      className="h-8"
-                    >
-                      {showHistory ? "Back to Tasks" : "History"}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-7 w-7">
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {applicantGroups.length === 0 ? (
-                  <div className="py-10 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Left: Applicants */}
-                    <div className="md:col-span-1 border rounded-lg p-3 bg-card/50">
-                      <div className="space-y-2">
-                        {applicantGroups.map((g) => (
-                          <button
-                            key={g.applicantId}
-                            onClick={() => setSelectedApplicantId(g.applicantId)}
-                            className={`w-full text-left px-3 py-2 rounded-md border transition ${
-                              selectedApplicantId === g.applicantId ? "bg-primary/10 border-primary/30" : "hover:bg-muted/40"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium truncate">{g.applicantName}</span>
-                              <Badge className="text-xs bg-blue-500 text-white" variant="secondary">{g.tasks.length}</Badge>
-                            </div>
-                          </button>
-                        ))}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 16 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="bg-background border border-border rounded-xl w-full max-w-5xl shadow-2xl my-4 max-h-[92vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Sticky header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-background/80 backdrop-blur-md rounded-t-xl shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/10">
+                        <Users className="h-4 w-4 text-primary" />
                       </div>
+                      <h2 className="text-lg font-semibold text-foreground tracking-tight">Hire Completions</h2>
                     </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant={showHistory ? "default" : "outline"}
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          const next = !showHistory
+                          setShowHistory(next)
+                          if (next) {
+                            const fallbackApplicantId =
+                              selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
+                            if (!selectedApplicantId && fallbackApplicantId) {
+                              setSelectedApplicantId(fallbackApplicantId)
+                            } else {
+                              fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
+                            }
+                          }
+                        }}
+                      >
+                        {showHistory ? "Back to Tasks" : "History"}
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-8 w-8">
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Close</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
 
-                    {/* Right: Tasks for selected applicant OR History */}
-                    <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
-                      {showHistory ? (
-                        <div>
-                          <div className="flex items-center justify-between mb-3 gap-3">
-                            <div className="min-w-0">
-                              <h3 className="text-base font-semibold">Recent Verifications</h3>
-                              <p className="text-xs text-muted-foreground">
-                                {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    value={historySearch}
-                                    onChange={(e) => setHistorySearch(e.target.value)}
-                                    placeholder="Search verifications..."
-                                    className="pl-7 h-8 w-56"
-                                  />
-                                </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8"
-                                onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                  {/* Scrollable body */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4">
+                    {applicantGroups.length === 0 ? (
+                      <div className="py-16 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Left: Applicants */}
+                        <div className="md:col-span-1 border rounded-lg p-3 bg-card/50">
+                          <div className="space-y-1.5">
+                            {applicantGroups.map((g) => (
+                              <button
+                                key={g.applicantId}
+                                onClick={() => setSelectedApplicantId(g.applicantId)}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all duration-150 ${
+                                  selectedApplicantId === g.applicantId
+                                    ? "bg-primary/10 border-primary/30 shadow-sm"
+                                    : "border-transparent hover:bg-muted/50 hover:border-border/50"
+                                }`}
                               >
-                                <RefreshCw className="h-3 w-3 mr-2" /> Refresh
-                              </Button>
-                            </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium truncate">{g.applicantName}</span>
+                                  <Badge className="text-xs bg-blue-500/90 text-white ml-2 tabular-nums" variant="secondary">{g.tasks.length}</Badge>
+                                </div>
+                              </button>
+                            ))}
                           </div>
-                          {historyLoading ? (
-                            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
-                          ) : historyItems.length === 0 ? (
-                            <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
-                          ) : (
-                            <div className="space-y-2">
-                              {historyItems
-                                .filter((it) => {
-                                  const q = (historySearch || "").trim().toLowerCase()
-                                  if (!q) return true
-                                  const hay = [
-                                    it.message,
-                                    it.title,
-                                    it.applicantName,
-                                    it.completedByName,
-                                    it.completedAt,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")
-                                    .toLowerCase()
-                                  return hay.includes(q)
-                                })
-                                .map((it) => (
-                                <div key={it.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">
-                                      {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground truncate">
-                                      {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
-                                      {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
-                      ) : (() => {
-                        const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
-                        const tasksForRaw = selected ? selected.tasks : []
-                        const tasksFor = groupSearch
-                          ? tasksForRaw.filter((t) => (t.title || "").toLowerCase().includes(groupSearch.toLowerCase()))
-                          : tasksForRaw
-                        const headerName = selected ? selected.applicantName : ""
-                        return (
-                          <div>
-                            <div className="flex items-center justify-between mb-3 gap-3">
-                              <div className="min-w-0">
-                                <h3 className="text-base font-semibold">{headerName}</h3>
-                                <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    value={groupSearch}
-                                    onChange={(e) => setGroupSearch(e.target.value)}
-                                    placeholder="Search tasks..."
-                                    className="pl-7 h-8 w-48"
-                                  />
-                                </div>
-                                {selected && (
-                                  <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
-                                    <Plus className="h-3 w-3 mr-2" /> Claim All
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
 
-                            <div className="space-y-2">
-                              {tasksFor.map((t) => (
-                                <div key={t.id} className="flex items-center justify-between p-2 rounded-md border bg-background">
+                        {/* Right: Tasks for selected applicant OR History */}
+                        <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
+                          {showHistory ? (
+                            <div>
+                              <div className="flex items-center justify-between mb-3 gap-3">
+                                <div className="min-w-0">
+                                  <h3 className="text-base font-semibold">Recent Verifications</h3>
+                                  <p className="text-xs text-muted-foreground">
+                                    {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                    <Input
+                                      value={historySearch}
+                                      onChange={(e) => setHistorySearch(e.target.value)}
+                                      placeholder="Search verifications..."
+                                      className="pl-7 h-8 w-56"
+                                    />
+                                  </div>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-8 w-8"
+                                        onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
+                                      >
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      <p>Refresh</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                              {historyLoading ? (
+                                <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+                              ) : historyItems.length === 0 ? (
+                                <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {historyItems
+                                    .filter((it) => {
+                                      const q = (historySearch || "").trim().toLowerCase()
+                                      if (!q) return true
+                                      const hay = [
+                                        it.message,
+                                        it.title,
+                                        it.applicantName,
+                                        it.completedByName,
+                                        it.completedAt,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")
+                                        .toLowerCase()
+                                      return hay.includes(q)
+                                    })
+                                    .map((it) => (
+                                    <div key={it.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-medium break-words whitespace-normal leading-5">
+                                          {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                          {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
+                                          {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
+                                        </div>
+                                      </div>
+                                      {it.taskDocumentUrl && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              className="h-8 w-8 shrink-0"
+                                              onClick={() => window.open(it.taskDocumentUrl, "_blank", "noopener,noreferrer")}
+                                            >
+                                              <FileText className="h-3.5 w-3.5 text-primary" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="left">
+                                            <p>Open Resource Link</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (() => {
+                            const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
+                            const tasksForRaw = selected ? selected.tasks : []
+                            const tasksFor = groupSearch
+                              ? tasksForRaw.filter((t) => (t.title || "").toLowerCase().includes(groupSearch.toLowerCase()))
+                              : tasksForRaw
+                            const headerName = selected ? selected.applicantName : ""
+                            return (
+                              <div>
+                                <div className="flex items-center justify-between mb-3 gap-3">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
-                                    <div className="text-xs text-muted-foreground truncate">ID: {t.id}</div>
+                                    <h3 className="text-base font-semibold">{headerName}</h3>
+                                    <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant="secondary"
-                                      className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
-                                        isGlobalTask(t)
-                                          ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
-                                          : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-                                      }`}
-                                    >
-                                      {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
-                                    </Badge>
-                                    {/* Actions mirroring the main component */}
-                                    {isGlobalTask(t) ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8"
-                                        onClick={() => handleClaimTask(t.id)}
-                                      >
-                                        <Plus className="h-3 w-3 mr-2" /> Claim
-                                      </Button>
-                                    ) : (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8"
-                                          onClick={() => completeTask(t.id)}
-                                        >
-                                          <CheckCircle2 className="h-3 w-3 mr-2" /> Complete
-                                        </Button>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-8">
-                                              <MoreHorizontal className="h-3 w-3" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-44">
-                                            <DropdownMenuItem onClick={() => { setSelectedTask(t); setShowTaskDetails(true); }}>
-                                              <Eye className="h-3 w-3 mr-2" /> View Details
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openEditDialog(t)}>
-                                              <Pencil className="h-3 w-3 mr-2" /> Edit Task
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openFlagDialog(t)}>
-                                              <Flag className="h-3 w-3 mr-2" /> Flag
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              onClick={() => {
-                                                const key = `unclaim-${t.id}`
-                                                const timer = setTimeout(async () => {
-                                                  try {
-                                                    const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
-                                                      method: "PATCH",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({ action: "unclaim" }),
-                                                    })
-                                                    if (!res.ok) {
-                                                      const d = await res.json()
-                                                      throw new Error(d.error || "Failed to unclaim")
-                                                    }
-                                                    fetchTasks()
-                                                  } catch (e) {
-                                                    toast.error(e.message)
-                                                  }
-                                                }, 4000)
-                                                pendingTimersRef.current.set(key, timer)
-                                                toast.success("Task will be unclaimed", {
-                                                  duration: 4000,
-                                                  action: {
-                                                    label: "Undo",
-                                                    onClick: () => {
-                                                      const tt = pendingTimersRef.current.get(key)
-                                                      if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
-                                                    },
-                                                  },
-                                                })
-                                              }}
-                                            >
-                                              <X className="h-3 w-3 mr-2" /> Unclaim
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </>
+                                    <div className="relative">
+                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                      <Input
+                                        value={groupSearch}
+                                        onChange={(e) => setGroupSearch(e.target.value)}
+                                        placeholder="Search tasks..."
+                                        className="pl-7 h-8 w-48"
+                                      />
+                                    </div>
+                                    {selected && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button size="sm" onClick={() => handleClaimAllForApplicant(selected.applicantId)} className="h-8">
+                                            <Plus className="h-3 w-3 mr-1.5" /> Claim All
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">
+                                          <p>Claim all tasks for {headerName}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
                                     )}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8"
-                                      onClick={() => openFlagDialog(t)}
-                                    >
-                                      <Flag className="h-3 w-3 mr-2" /> Flag
-                                    </Button>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </div>
+
+                                <div className="space-y-2">
+                                  {tasksFor.map((t) => (
+                                    <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-medium break-words whitespace-normal leading-5">{t.title}</div>
+                                        <div className="text-xs text-muted-foreground truncate mt-0.5">ID: {t.id}</div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <Badge
+                                          variant="secondary"
+                                          className={`text-[10px] px-2 py-0.5 font-medium border-0 whitespace-nowrap ${
+                                            isGlobalTask(t)
+                                              ? "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400"
+                                              : "bg-success-muted text-success"
+                                          }`}
+                                        >
+                                          {isGlobalTask(t) ? "Unclaimed" : "Claimed"}
+                                        </Badge>
+
+                                        {/* Resource link icon */}
+                                        {t.taskDocumentUrl && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => window.open(t.taskDocumentUrl, "_blank", "noopener,noreferrer")}
+                                              >
+                                                <FileText className="h-3.5 w-3.5 text-primary" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Open Resource Link</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+
+                                        {/* Action icons */}
+                                        {isGlobalTask(t) ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleClaimTask(t.id)}
+                                              >
+                                                <Plus className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Claim</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => completeTask(t.id)}
+                                                >
+                                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>Complete</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => { setSelectedTask(t); setShowTaskDetails(true); }}
+                                                >
+                                                  <Eye className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>View Details</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="outline"
+                                                  size="icon"
+                                                  className="h-8 w-8"
+                                                  onClick={() => openEditDialog(t)}
+                                                >
+                                                  <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p>Edit Task</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </>
+                                        )}
+
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              onClick={() => openFlagDialog(t)}
+                                            >
+                                              <Flag className="h-3.5 w-3.5" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom">
+                                            <p>Flag</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+
+                                        {!isGlobalTask(t) && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => {
+                                                  const key = `unclaim-${t.id}`
+                                                  const timer = setTimeout(async () => {
+                                                    try {
+                                                      const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
+                                                        method: "PATCH",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({ action: "unclaim" }),
+                                                      })
+                                                      if (!res.ok) {
+                                                        const d = await res.json()
+                                                        throw new Error(d.error || "Failed to unclaim")
+                                                      }
+                                                      fetchTasks()
+                                                    } catch (e) {
+                                                      toast.error(e.message)
+                                                    }
+                                                  }, 4000)
+                                                  pendingTimersRef.current.set(key, timer)
+                                                  toast.success("Task will be unclaimed", {
+                                                    duration: 4000,
+                                                    action: {
+                                                      label: "Undo",
+                                                      onClick: () => {
+                                                        const tt = pendingTimersRef.current.get(key)
+                                                        if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
+                                                      },
+                                                    },
+                                                  })
+                                                }}
+                                              >
+                                                <X className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">
+                                              <p>Unclaim</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         {/* Appraisal Modal */}
         <AnimatePresence>
@@ -2221,8 +2364,8 @@ function isAppraisalActionPlanTask(task) {
                           </Select>
                         </div>
                       </div>
-                      {appraisalHasConflict && (<div className="mt-2 text-xs text-red-500">Selected time overlaps with an existing event.</div>)}
-                      {appraisalStartTime && appraisalEndTime && appraisalEndTime <= appraisalStartTime && (<div className="mt-1 text-xs text-red-500">End time must be after start time.</div>)}
+                      {appraisalHasConflict && (<div className="mt-2 text-xs text-error">Selected time overlaps with an existing event.</div>)}
+                      {appraisalStartTime && appraisalEndTime && appraisalEndTime <= appraisalStartTime && (<div className="mt-1 text-xs text-error">End time must be after start time.</div>)}
                     </div>
                   )}
 
@@ -2280,7 +2423,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -2363,13 +2506,13 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-amber/10">
-                      <Flag className="h-4 w-4 text-amber-600" />
+                      <Flag className="h-4 w-4 text-warning" />
                     </div>
                     <h2 className="text-lg font-semibold">Flag Task</h2>
                   </div>
@@ -2379,7 +2522,7 @@ function isAppraisalActionPlanTask(task) {
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-sm">Reason <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm">Reason <span className="text-error">*</span></Label>
                     <Textarea value={flagReason} onChange={(e) => setFlagReason(e.target.value)} rows={3} className="mt-1" placeholder="Why is this task being flagged?" />
                   </div>
                 </div>
@@ -2401,13 +2544,13 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-md p-5 shadow-2xl my-4"
+                className="bg-background border border-border rounded-xl w-full max-w-md p-6 shadow-2xl my-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-emerald/10">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                     </div>
                     <h2 className="text-lg font-semibold">Resolve Flag</h2>
                   </div>
@@ -2512,7 +2655,7 @@ function isAppraisalActionPlanTask(task) {
                 {monthlyReviewsLoading ? (
                   <div className="py-10 text-center text-sm text-muted-foreground">Loading onboarding people…</div>
                 ) : monthlyReviewsError ? (
-                  <div className="py-10 text-center text-sm text-red-600">{monthlyReviewsError}</div>
+                  <div className="py-10 text-center text-sm text-error">{monthlyReviewsError}</div>
                 ) : monthlyPeople.length === 0 ? (
                   <div className="py-10 text-center text-sm text-muted-foreground">No people currently onboarding.</div>
                 ) : (
@@ -2647,8 +2790,8 @@ function isAppraisalActionPlanTask(task) {
                     {selectedTask.flaggedReason && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Flagged Reason</Label>
-                        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <p className="text-sm text-amber-800 dark:text-amber-200">{selectedTask.flaggedReason}</p>
+                        <div className="mt-2 p-3 bg-warning-muted rounded-lg border border-warning/20">
+                          <p className="text-sm text-warning">{selectedTask.flaggedReason}</p>
                         </div>
                         <div className="mt-3 flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => resolveFlag(selectedTask.id)}>
@@ -2660,8 +2803,8 @@ function isAppraisalActionPlanTask(task) {
                     {!selectedTask.flaggedReason && selectedTask.resolutionNote && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">Resolution Note</Label>
-                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                          <p className="text-sm text-emerald-800 dark:text-emerald-200">{selectedTask.resolutionNote}</p>
+                        <div className="mt-2 p-3 bg-success-muted rounded-lg border border-success/20">
+                          <p className="text-sm text-success">{selectedTask.resolutionNote}</p>
                         </div>
                       </div>
                     )}
@@ -2721,8 +2864,8 @@ function isAppraisalActionPlanTask(task) {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-destructive/10">
-                      <Trash className="h-5 w-5 text-destructive" />
+                    <div className="p-2 rounded-lg bg-error/10">
+                      <Trash className="h-5 w-5 text-error" />
                     </div>
                     <h2 className="text-lg font-semibold text-foreground">Delete Task</h2>
                   </div>
@@ -2770,7 +2913,7 @@ function isAppraisalActionPlanTask(task) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-background border border-border rounded-xl w-full max-w-lg p-4 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
+                className="bg-background border border-border rounded-xl w-full max-w-lg p-6 shadow-2xl my-4 max-h-[90vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -2780,7 +2923,7 @@ function isAppraisalActionPlanTask(task) {
                     <div>
                       <h2 className="text-lg font-semibold text-foreground">Edit Task</h2>
                       {hasChanges && (
-                        <Badge className="bg-amber-500 text-white font-medium px-2 py-0.5 text-xs mt-1">Unsaved Changes</Badge>
+                        <Badge className="bg-warning text-warning-foreground font-medium px-2 py-0.5 text-xs mt-1">Unsaved Changes</Badge>
                       )}
                     </div>
                   </div>
@@ -2799,7 +2942,7 @@ function isAppraisalActionPlanTask(task) {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="title" className="text-foreground mb-1 block font-medium text-sm">
-                      Title <span className="text-red-500">*</span>
+                      Title <span className="text-error">*</span>
                     </Label>
                     <Input
                       id="title"
@@ -2829,7 +2972,7 @@ function isAppraisalActionPlanTask(task) {
                   {editedTask.status === "Flagged" && (
                     <div>
                       <Label htmlFor="flaggedReason" className="text-foreground mb-1 block font-medium text-sm">
-                        Flagged Reason <span className="text-red-500">*</span>
+                        Flagged Reason <span className="text-error">*</span>
                       </Label>
                       <Input
                         id="flaggedReason"
@@ -2845,7 +2988,7 @@ function isAppraisalActionPlanTask(task) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="priority" className="text-foreground mb-1 block font-medium text-sm">
-                        Priority <span className="text-red-500">*</span>
+                        Priority <span className="text-error">*</span>
                       </Label>
                       <Select
                         value={editedTask.priority}
@@ -2866,7 +3009,7 @@ function isAppraisalActionPlanTask(task) {
 
                     <div>
                       <Label htmlFor="status" className="text-foreground mb-1 block font-medium text-sm">
-                        Status <span className="text-red-500">*</span>
+                        Status <span className="text-error">*</span>
                       </Label>
                       <Select value={editedTask.status} onValueChange={(value) => handleSelectChange("status", value)}>
                         <SelectTrigger className="bg-background border-border focus:ring-1 focus:ring-primary/20 h-9">

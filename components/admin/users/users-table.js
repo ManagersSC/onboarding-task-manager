@@ -1,14 +1,27 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { Eye, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Skeleton } from "@components/ui/skeleton"
+import { cn } from "@components/lib/utils"
+import { Eye, ChevronLeft, ChevronRight, Users } from "lucide-react"
 import ApplicantDrawer from "./applicant-drawer"
-import { stageColor } from "@/lib/stage"
+
+// Map stage names to semantic badge variants
+const stageBadgeVariant = (stage) => {
+  const s = String(stage || "").toLowerCase()
+  if (s === "new application") return "info-subtle"
+  if (s.includes("interview")) return "warning-subtle"
+  if (s.includes("review")) return "secondary"
+  if (s.startsWith("rejected")) return "error-subtle"
+  if (s === "hired") return "success-subtle"
+  return "secondary"
+}
 
 // Helper function for date formatting
 const formatDate = (dateString) => {
@@ -18,23 +31,80 @@ const formatDate = (dateString) => {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     })
   } catch {
     return "Invalid date"
   }
 }
 
-export default function UsersTable({ 
-  initialRows = [], 
+// Relative time formatting
+const relativeTime = (dateString) => {
+  if (!dateString) return "—"
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now - date
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return "Today"
+    if (diffDays === 1) return "Yesterday"
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`
+    return formatDate(dateString)
+  } catch {
+    return "—"
+  }
+}
+
+function SkeletonRow() {
+  return (
+    <TableRow className="h-14">
+      <TableCell className="w-[48px]">
+        <Skeleton className="h-4 w-4 rounded" />
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-5 w-24 rounded-md mx-auto" />
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-3.5 w-28 mx-auto" />
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-3.5 w-20 mx-auto" />
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-8 w-8 rounded-lg mx-auto" />
+      </TableCell>
+    </TableRow>
+  )
+}
+
+export default function UsersTable({
+  initialRows = [],
   pagination = {},
   isLoading = false,
   onPageChange,
   onSelectionChange
 }) {
+  const searchParams = useSearchParams()
   const [rows, setRows] = useState(initialRows)
   const [openId, setOpenId] = useState(null)
+
+  // Auto-open drawer if applicantId is in URL params
+  useEffect(() => {
+    const applicantId = searchParams.get('applicantId')
+    if (applicantId) {
+      setOpenId(applicantId)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     setRows(initialRows)
@@ -42,13 +112,13 @@ export default function UsersTable({
 
   const [selected, setSelected] = useState({})
   const allChecked = useMemo(() => rows.length > 0 && rows.every((r) => selected[r.id]), [rows, selected])
-  
+
   const toggleAll = (checked) => {
     const next = {}
     if (checked) rows.forEach((r) => (next[r.id] = true))
     setSelected(next)
   }
-  
+
   const toggleOne = (id, checked) => {
     setSelected((prev) => ({ ...prev, [id]: checked }))
   }
@@ -68,47 +138,60 @@ export default function UsersTable({
 
   if (isLoading && rows.length === 0) {
     return (
-      <div className="w-full overflow-auto rounded-md border">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Loading applicants...</p>
-          </div>
-        </div>
+      <div className="w-full">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/20 hover:bg-muted/20 h-11">
+              <TableHead className="w-[48px]">
+                <Checkbox aria-label="Select all" disabled />
+              </TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Applicant</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Stage</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Job</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Created</TableHead>
+              <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} />
+            ))}
+          </TableBody>
+        </Table>
       </div>
     )
   }
 
   return (
-    <div className="w-full overflow-auto rounded-md border">
+    <div className="w-full">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-muted/20 hover:bg-muted/20 h-11 border-b border-border/30">
             <TableHead className="w-[48px]">
-              <Checkbox 
-                aria-label="Select all" 
-                checked={allChecked} 
+              <Checkbox
+                aria-label="Select all"
+                checked={allChecked}
                 onCheckedChange={(v) => toggleAll(!!v)}
                 disabled={isLoading}
               />
             </TableHead>
-            <TableHead>Applicant</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Job</TableHead>
-            <TableHead>Interview</TableHead>
-            <TableHead>Documents</TableHead>
-            <TableHead>Feedback</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium">Applicant</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Stage</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Job</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Created</TableHead>
+            <TableHead className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
-            const docsText = row.docs.total || 0
             const [first, last] = (row.name || "").split(" ")
             const initials = `${(first || "").slice(0, 1)}${(last || "").slice(0, 1)}`.trim().toUpperCase() || "A"
             return (
-              <TableRow key={row.id} data-rowid={row.id}>
+              <TableRow
+                key={row.id}
+                data-rowid={row.id}
+                className="h-14 hover:bg-muted/20 transition-colors cursor-pointer border-b border-border/20 last:border-0 group"
+              >
                 <TableCell className="align-middle">
                   <Checkbox
                     aria-label={`Select ${row.name}`}
@@ -119,67 +202,49 @@ export default function UsersTable({
                 </TableCell>
                 <TableCell className="min-w-[220px]">
                   <div
-                    className="flex items-center gap-3 cursor-pointer"
+                    className="flex items-center gap-3"
                     onClick={() => setOpenId(row.id)}
                     title="Open details"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>{initials}</AvatarFallback>
+                    <Avatar className="h-8 w-8 bg-primary/5">
+                      <AvatarFallback className="bg-primary/5 text-primary font-medium text-caption">
+                        {initials}
+                      </AvatarFallback>
                     </Avatar>
-                    <div className="leading-tight">
-                      <div className="font-medium hover:underline">{row.name}</div>
-                      <div className="text-xs text-muted-foreground">{row.email}</div>
+                    <div className="leading-tight min-w-0">
+                      <div className="text-body-sm font-medium group-hover:underline truncate">{row.name}</div>
+                      <div className="text-caption text-muted-foreground truncate">{row.email}</div>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="min-w-[220px]">
+                <TableCell className="text-center">
                   <Badge
-                    variant="secondary"
-                    className={`${stageColor(row.stage)} cursor-pointer`}
+                    variant={stageBadgeVariant(row.stage)}
+                    className="cursor-pointer"
                     onClick={() => setOpenId(row.id)}
                     title="View details"
                   >
                     {row.stage}
                   </Badge>
                 </TableCell>
-                <TableCell className="min-w-[180px]">
-                  <div className="truncate">{row.job || "—"}</div>
+                <TableCell className="text-center">
+                  <span className="text-body-sm truncate">{row.job || "—"}</span>
                 </TableCell>
-                <TableCell className="min-w-[220px]">
-                  <div className="flex flex-col">
-                    <div className="text-sm">
-                      {row.location ? (
-                        <Badge variant="outline" className="cursor-default">
-                          {row.location}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">No location</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {row.interviewDate ? `First: ${formatDate(row.interviewDate)}` : "First: —"}
-                      {row.secondInterviewDate ? ` • Second: ${formatDate(row.secondInterviewDate)}` : " • Second: —"}
-                    </div>
-                  </div>
+                <TableCell className="text-center">
+                  <span
+                    className="text-body-sm text-muted-foreground"
+                    title={row.createdAt ? formatDate(row.createdAt) : undefined}
+                  >
+                    {relativeTime(row.createdAt)}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={row.docs.total > 0 ? "default" : "outline"}>{docsText}</Badge>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{row.feedbackCount || 0}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">{row.source || "—"}</div>
-                </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-center">
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => setOpenId(row.id)}
                     aria-label="Open details"
-                    className="cursor-pointer"
+                    className="h-8 w-8 rounded-lg"
                     disabled={isLoading}
                   >
                     <Eye className="h-4 w-4" />
@@ -190,8 +255,12 @@ export default function UsersTable({
           })}
           {rows.length === 0 && !isLoading && (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center text-sm text-muted-foreground">
-                No applicants found. Adjust filters or search.
+              <TableCell colSpan={6} className="h-48">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <Users className="h-12 w-12 text-muted-foreground/40 mb-3" />
+                  <p className="text-body-sm text-muted-foreground">No applicants found</p>
+                  <p className="text-caption text-muted-foreground/60 mt-1">Try adjusting your filters</p>
+                </div>
               </TableCell>
             </TableRow>
           )}
@@ -199,18 +268,12 @@ export default function UsersTable({
       </Table>
 
       {/* Pagination */}
-      {pagination && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-muted-foreground">
-            {pagination.total > 0 ? (
-              <>
-                Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{" "}
-                {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
-                {pagination.total} applicants
-              </>
-            ) : (
-              "No applicants found"
-            )}
+      {pagination && pagination.total > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border/20">
+          <div className="text-caption text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{" "}
+            {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
+            {pagination.total} applicants
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -218,11 +281,12 @@ export default function UsersTable({
               size="sm"
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!pagination.hasPrev || isLoading}
+              className="h-8 rounded-lg"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-caption text-muted-foreground px-2">
               Page {pagination.page} of {pagination.totalPages || 1}
             </span>
             <Button
@@ -230,6 +294,7 @@ export default function UsersTable({
               size="sm"
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!pagination.hasNext || isLoading}
+              className="h-8 rounded-lg"
             >
               Next
               <ChevronRight className="h-4 w-4 ml-1" />

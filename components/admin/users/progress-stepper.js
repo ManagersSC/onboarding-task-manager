@@ -29,9 +29,9 @@ export default function ProgressStepper({ currentStage = "" }) {
                 className={cn(
                   "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
                   done
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-success text-success-foreground"
                     : active
-                      ? "bg-foreground text-background"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground",
                 )}
                 aria-current={active ? "step" : undefined}
@@ -39,10 +39,10 @@ export default function ProgressStepper({ currentStage = "" }) {
               >
                 {idx + 1}
               </div>
-              <span className={cn("text-xs", active ? "font-semibold" : "text-muted-foreground")}>{step.label}</span>
+              <span className={cn("text-caption", active ? "font-semibold text-foreground" : "text-muted-foreground")}>{step.label}</span>
               {idx < STEPS.length - 1 && (
                 <span
-                  className={cn("mx-2 h-px w-8 md:w-12", done ? "bg-emerald-600" : "bg-muted")}
+                  className={cn("mx-2 h-px w-8 md:w-12", done ? "bg-success" : "bg-muted")}
                   aria-hidden="true"
                 />
               )}
