@@ -6,8 +6,8 @@
 
 ## Sub-tasks
 
-- [ ] Create POST API endpoint for new quiz (`/api/admin/quizzes`)
-- [ ] Create POST API endpoint for new quiz items (`/api/admin/quizzes/[quizId]/items`)
-- [ ] Add "Create Quiz" modal to the quizzes admin page with week selector and question editor
-- [ ] Wire up the save flow (create quiz, then batch-create items)
-- [ ] Add "Add Item" button to the existing edit modal for adding questions to existing quizzes
+- [x] Create POST API endpoint for new quiz (`/api/admin/quizzes`)
+- [x] Create POST API endpoint for new quiz items (`/api/admin/quizzes/[quizId]/items`)
+- [x] Add "Create Quiz" modal to the quizzes admin page with week selector and question editor
+- [x] Wire up the save flow (create quiz, then batch-create items)
+- [x] Add "Add Item" button to the existing edit modal for adding questions to existing quizzes
