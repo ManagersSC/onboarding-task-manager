@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
@@ -47,7 +48,7 @@ export async function POST(request) {
     }
 
     const users = await base("Applicants")
-      .select({ filterByFormula: `{Email}='${email}'`, maxRecords: 1 })
+      .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
       .firstPage();
 
     if (users.length === 0) {

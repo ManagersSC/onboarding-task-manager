@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger";
 import { unsealData } from "iron-session";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Get tasks
 export async function GET(request) {
@@ -54,7 +55,7 @@ export async function GET(request) {
 
     const applicantRecords = await base("Applicants")
     .select({
-      filterByFormula: `{fldjmvdigpKYyZS63} = '${userEmail}'`,
+      filterByFormula: `{fldjmvdigpKYyZS63} = '${escapeAirtableValue(userEmail)}'`,
       // Include paused fields so the UI can disable actions when onboarding is paused
       fields: [
         "Email",                 // fldjmvdigpKYyZS63

@@ -3,6 +3,7 @@ import logger from "@/lib/utils/logger"
 import Airtable from "airtable"
 import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
+import { escapeAirtableValue } from "@/lib/airtable/sanitize"
 
 export async function GET(request) {
   let userEmail;
@@ -45,7 +46,7 @@ export async function GET(request) {
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
     const records = await base("Applicants").select({
-      filterByFormula: `{Email}='${userEmail}'`,
+      filterByFormula: `{Email}='${escapeAirtableValue(userEmail)}'`,
       maxRecords: 1
     }).firstPage()
 

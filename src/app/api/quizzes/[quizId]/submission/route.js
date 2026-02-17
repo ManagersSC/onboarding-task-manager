@@ -4,6 +4,7 @@ import Airtable from "airtable";
 import { unsealData } from "iron-session";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { NextResponse } from 'next/server';
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -12,7 +13,7 @@ const ONBOARDING_QUIZ_SUBMISSIONS = 'Onboarding Quiz Submissions';
 
 async function getApplicantRecord(userEmail) {
   logger.info("Getting applicant record for user email:", userEmail);
-  const records = await base(APPLICANTS).select({ filterByFormula: `{Email} = '${userEmail}'`, maxRecords: 1 }).firstPage();
+  const records = await base(APPLICANTS).select({ filterByFormula: `{Email} = '${escapeAirtableValue(userEmail)}'`, maxRecords: 1 }).firstPage();
   if (!records.length) throw new Error("Applicant not found");
   return records[0];
 }
@@ -31,7 +32,7 @@ export async function GET(req, { params }) {
     // Find the user's submission for this quiz
     const submissions = await base(ONBOARDING_QUIZ_SUBMISSIONS)
       .select({
-        filterByFormula: `AND(FIND('${quizId}', ARRAYJOIN({Onboarding - Quizzes})), FIND('${applicant.id}', ARRAYJOIN({Applicants})))`,
+        filterByFormula: `AND(FIND('${escapeAirtableValue(quizId)}', ARRAYJOIN({Onboarding - Quizzes})), FIND('${escapeAirtableValue(applicant.id)}', ARRAYJOIN({Applicants})))`,
         maxRecords: 1
       })
       .firstPage();
@@ -79,7 +80,7 @@ export async function POST(req, { params }) {
     // Find the user's submission for this quiz
     const submissions = await base(ONBOARDING_QUIZ_SUBMISSIONS)
       .select({
-        filterByFormula: `AND(FIND('${quizId}', ARRAYJOIN({Onboarding - Quizzes})), FIND('${applicant.id}', ARRAYJOIN({Applicants})))`,
+        filterByFormula: `AND(FIND('${escapeAirtableValue(quizId)}', ARRAYJOIN({Onboarding - Quizzes})), FIND('${escapeAirtableValue(applicant.id)}', ARRAYJOIN({Applicants})))`,
         maxRecords: 1
       })
       .firstPage();

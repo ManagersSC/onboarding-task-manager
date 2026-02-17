@@ -1,19 +1,35 @@
 import { cookies } from "next/headers"
+import { unsealData } from "iron-session"
 import logger from "@/lib/utils/logger"
 import Airtable from "airtable"
 import bcrypt from "bcryptjs"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { escapeAirtableValue } from "@/lib/airtable/sanitize"
 
 export async function POST(request) {
   try {
-    // Verify admin role
+    // Verify admin role using iron-session
     const cookieStore = await cookies()
-    const role = cookieStore.get("user_role")?.value
-    const adminEmail = cookieStore.get("user_email")?.value
+    const sessionCookie = cookieStore.get("session")?.value
+    if (!sessionCookie) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    // if (role !== "admin") {
-    //   return Response.json({ error: "Unauthorized" }, { status: 401 })
-    // }
+    let session
+    try {
+      session = await unsealData(sessionCookie, {
+        password: process.env.SESSION_SECRET,
+        ttl: 60 * 60 * 8,
+      })
+    } catch {
+      return Response.json({ error: "Invalid session" }, { status: 401 })
+    }
+
+    if (session.userRole !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const adminEmail = session.userEmail
 
     const { name, email, password, isAdmin } = await request.json()
 
@@ -31,7 +47,7 @@ export async function POST(request) {
     // Check if user already exists
     const existingUsers = await base("Staff")
       .select({
-        filterByFormula: `{Email}='${email.trim().toLowerCase()}'`,
+        filterByFormula: `{Email}='${escapeAirtableValue(email.trim().toLowerCase())}'`,
         maxRecords: 1,
       })
       .firstPage()

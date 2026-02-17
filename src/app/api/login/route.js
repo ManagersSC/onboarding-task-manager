@@ -4,6 +4,7 @@ import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import { sealData } from "iron-session";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Login route
 export async function POST(request) {
@@ -48,7 +49,7 @@ export async function POST(request) {
     // Fetch user from Airtable
     const users = await base("Applicants")
       .select({
-        filterByFormula: `{Email}='${normalisedEmail}'`,
+        filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`,
         maxRecords: 1,
       })
       .firstPage();
