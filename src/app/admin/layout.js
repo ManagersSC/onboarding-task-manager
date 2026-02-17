@@ -14,7 +14,7 @@ export default function AdminLayout({ children }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AdminSidebar />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto scroll-smooth bg-muted/20 pb-16 md:pb-0 w-full">
+        <main className="flex-1 overflow-x-hidden pb-16 md:pb-0 w-full">
           {children}
           <BottomNavigation />
         </main>

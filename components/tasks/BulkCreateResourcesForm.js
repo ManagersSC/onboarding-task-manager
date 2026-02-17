@@ -78,7 +78,7 @@ function FolderDropdown({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={cn(error && "border-error", className)}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -135,7 +135,7 @@ function JobDropdown({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={cn(error && "border-error", className)}>
+      <SelectTrigger className={cn(error && "border-red-500", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -637,7 +637,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                         ) : (
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
-                        <Briefcase className="h-4 w-4 text-info" />
+                        <Briefcase className="h-4 w-4 text-blue-500" />
                         <div>
                           <h4 className="font-semibold text-sm">{jobGroup.jobName}</h4>
                           <p className="text-xs text-muted-foreground">
@@ -669,7 +669,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                             e.stopPropagation()
                             removeJobGroup(jobGroup.id)
                           }}
-                          className="h-7 w-7 p-0 hover:bg-error-muted hover:text-error"
+                          className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -694,7 +694,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                   ) : (
                                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                                   )}
-                                  <Folder className="h-3.5 w-3.5 text-warning" />
+                                  <Folder className="h-3.5 w-3.5 text-amber-500" />
                                   <span className="text-sm font-medium">{folderGroup.folderName}</span>
                                   <Badge variant="secondary" className="text-xs">
                                     {(folderGroup.resources || []).length} resources
@@ -707,7 +707,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                     e.stopPropagation()
                                     removeFolderGroup(jobGroup.id, folderGroup.id)
                                   }}
-                                  className="h-7 w-7 p-0 hover:bg-error-muted hover:text-error"
+                                  className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -733,7 +733,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => removeResource(jobGroup.id, folderGroup.id, resource.id)}
-                                  className="h-7 w-7 p-0 hover:bg-error-muted hover:text-error"
+                                  className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -823,7 +823,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                     )}
                                   />
                                   {validationErrors[`resource_${resource.id}`]?.taskLink && (
-                                    <p className="text-xs text-error">
+                                    <p className="text-xs text-destructive">
                                       {validationErrors[`resource_${resource.id}`].taskLink}
                                     </p>
                                   )}
@@ -1045,16 +1045,16 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                 key={resource.id} 
                                 className={`px-2 py-1 rounded border-l-2 ${
                                   hasErrors 
-                                    ? "border-error bg-error-muted" 
-                                    : "border-success bg-success-muted"
+                                    ? "border-red-500 bg-red-50 dark:bg-red-950/20" 
+                                    : "border-green-500 bg-green-50 dark:bg-green-950/20"
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
                                   <div className="flex-shrink-0">
                                     {resource.taskMedium === "Document" ? (
-                                      <FileText className="h-3 w-3 text-info" />
+                                      <FileText className="h-3 w-3 text-blue-600" />
                                     ) : (
-                                      <div className="h-3 w-3 text-primary">▶</div>
+                                      <div className="h-3 w-3 text-purple-600">▶</div>
                                     )}
                                   </div>
                                   
@@ -1066,10 +1066,10 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                       <span className="text-xs text-muted-foreground">
                                         W{resource.taskWeek}D{resource.taskDay}
                                       </span>
-                                      <div className={`flex items-center ${resource.taskDescription ? 'text-success' : 'text-error'}`}>
+                                      <div className={`flex items-center ${resource.taskDescription ? 'text-green-600' : 'text-red-600'}`}>
                                         <DescriptionIcon className="h-3 w-3" />
                                       </div>
-                                      <div className={`flex items-center ${resource.taskLink && !errors.taskLink ? 'text-success' : 'text-error'}`}>
+                                      <div className={`flex items-center ${resource.taskLink && !errors.taskLink ? 'text-green-600' : 'text-red-600'}`}>
                                         {resource.taskLink && !errors.taskLink ? (
                                           <Link className="h-3 w-3" />
                                         ) : (
@@ -1077,7 +1077,7 @@ export function BulkCreateResourcesForm({ onSuccess, onCancel, onAutoSaveStateCh
                                         )}
                                       </div>
                                       {hasErrors && (
-                                        <span className="text-xs text-error font-medium">
+                                        <span className="text-xs text-red-600 font-medium">
                                           Missing: {Object.keys(errors).join(', ')}
                                         </span>
                                       )}

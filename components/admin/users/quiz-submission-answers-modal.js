@@ -46,13 +46,13 @@ export function QuizSubmissionAnswersModal({ open, onOpenChange, submission, que
           <div className="rounded-md border p-3">
             <div className="text-xs text-muted-foreground">Score</div>
             <div className="mt-1 flex items-center gap-2">
-              <Badge variant="outline" className={submission?.passed ? "bg-success-muted text-success border-success/20" : "bg-error-muted text-error border-error/20"}>
+              <Badge variant="outline" className={submission?.passed ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : "bg-red-500/15 text-red-600 border-red-500/20"}>
                 {submission?.passed ? "Passed" : "Failed"}
               </Badge>
               <div className="text-sm font-medium">{score} / {total} ({pct}%)</div>
             </div>
             <div className="mt-2 h-2 w-full rounded bg-muted overflow-hidden">
-              <div className={`h-full ${submission?.passed ? "bg-success" : "bg-error"}`} style={{ width: `${pct}%` }} />
+              <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
             </div>
           </div>
           <div className="rounded-md border p-3">
@@ -102,7 +102,7 @@ export function QuizSubmissionAnswersModal({ open, onOpenChange, submission, que
                         title="Copy answer"
                         aria-label="Copy answer"
                       >
-                        {copiedKey === key ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedKey === key ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                     <Separator className="my-2" />

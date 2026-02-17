@@ -9,8 +9,8 @@ import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Alert, AlertDescription } from "@components/ui/alert"
-import { Loader2, Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react"
-import { cn } from "@components/lib/utils"
+import { Loader2 } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -22,7 +22,6 @@ export function LoginForm({ onSuccess, onSignUpClick }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [focusedField, setFocusedField] = useState(null)
 
   const {
     register,
@@ -67,135 +66,69 @@ export function LoginForm({ onSuccess, onSignUpClick }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {error && (
-        <Alert variant="destructive" className="animate-fade-in-up border-error/30 bg-error-muted">
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium">
-            Email
-          </Label>
-          <div className="relative">
-            <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-              focusedField === "email" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <Mail className="h-4 w-4" />
-            </div>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              className={cn(
-                "pl-10 h-11",
-                errors.email && "border-error focus-visible:ring-error/30"
-              )}
-              onFocus={() => setFocusedField("email")}
-              onBlur={() => setFocusedField(null)}
-              {...register("email")}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
-              <AlertCircle className="h-3 w-3" />
-              {errors.email.message}
-            </p>
-          )}
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" placeholder="you@example.com" {...register("email")} />
+          {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-sm font-medium">
-              Password
-            </Label>
-            <Button
-              type="button"
-              variant="link"
-              className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
-              onClick={() => router.push("/forgot-password")}
-            >
+            <Label htmlFor="password">Password</Label>
+            <Button type="button" variant="link" className="p-0 h-auto text-sm" onClick={() => router.push("/forgot-password")}>
               Forgot password?
             </Button>
           </div>
-          <div className="relative">
-            <div className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-              focusedField === "password" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <Lock className="h-4 w-4" />
-            </div>
+          <div className="relative w-full">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
-              className={cn(
-                "pl-10 pr-10 h-11",
-                errors.password && "border-error focus-visible:ring-error/30"
-              )}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
+              className="pr-10"
               {...register("password")}
             />
-            <button
-              type="button"
-              className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-base",
-                "text-muted-foreground hover:text-foreground focus:outline-none focus:text-primary"
-              )}
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-            </button>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+              </button>
+            </div>
           </div>
-          {errors.password && (
-            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
-              <AlertCircle className="h-3 w-3" />
-              {errors.password.message}
-            </p>
-          )}
+          {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full h-11 text-sm font-medium mt-6"
-          disabled={isLoading}
-        >
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
+              Logging in...
             </>
           ) : (
-            "Sign In"
+            "Login"
           )}
         </Button>
       </form>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border/60" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">or</span>
-        </div>
+      <div className="text-center mt-4">
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Button variant="link" className="p-0 h-auto" onClick={onSignUpClick}>
+            Sign up
+          </Button>
+        </p>
       </div>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Button
-          variant="link"
-          className="p-0 h-auto font-medium text-primary hover:text-primary/80"
-          onClick={onSignUpClick}
-        >
-          Create one
-        </Button>
-      </p>
     </div>
   )
 }

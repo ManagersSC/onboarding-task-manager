@@ -110,7 +110,7 @@ export default function QuizClient({ quizId }) {
   }
 
   if (error) {
-    return <div className="text-center text-error py-12">{error}</div>
+    return <div className="text-center text-destructive py-12">{error}</div>
   }
 
   if (!quizData) {
@@ -118,7 +118,7 @@ export default function QuizClient({ quizId }) {
   }
 
   if (!quizData.items || !Array.isArray(quizData.items) || quizData.items.length === 0) {
-    return <div className="text-center text-error py-12">No quiz items found for this quiz.</div>
+    return <div className="text-center text-destructive py-12">No quiz items found for this quiz.</div>
   }
 
   const questionItems = quizData.items?.filter((item) => item.type === "question") || []

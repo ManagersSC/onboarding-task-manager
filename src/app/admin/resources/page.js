@@ -1,13 +1,13 @@
 import { ResourcePage } from "@components/tasks/ResourcePage"
 
 export const metadata = {
-  title: "Resources",
-  description: "Manage onboarding task templates and resources",
+  title: "Tasks Management",
+  description: "Manage onboarding tasks and resources",
 }
 
-export default function AdminResourcesPage() {
+export default function AdminTasksPage() {
   return (
-    <div className="p-6 md:p-8 animate-fade-in-up">
+    <div className="p-6 space-y-6 bg-background">
       <ResourcePage />
     </div>
   )

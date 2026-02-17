@@ -6,8 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Label } from "@components/ui/label"
-import { GradientBackground } from "@components/ui/gradient-background"
-import { Loader2, Eye, EyeOff, ShieldAlert, Lock } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
 function AcceptAdminInviteInner() {
@@ -85,140 +84,84 @@ function AcceptAdminInviteInner() {
   }
 
   return (
-    <Card variant="glass" className="shadow-elevated-lg">
-      <CardHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-            <ShieldAlert className="h-4 w-4 text-primary" />
-          </div>
-          <span className="text-xs font-medium text-primary tracking-wide uppercase">
-            Administrator Access
-          </span>
-        </div>
-        <CardTitle className="text-lg">Set your admin password</CardTitle>
-        <CardDescription>Complete your account setup to access the admin dashboard.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error ? (
-            <div className="rounded-lg border border-error/30 bg-error-muted px-3 py-2.5">
-              <p className="text-sm font-medium text-error">{error}</p>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Set your admin password</CardTitle>
+          <CardDescription>Complete your account setup to access the admin dashboard.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error ? (
+              <p className="text-sm font-medium text-red-500">{error}</p>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative w-full">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                </button>
+              </div>
             </div>
-          ) : null}
-          {success ? (
-            <div className="rounded-lg border border-success/30 bg-success-muted px-3 py-2.5">
-              <p className="text-sm font-medium text-success">{success}</p>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative w-full">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowConfirm((v) => !v)}
+                >
+                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="sr-only">{showConfirm ? "Hide password" : "Show password"}</span>
+                </button>
+              </div>
             </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative w-full">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 pr-10 h-11"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowPassword((v) => !v)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <div className="relative w-full">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="confirmPassword"
-                type={showConfirm ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10 pr-10 h-11"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowConfirm((v) => !v)}
-              >
-                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showConfirm ? "Hide password" : "Show password"}</span>
-              </button>
-            </div>
-          </div>
-          <Button type="submit" className="w-full h-11" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Setting password...
-              </>
-            ) : (
-              "Set Password"
-            )}
-          </Button>
-        </form>
-      </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
-        Token is valid for 24 hours. If expired, ask the admin to resend the invite.
-      </CardFooter>
-    </Card>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Setting password...
+                </>
+              ) : (
+                "Set Password"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="text-xs text-muted-foreground">
+          Token is valid for 24 hours. If expired, ask the admin to resend the invite.
+        </CardFooter>
+      </Card>
+    </div>
   )
 }
 
 export default function AcceptAdminInvitePage() {
   return (
-    <GradientBackground
-      variant="mesh"
-      className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8"
-    >
-      <main className="w-full max-w-md animate-fade-in-up">
-        {/* Brand */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <svg
-              className="w-8 h-8 text-primary"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              <path d="M2 17l10 5 10-5" />
-              <path d="M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <h1 className="text-display text-2xl sm:text-3xl font-bold tracking-tight">
-            Smile Cliniq
-          </h1>
-          <p className="text-muted-foreground mt-2 text-body-sm">
-            Set up your administrator account
-          </p>
-        </div>
-
-        <Suspense fallback={
-          <Card variant="glass" className="shadow-elevated-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        }>
-          <AcceptAdminInviteInner />
-        </Suspense>
-
-        <p className="text-center text-caption text-muted-foreground/60 mt-8">
-          Secure login powered by Smile Cliniq
-        </p>
-      </main>
-    </GradientBackground>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-6 text-sm text-muted-foreground">Loading…</div>}>
+      <AcceptAdminInviteInner />
+    </Suspense>
   )
 }
+
+
+

@@ -1,4 +1,4 @@
-# Smile Cliniq Onboarding Task Manager
+# Smile Clinique Onboarding Task Manager
 
 > **A modern onboarding and workflow automation platform for dental clinics.**
 
@@ -10,7 +10,7 @@
 
 ## What is this project?
 
-Smile Cliniq Onboarding Task Manager is a web application that streamlines the onboarding process for dental clinics. It automates task management, document handling, and communication between admins, managers, and team members, providing a single source of truth for onboarding workflows.
+Smile Clinique Onboarding Task Manager is a web application that streamlines the onboarding process for dental clinics. It automates task management, document handling, and communication between admins, managers, and team members, providing a single source of truth for onboarding workflows.
 
 **Who is it for?**
 - Dental clinic owners and managers

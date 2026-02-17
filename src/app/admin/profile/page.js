@@ -213,7 +213,7 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="flex flex-col w-full min-h-screen bg-background p-6 md:p-8">
+      <div className="flex flex-col w-full min-h-screen bg-background p-4 md:p-6">
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -225,7 +225,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-background">
-      <div className="p-6 md:p-8 w-full animate-fade-in-up">
+      <div className="p-4 md:p-6 w-full">
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="w-full mx-auto">
           <motion.div variants={itemVariants}>
             <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
@@ -713,11 +713,11 @@ export default function ProfilePage() {
 // Helper function to generate activity icons
 function getActivityIcon(index) {
   const icons = [
-    { icon: UserCog, color: "bg-info-muted text-info" },
-    { icon: Lock, color: "bg-success-muted text-success" },
-    { icon: Mail, color: "bg-primary/10 text-primary" },
-    { icon: Shield, color: "bg-warning-muted text-warning" },
-    { icon: Bell, color: "bg-error-muted text-error" },
+    { icon: UserCog, color: "bg-blue-100 text-blue-500 dark:bg-blue-900/20" },
+    { icon: Lock, color: "bg-green-100 text-green-500 dark:bg-green-900/20" },
+    { icon: Mail, color: "bg-purple-100 text-purple-500 dark:bg-purple-900/20" },
+    { icon: Shield, color: "bg-amber-100 text-amber-500 dark:bg-amber-900/20" },
+    { icon: Bell, color: "bg-red-100 text-red-500 dark:bg-red-900/20" },
   ]
   return icons[index % icons.length]
 }

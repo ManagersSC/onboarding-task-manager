@@ -1,6 +1,6 @@
 # Changelog
 
-This directory contains detailed documentation of changes, updates, and debugging sessions for the Smile Cliniq Onboarding Task Manager.
+This directory contains detailed documentation of changes, updates, and debugging sessions for the Smile Clinique Onboarding Task Manager.
 
 ## Structure
 

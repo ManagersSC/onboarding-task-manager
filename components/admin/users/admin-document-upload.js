@@ -103,16 +103,16 @@ export default function AdminDocumentUpload({ applicantId, applicantName, onUplo
 
   const getCategoryColor = (category) => {
     const colors = {
-      'Application': 'bg-info-muted text-info',
-      'Legal': 'bg-error-muted text-error',
-      'Professional': 'bg-success-muted text-success',
-      'Medical': 'bg-primary/10 text-primary',
-      'Training': 'bg-warning-muted text-warning',
-      'Employment': 'bg-info-muted text-info',
-      'Personal': 'bg-primary/10 text-primary',
-      'Miscellaneous': 'bg-muted text-muted-foreground'
+      'Application': 'bg-blue-100 text-blue-800',
+      'Legal': 'bg-red-100 text-red-800',
+      'Professional': 'bg-green-100 text-green-800',
+      'Medical': 'bg-purple-100 text-purple-800',
+      'Training': 'bg-yellow-100 text-yellow-800',
+      'Employment': 'bg-orange-100 text-orange-800',
+      'Personal': 'bg-pink-100 text-pink-800',
+      'Miscellaneous': 'bg-gray-100 text-gray-800'
     }
-    return colors[category] || 'bg-muted text-muted-foreground'
+    return colors[category] || 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -207,16 +207,16 @@ export default function AdminDocumentUpload({ applicantId, applicantName, onUplo
       {/* Upload Status */}
       {uploadStatus && (
         <div className={`p-3 rounded-md border ${
-          uploadStatus.success ? 'border-success/30 bg-success-muted' : 'border-error/30 bg-error-muted'
+          uploadStatus.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
         }`}>
           <div className="flex items-center gap-2">
             {uploadStatus.success ? (
-              <CheckCircle className="h-4 w-4 text-success" />
+              <CheckCircle className="h-4 w-4 text-green-600" />
             ) : (
-              <AlertCircle className="h-4 w-4 text-error" />
+              <AlertCircle className="h-4 w-4 text-red-600" />
             )}
             <span className={`text-sm ${
-              uploadStatus.success ? 'text-success' : 'text-error'
+              uploadStatus.success ? 'text-green-800' : 'text-red-800'
             }`}>
               {uploadStatus.message}
             </span>

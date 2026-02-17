@@ -453,8 +453,8 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
 
               {error ? (
                 <div className="py-6 text-center">
-                  <AlertCircle className="h-10 w-10 text-error mx-auto mb-2" />
-                  <p className="text-error font-medium">Error: {error}</p>
+                  <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
+                  <p className="text-destructive font-medium">Error: {error}</p>
                   <Button onClick={() => onOpenChange(false)} variant="outline" className="mt-4">
                     Close
                   </Button>
@@ -496,7 +496,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     placeholder="Enter task name"
                                     {...field}
                                     className={cn(
-                                      isFieldModified("title") && "border-warning bg-warning-muted",
+                                      isFieldModified("title") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                     )}
                                   />
                                 </FormControl>
@@ -530,7 +530,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     className={cn(
                                       "min-h-[100px] resize-none",
                                       isFieldModified("description") &&
-                                        "border-warning bg-warning-muted",
+                                        "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                     )}
                                     {...field}
                                   />
@@ -563,7 +563,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                   <FormControl>
                                     <SelectTrigger
                                       className={cn(
-                                        isFieldModified("type") && "border-warning bg-warning-muted",
+                                        isFieldModified("type") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                       )}
                                     >
                                       <SelectValue placeholder="Select type" />
@@ -612,7 +612,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                       <SelectTrigger
                                         className={cn(
                                           isFieldModified("week") &&
-                                            "border-warning bg-warning-muted",
+                                            "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                         )}
                                       >
                                         <SelectValue placeholder="Select week" />
@@ -654,7 +654,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     <FormControl>
                                       <SelectTrigger
                                         className={cn(
-                                          isFieldModified("day") && "border-warning bg-warning-muted",
+                                          isFieldModified("day") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                         )}
                                       >
                                         <SelectValue placeholder="Select day" />
@@ -698,7 +698,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     <SelectTrigger
                                       className={cn(
                                         isFieldModified("folderName") &&
-                                          "border-warning bg-warning-muted",
+                                          "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                       )}
                                     >
                                       <SelectValue placeholder="Select folder..." />
@@ -755,7 +755,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                   <FormControl>
                                     <SelectTrigger
                                       className={cn(
-                                        isFieldModified("jobTitle") && "border-warning bg-warning-muted",
+                                        isFieldModified("jobTitle") && "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                       )}
                                     >
                                       <SelectValue placeholder="Select job role" />
@@ -798,7 +798,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     <SelectTrigger
                                       className={cn(
                                         isFieldModified("location") &&
-                                          "border-warning bg-warning-muted",
+                                          "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                       )}
                                     >
                                       <SelectValue placeholder="Select location" />
@@ -833,7 +833,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                         {isFieldModified("resourceUrl") && (
                           <Badge
                             variant="outline"
-                            className="ml-2 bg-warning-muted text-warning border-warning/20"
+                            className="ml-2 bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
                           >
                             Modified
                           </Badge>
@@ -865,13 +865,13 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     }}
                                     className={cn(
                                       isFieldModified("resourceUrl") &&
-                                        "border-warning bg-warning-muted",
+                                        "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                     )}
                                   />
                                 </FormControl>
                                 {isFieldModified("resourceUrl") && (
-                                  <div className="text-xs text-muted-foreground space-y-1 bg-warning-muted p-2 rounded-md border border-warning/20">
-                                    <p className="flex items-center font-medium text-warning">
+                                  <div className="text-xs text-muted-foreground space-y-1 bg-amber-50 dark:bg-amber-950/20 p-2 rounded-md border border-amber-200 dark:border-amber-800">
+                                    <p className="flex items-center font-medium text-amber-700 dark:text-amber-400">
                                       <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
                                       Resource link has been modified
                                     </p>
@@ -908,7 +908,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                     "border-2 border-dashed rounded-md p-6 transition-colors",
                                     isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
                                     isFieldModified("attachments") &&
-                                      "border-warning bg-warning-muted",
+                                      "border-amber-500 bg-amber-50 dark:bg-amber-950/20",
                                   )}
                                   onDragOver={handleDragOver}
                                   onDragLeave={handleDragLeave}
@@ -950,7 +950,7 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                                             {file.isNew && (
                                               <Badge
                                                 variant="outline"
-                                                className="bg-info-muted text-info border-info/20 text-xs"
+                                                className="bg-blue-100 text-blue-800 border-blue-200 text-xs"
                                               >
                                                 New
                                               </Badge>
@@ -993,8 +993,8 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
                     {/* Form Actions */}
                     <div className="pt-4 border-t mt-6">
                       {formModified && (
-                        <div className="mb-4 p-2 bg-info-muted rounded-md border border-info/20">
-                          <p className="text-sm text-info flex items-center">
+                        <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800">
+                          <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center">
                             <Info className="h-4 w-4 mr-2" />
                             You have unsaved changes
                           </p>
@@ -1063,21 +1063,21 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-warning" />
+              <AlertCircle className="h-5 w-5 text-amber-500" />
               Unsaved Changes
             </AlertDialogTitle>
             <AlertDialogDescription>
               You have unsaved changes to this task. Are you sure you want to close without saving? All your changes will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="my-4 p-4 bg-warning-muted rounded-md border border-warning/20">
+          <div className="my-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
               <div className="space-y-2">
-                <p className="text-sm font-medium text-warning">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                   Your changes include:
                 </p>
-                <ul className="text-sm text-warning space-y-1">
+                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
                   {isFieldModified("title") && (
                     <li>• Task name: "{originalData?.title}" → "{formValues.title}"</li>
                   )}

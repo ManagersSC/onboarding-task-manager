@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function AssignedTasksLogs() {
   return (
-    <div className="p-6 md:p-8 animate-fade-in-up">
+    <div className="p-6 space-y-6 bg-background">
       <AssignedTasksLogsPage />
     </div>
   )
