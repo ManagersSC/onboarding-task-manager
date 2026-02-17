@@ -60,7 +60,7 @@ export async function POST(request) {
 
     // Trigger Make.com webhook for email delivery.
     try{
-      const response = await fetch(process.env.MAKE_WEBHOOK_URL, {
+      const response = await fetch(process.env.MAKE_WEBHOOK_URL_RESET_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalisedEmail, expiresIn: expiryTime, resetToken }),
@@ -82,7 +82,7 @@ export async function POST(request) {
         );
       }
     } catch(err){
-      logger.error("Error triggering Make.com automation", error);
+      logger.error("Error triggering Make.com automation", err);
       return Response.json({ error: "Internal server error" }, { status: 500 });
     }
 

@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     eslint: {
-      // Avoid ESLint build failures on Vercel due to legacy CLI options
-      ignoreDuringBuilds: true,
+      ignoreDuringBuilds: false,
     },
     images: {
       remotePatterns: [

@@ -43,11 +43,22 @@ export async function DELETE(request) {
     userName = session.userName
 
     const { taskIds } = await request.json()
-    
+
     // Single source of control for test mode via environment variable
     const testMode = process.env.BULK_DELETE_TEST_MODE === 'true'
     if (!Array.isArray(taskIds) || taskIds.length === 0) {
       return Response.json({ error: "Invalid request: taskIds is required" }, { status: 400 })
+    }
+
+    const MAX_BULK_DELETE = 50
+    if (taskIds.length > MAX_BULK_DELETE) {
+      return Response.json({ error: `Cannot delete more than ${MAX_BULK_DELETE} records at once` }, { status: 400 })
+    }
+
+    const airtableIdPattern = /^rec[a-zA-Z0-9]{14}$/
+    const invalidIds = taskIds.filter(id => !airtableIdPattern.test(id))
+    if (invalidIds.length > 0) {
+      return Response.json({ error: "Invalid record ID format detected" }, { status: 400 })
     }
 
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {

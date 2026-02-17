@@ -132,7 +132,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Check if template exists and is custom
     const existingRecord = await base('Email Templates').find(id)

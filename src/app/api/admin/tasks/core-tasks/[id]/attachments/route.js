@@ -181,6 +181,7 @@ export async function PATCH(request, { params }) {
         path: "/",
         maxAge: 60 * 60 * 8,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
       });
 
       logAuditEvent({
