@@ -76,6 +76,9 @@ export async function DELETE(request, { params }) {
     // Delete the quiz record
     await base("Onboarding Quizzes").destroy([quizId])
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'quizzes/[quizId]/route.js:beforeLogAudit',message:'about to call logAuditEvent Quiz Deleted Success',data:{quizId},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     await logAuditEvent({
       eventType: "Quiz Deleted",
       eventStatus: "Success",

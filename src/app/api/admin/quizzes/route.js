@@ -101,6 +101,9 @@ export async function POST(request) {
       }
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'quizzes/route.js:beforeLogAudit',message:'about to call logAuditEvent Quiz Created Success',data:{quizId},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     await logAuditEvent({
       eventType: "Quiz Created",
       eventStatus: "Success",
@@ -113,6 +116,9 @@ export async function POST(request) {
 
     return new Response(JSON.stringify({ ok: true, quizId }), { status: 201, headers: { "Content-Type": "application/json" } })
   } catch (e) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d97e23f0-6cbf-4e5b-b880-d53a90811734',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'quizzes/route.js:catchBeforeLogAudit',message:'in catch, about to call logAuditEvent Quiz Created Error',data:{errorMessage:e?.message},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     await logAuditEvent({
       eventType: "Quiz Created",
       eventStatus: "Error",
