@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { joinOptionsArray } from "@/lib/quiz/options"
+import { logAuditEvent } from "@/lib/auditLogger"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -38,9 +39,15 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  let userEmail, userRole, userName
+
   try {
     const session = await getAdminSession()
     if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } })
+
+    userEmail = session.userEmail
+    userRole = session.userRole
+    userName = session.userName || userEmail?.split("@")[0]
 
     const body = await request.json().catch(() => ({}))
     const { title, pageTitle, passingScore, week, items } = body
@@ -59,6 +66,7 @@ export async function POST(request) {
     const quizId = quizRecord[0].id
 
     // Create quiz items if provided
+    const itemCount = Array.isArray(items) ? items.length : 0
     if (Array.isArray(items) && items.length > 0) {
       const itemRecords = items.map((it, idx) => {
         const isInfo = String(it.type || "").toLowerCase() === "information"
@@ -84,10 +92,27 @@ export async function POST(request) {
       }
     }
 
+    logAuditEvent({
+      eventType: "Quiz Created",
+      eventStatus: "Success",
+      userRole,
+      userName,
+      userIdentifier: userEmail,
+      detailedMessage: `Admin: ${userName}. Quiz created: "${title.trim()}"${week ? ` (Week ${week})` : ""} with ${itemCount} item(s). Record ID: ${quizId}`,
+      request,
+    })
+
     return new Response(JSON.stringify({ ok: true, quizId }), { status: 201, headers: { "Content-Type": "application/json" } })
   } catch (e) {
+    logAuditEvent({
+      eventType: "Quiz Created",
+      eventStatus: "Error",
+      userRole: userRole || "Unknown",
+      userName: userName || "Unknown",
+      userIdentifier: userEmail || "Unknown",
+      detailedMessage: `Failed to create quiz: ${e?.message || "Unknown error"}`,
+      request,
+    })
     return new Response(JSON.stringify({ error: "Failed to create quiz" }), { status: 500, headers: { "Content-Type": "application/json" } })
   }
 }
-
-
