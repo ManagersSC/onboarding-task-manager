@@ -141,6 +141,11 @@ function AdminQuizzesPageContent() {
   const [createSaving, setCreateSaving] = useState(false)
   const [createPreviewOpen, setCreatePreviewOpen] = useState(false)
 
+  // Delete quiz state
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   // Helpers to convert between fraction (0-1) and percent (0-100) displays
   const toPercentDisplay = (value) => {
     const n = Number(value)
@@ -345,6 +350,17 @@ function AdminQuizzesPageContent() {
     }
   }
 
+  const deleteQuiz = async (quizId) => {
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quizId}`, { method: "DELETE" })
+      if (!res.ok) return false
+      await refreshQuizzes?.()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const saveQuizEdits = async () => {
     if (!editQuiz) return false
     // validate before save
@@ -480,10 +496,18 @@ function AdminQuizzesPageContent() {
       }}>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Quizzes Admin</h1>
-          <TabsList>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-3">
+            {tab === "quizzes" && (
+              <Button onClick={openCreateModal} size="sm" className="h-8">
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Quiz
+              </Button>
+            )}
+            <TabsList>
+              <TabsTrigger value="submissions">Submissions</TabsTrigger>
+              <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
+            </TabsList>
+          </div>
         </div>
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -760,13 +784,6 @@ function AdminQuizzesPageContent() {
         </TabsContent>
 
         <TabsContent value="quizzes" className="mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm text-muted-foreground">{quizzes.length} quiz{quizzes.length !== 1 ? "zes" : ""}</div>
-            <Button onClick={openCreateModal} className="h-9">
-              <Plus className="h-4 w-4 mr-2" />
-              New Quiz
-            </Button>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {quizzes.map((q) => (
               <motion.div
@@ -782,7 +799,18 @@ function AdminQuizzesPageContent() {
                       {q.week != null && <span className="ml-2">· Week {q.week}</span>}
                     </div>
                   </div>
-                  <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                      onClick={() => { setDeleteTarget(q); setDeleteConfirmOpen(true) }}
+                      title="Delete quiz"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -1587,6 +1615,40 @@ function AdminQuizzesPageContent() {
               <PreviewRenderer items={(createItems || []).map((it) => ({ ...it, options: it.uiOptions }))} />
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Quiz Confirmation Modal */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => { if (!deleting) { setDeleteConfirmOpen(open); if (!open) setDeleteTarget(null) } }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete quiz</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.title || "this quiz"}</span>? This will also remove all associated questions and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setDeleteConfirmOpen(false); setDeleteTarget(null) }} disabled={deleting}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deleteTarget) return
+                setDeleting(true)
+                const ok = await deleteQuiz(deleteTarget.id)
+                setDeleting(false)
+                if (ok) {
+                  setDeleteConfirmOpen(false)
+                  setDeleteTarget(null)
+                  toast.success("Quiz deleted successfully")
+                } else {
+                  toast.error("Failed to delete quiz")
+                }
+              }}
+            >
+              {deleting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting…</>) : "Delete"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
