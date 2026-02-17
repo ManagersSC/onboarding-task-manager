@@ -4,7 +4,7 @@ import { jest } from "@jest/globals";
 describe("logAuditEvent", () => {
   let logAuditEvent;
   let createMock;
-  let logger;
+  let loggerErrorMock;
 
   beforeEach(() => {
     // Clear module cache so that our mocks are fresh.
@@ -18,12 +18,10 @@ describe("logAuditEvent", () => {
     // Create a mock for the Airtable create method.
     createMock = jest.fn().mockResolvedValue();
 
-    // Use jest.doMock for Airtable so that the module initialization in auditLogger.js
-    // uses our mocked version.
+    // Use jest.doMock for Airtable so that getAirtableBase() (via airtable/client) uses our mock.
     jest.doMock("airtable", () => {
       return jest.fn().mockImplementation(() => {
         return {
-          // When .base() is called, return a function that accepts a table name.
           base: jest.fn().mockImplementation((baseId) => {
             return (tableName) => {
               if (tableName === "Website Audit Log") {
@@ -36,14 +34,15 @@ describe("logAuditEvent", () => {
       });
     });
 
-    // Use jest.doMock for logger so we can spy on logger.error.
-    jest.doMock("./logger", () => ({
-      error: jest.fn(),
+    // Use jest.doMock for logger so we can spy on logger.error (auditLogger imports from ./utils/logger).
+    loggerErrorMock = jest.fn();
+    jest.doMock("./utils/logger", () => ({
+      __esModule: true,
+      default: { error: loggerErrorMock },
     }));
 
     // Import our auditLogger module after our mocks are in place.
     ({ logAuditEvent } = require("./auditLogger"));
-    logger = require("./utils/logger");
   });
 
   afterEach(() => {
@@ -89,7 +88,7 @@ describe("logAuditEvent", () => {
     expect(fields["User Agent"]).toBe("jest-agent");
 
     // In the success case, logger.error should not have been called.
-    expect(logger.error).not.toHaveBeenCalled();
+    expect(loggerErrorMock).not.toHaveBeenCalled();
   });
 
   it("should handle errors when Airtable create fails", async () => {
@@ -115,11 +114,32 @@ describe("logAuditEvent", () => {
     await logAuditEvent(eventDetails);
 
     // Verify that logger.error is called with the appropriate error.
-    expect(logger.error).toHaveBeenCalledTimes(1);
-    const errorCallArgs = logger.error.mock.calls[0];
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    const errorCallArgs = loggerErrorMock.mock.calls[0];
     expect(errorCallArgs[0]).toBe("Audit log creation failed:");
     expect(errorCallArgs[1]).toBeInstanceOf(Error);
     expect(errorCallArgs[1].message).toBe(errorMsg);
+  });
+
+  it("should still create a record when request is undefined (defensive)", async () => {
+    const eventDetails = {
+      eventType: "Quiz Created",
+      eventStatus: "Success",
+      userRole: "admin",
+      userName: "Test Admin",
+      userIdentifier: "admin@test.com",
+      detailedMessage: "Quiz created without request object",
+      request: undefined,
+    };
+
+    await logAuditEvent(eventDetails);
+
+    expect(createMock).toHaveBeenCalledTimes(1);
+    const fields = createMock.mock.calls[0][0][0].fields;
+    expect(fields["Event Type"]).toBe("Quiz Created");
+    expect(fields["IP Address"]).toBe("unknown");
+    expect(fields["User Agent"]).toBe("unknown");
+    expect(loggerErrorMock).not.toHaveBeenCalled();
   });
 
   it("should handle missing environment variables", async () => {
@@ -145,8 +165,8 @@ describe("logAuditEvent", () => {
     await logAuditEvent(eventDetails);
 
     // Verify that logger.error is called because the environment variables are missing.
-    expect(logger.error).toHaveBeenCalledTimes(1);
-    const errorCallArgs = logger.error.mock.calls[0];
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
+    const errorCallArgs = loggerErrorMock.mock.calls[0];
     expect(errorCallArgs[0]).toBe("Audit log creation failed:");
     expect(errorCallArgs[1]).toBeInstanceOf(Error);
     expect(errorCallArgs[1].message).toBe("Airtable environment variables are missing");
