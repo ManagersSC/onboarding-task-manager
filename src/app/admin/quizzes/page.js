@@ -304,8 +304,21 @@ function AdminQuizzesPageContent() {
     setCreateItems(prev => prev.map(it => it._tempId === tempId ? { ...it, ...patch } : it))
   }
 
+  const isCreateItemValid = (it) => {
+    if (!it.content || !String(it.content).trim()) return false
+    const isInfo = String(it.type || "").toLowerCase() === "information"
+    if (!isInfo) {
+      const opts = (it.uiOptions || []).filter(o => String(o).trim())
+      if (opts.length === 0) return false
+      if (!it.uiCorrectIndices || it.uiCorrectIndices.length === 0) return false
+    }
+    return true
+  }
+
+  const isCreateFormValid = createQuiz.title.trim() && createQuiz.pageTitle.trim() && createQuiz.passingScore && createQuiz.week && createItems.length > 0 && createItems.every(isCreateItemValid)
+
   const saveNewQuiz = async () => {
-    if (!createQuiz.title.trim() || !createQuiz.pageTitle.trim() || !createQuiz.passingScore || !createQuiz.week) return false
+    if (!isCreateFormValid) return false
 
     const itemsPayload = createItems.map(it => {
       const isInfo = String(it.type || "").toLowerCase() === "information"
@@ -1381,7 +1394,7 @@ function AdminQuizzesPageContent() {
                 <Button
                   size="sm"
                   className="h-8"
-                  disabled={!createQuiz.title.trim() || !createQuiz.pageTitle.trim() || !createQuiz.passingScore || !createQuiz.week || createSaving}
+                  disabled={!isCreateFormValid || createSaving}
                   onClick={async () => {
                     setCreateSaving(true)
                     const ok = await saveNewQuiz()

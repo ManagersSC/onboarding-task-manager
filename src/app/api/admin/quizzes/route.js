@@ -59,6 +59,25 @@ export async function POST(request) {
     if (typeof passingScore !== "number" || !Number.isFinite(passingScore)) errors.push("Passing Score is required")
     if (typeof week !== "number" || !Number.isFinite(week) || week < 1 || week > 5) errors.push("Week (1-5) is required")
 
+    if (!Array.isArray(items) || items.length === 0) errors.push("At least one item is required")
+    if (Array.isArray(items)) {
+      items.forEach((it, idx) => {
+        const label = `Item ${idx + 1}`
+        if (!it.content || typeof it.content !== "string" || !it.content.trim()) {
+          errors.push(`${label}: Content is required`)
+        }
+        const isInfo = String(it.type || "").toLowerCase() === "information"
+        if (!isInfo) {
+          if (!Array.isArray(it.options) || it.options.filter(o => String(o).trim()).length === 0) {
+            errors.push(`${label}: At least one option is required`)
+          }
+          if (!it.correctAnswer || typeof it.correctAnswer !== "string" || !it.correctAnswer.trim()) {
+            errors.push(`${label}: Correct answer is required`)
+          }
+        }
+      })
+    }
+
     if (errors.length > 0) {
       return new Response(JSON.stringify({ error: errors.join(", ") }), { status: 400, headers: { "Content-Type": "application/json" } })
     }
