@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { sealData } from "iron-session";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Sign up route with immediate post sign-up login.
 export async function POST(request) {
@@ -43,7 +44,7 @@ export async function POST(request) {
 
     // Look up the applicant record in the ATS database.
     const existingApplicants = await base("Applicants")
-      .select({ filterByFormula: `{Email}='${normalisedEmail}'`, maxRecords: 1 })
+      .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
       .firstPage();
 
     // If no applicant record is found, return a 404.

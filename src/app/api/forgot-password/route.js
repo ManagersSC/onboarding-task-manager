@@ -2,6 +2,7 @@ import Airtable from "airtable";
 import jwt from "jsonwebtoken";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Initialize Airtable base.
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
@@ -22,7 +23,7 @@ export async function POST(request) {
 
     // Check if user exists.
     const users = await base("Applicants")
-      .select({ filterByFormula: `{Email}='${normalisedEmail}'`, maxRecords: 1 })
+      .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
       .firstPage();
 
     if (users.length === 0) {

@@ -63,13 +63,7 @@ export function rateLimiter(limit = 5, windowMs = 60 * 1000) {
     validTimestamps.push(now);
     rateLimitStore.set(ip, validTimestamps);
 
-    // Return response with rate limit headers
-    return NextResponse.next({
-      headers: {
-        'X-RateLimit-Limit': limit.toString(),
-        'X-RateLimit-Remaining': (limit - validTimestamps.length).toString(),
-        'X-RateLimit-Reset': (now + windowMs).toString()
-      }
-    });
+    // Return null to indicate request should proceed through middleware
+    return null;
   };
 } 

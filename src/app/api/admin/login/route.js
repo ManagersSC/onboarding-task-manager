@@ -4,6 +4,7 @@ import logger from "@/lib/utils/logger";
 import Airtable from "airtable";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Login route
 export async function POST(request) {
@@ -24,8 +25,7 @@ export async function POST(request) {
             )
         }
 
-        const escapedEmail = email.replace(/'/g, "''");
-        normalisedEmail = escapedEmail.trim().toLowerCase();
+        normalisedEmail = email.trim().toLowerCase();
 
         if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
             logger.error("Server configuration error: Missing AIRTABLE_API_KEY or AIRTABLE_BASE_ID")
@@ -43,7 +43,7 @@ export async function POST(request) {
         // Fetch admin user from Airtable
         const admins = await base("Staff")
             .select({
-                filterByFormula: `AND({Email}='${normalisedEmail}', {IsAdmin}=TRUE())`,
+                filterByFormula: `AND({Email}='${escapeAirtableValue(normalisedEmail)}', {IsAdmin}=TRUE())`,
                 maxRecords: 1,
             }
         ).firstPage();

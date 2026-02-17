@@ -4,6 +4,7 @@ import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { unsealData } from "iron-session";
 import { createNotification } from "@/lib/notifications";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Complete tasks
 export async function POST(request) {
@@ -72,7 +73,7 @@ export async function POST(request) {
     // First, fetch applicant record and task log record.
     const applicantQuery = base("Applicants")
       .select({
-        filterByFormula: `{Email}='${userEmail}'`,
+        filterByFormula: `{Email}='${escapeAirtableValue(userEmail)}'`,
         maxRecords: 1,
       })
       .firstPage();

@@ -3,6 +3,7 @@ import logger from "@/lib/utils/logger"
 import Airtable from "airtable"
 import { unsealData, sealData } from "iron-session"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { escapeAirtableValue } from "@/lib/airtable/sanitize"
 
 export async function GET(request) {
   let userEmail;
@@ -56,13 +57,12 @@ export async function GET(request) {
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
-    const escapedEmail = userEmail.replace(/'/g, "''");
-    const email = escapedEmail;
+    const email = userEmail;
 
     // Get admin profile from Staff table
     const staffResponse = await base("Staff")
       .select({
-        filterByFormula: `{Email}='${email}'`,
+        filterByFormula: `{Email}='${escapeAirtableValue(email)}'`,
         maxRecords: 1,
         fields: ["Name", "Email"],
       })

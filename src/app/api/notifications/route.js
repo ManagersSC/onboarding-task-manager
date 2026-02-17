@@ -2,6 +2,7 @@ import Airtable from "airtable";
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
 import logger from "@/lib/utils/logger";
+import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -43,7 +44,7 @@ export async function GET(request) {
     const since = searchParams.get("since"); // ISO string or timestamp
 
     // 3. Build Airtable filter formula
-    let filterFormula = `{Recipient} = '${staffName}'`;
+    let filterFormula = `{Recipient} = '${escapeAirtableValue(staffName)}'`;
     if (unread) {
       filterFormula = `AND(${filterFormula}, {Read} = FALSE())`;
     }
@@ -99,7 +100,7 @@ export async function GET(request) {
     try {
       const unreadResult = await base("Notifications")
         .select({
-          filterByFormula: `AND({Recipient} = '${staffName}', {Read} = FALSE())`,
+          filterByFormula: `AND({Recipient} = '${escapeAirtableValue(staffName)}', {Read} = FALSE())`,
           fields: ["Read"],
         })
         .all();

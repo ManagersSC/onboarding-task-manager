@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { escapeAirtableValue } from "@/lib/airtable/sanitize"
 
 export async function POST(request) {
   let requesterEmail = "Unknown"
@@ -58,7 +59,7 @@ export async function POST(request) {
 
     // Check Staff table for existing record
     const existing = await base("Staff")
-      .select({ filterByFormula: `{Email}='${normalisedEmail}'`, maxRecords: 1 })
+      .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
       .firstPage()
 
     let staffId

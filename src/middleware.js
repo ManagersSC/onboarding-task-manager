@@ -46,12 +46,25 @@ export async function middleware(request) {
     }
   }
 
-  const isPublic = ["/", "/signup", "/forgot-password", "/accept-admin-invite"].includes(path);
+  const isPublicPage = ["/", "/signup", "/forgot-password", "/accept-admin-invite"].includes(path);
+  const isPublicApi = [
+    "/api/login", "/api/admin/login", "/api/sign-up",
+    "/api/forgot-password", "/api/reset-password", "/api/admin/accept-invite",
+  ].includes(path);
+  const isPublic = isPublicPage || isPublicApi;
   const isAdminRoute = path.startsWith("/admin");
+  const isAdminApiRoute = path.startsWith("/api/admin");
+  const adminApiExemptions = ['/api/admin/login', '/api/admin/accept-invite'];
+  const needsAdminRole = isAdminRoute || (isAdminApiRoute && !adminApiExemptions.includes(path));
+
+  // Allow public routes through without session check
+  if (isPublic) {
+    return NextResponse.next();
+  }
 
   // Check session cookie
   const sessionCookie = request.cookies.get("session")?.value;
-  if(!isPublic && !sessionCookie){
+  if(!sessionCookie){
     edgeLog('[MIDDLEWARE] No session cookie, redirecting to home');
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
@@ -70,8 +83,11 @@ export async function middleware(request) {
   }
 
   // Check admin access
-  if (isAdminRoute && session.userRole !== "admin") {
+  if (needsAdminRole && session.userRole !== "admin") {
     edgeLog('[MIDDLEWARE] Non-admin access attempt to admin route:', path);
+    if (isAdminApiRoute) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl));
   }
 

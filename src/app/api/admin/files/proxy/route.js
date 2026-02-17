@@ -6,9 +6,26 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const fileUrl = searchParams.get('url')
-    
+
     if (!fileUrl) {
       return new Response(JSON.stringify({ error: "File URL is required" }), { status: 400 })
+    }
+
+    // SSRF protection: only allow known Airtable file hosts
+    const ALLOWED_HOSTS = ['dl.airtable.com', 'v5.airtableusercontent.com']
+    let parsedUrl
+    try {
+      parsedUrl = new URL(fileUrl)
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400 })
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+      return new Response(JSON.stringify({ error: "Only HTTPS URLs are allowed" }), { status: 400 })
+    }
+
+    if (!ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
+      return new Response(JSON.stringify({ error: "URL host not allowed" }), { status: 403 })
     }
 
     // Authentication check
@@ -34,7 +51,8 @@ export async function GET(request) {
       headers: {
         'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
         'User-Agent': 'Mozilla/5.0 (compatible; Airtable-Proxy/1.0)'
-      }
+      },
+      redirect: 'error',
     })
 
     if (!response.ok) {
