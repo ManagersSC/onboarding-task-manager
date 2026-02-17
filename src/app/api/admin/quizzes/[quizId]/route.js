@@ -76,7 +76,7 @@ export async function DELETE(request, { params }) {
     // Delete the quiz record
     await base("Onboarding Quizzes").destroy([quizId])
 
-    logAuditEvent({
+    await logAuditEvent({
       eventType: "Quiz Deleted",
       eventStatus: "Success",
       userRole,
@@ -88,7 +88,7 @@ export async function DELETE(request, { params }) {
 
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } })
   } catch (e) {
-    logAuditEvent({
+    await logAuditEvent({
       eventType: "Quiz Deleted",
       eventStatus: "Error",
       userRole: userRole || "Unknown",

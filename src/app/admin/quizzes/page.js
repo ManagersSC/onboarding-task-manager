@@ -305,7 +305,7 @@ function AdminQuizzesPageContent() {
   }
 
   const saveNewQuiz = async () => {
-    if (!createQuiz.title.trim()) return false
+    if (!createQuiz.title.trim() || !createQuiz.pageTitle.trim() || !createQuiz.passingScore || !createQuiz.week) return false
 
     const itemsPayload = createItems.map(it => {
       const isInfo = String(it.type || "").toLowerCase() === "information"
@@ -335,9 +335,9 @@ function AdminQuizzesPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: createQuiz.title.trim(),
-          pageTitle: createQuiz.pageTitle.trim() || undefined,
+          pageTitle: createQuiz.pageTitle.trim(),
           passingScore: normalizedPassing,
-          week: createQuiz.week ? Number(createQuiz.week) : undefined,
+          week: Number(createQuiz.week),
           items: itemsPayload
         })
       })
@@ -1314,7 +1314,7 @@ function AdminQuizzesPageContent() {
                 />
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Page Title</div>
+                <div className="text-xs text-muted-foreground mb-1">Page Title <span className="text-destructive">*</span></div>
                 <Input
                   value={createQuiz.pageTitle}
                   onChange={(e) => setCreateQuiz(q => ({ ...q, pageTitle: e.target.value }))}
@@ -1325,7 +1325,7 @@ function AdminQuizzesPageContent() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-muted-foreground mb-1">Passing Score</div>
+                <div className="text-xs text-muted-foreground mb-1">Passing Score <span className="text-destructive">*</span></div>
                 <div className="relative">
                   <Input
                     value={String(createQuiz.passingScore ?? "")}
@@ -1347,7 +1347,7 @@ function AdminQuizzesPageContent() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-2">Week</div>
+                <div className="text-xs text-muted-foreground mb-2">Week <span className="text-destructive">*</span></div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[1, 2, 3, 4, 5].map((w) => (
                     <Button
@@ -1381,7 +1381,7 @@ function AdminQuizzesPageContent() {
                 <Button
                   size="sm"
                   className="h-8"
-                  disabled={!createQuiz.title.trim() || createSaving}
+                  disabled={!createQuiz.title.trim() || !createQuiz.pageTitle.trim() || !createQuiz.passingScore || !createQuiz.week || createSaving}
                   onClick={async () => {
                     setCreateSaving(true)
                     const ok = await saveNewQuiz()

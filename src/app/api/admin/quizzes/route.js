@@ -52,15 +52,24 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}))
     const { title, pageTitle, passingScore, week, items } = body
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return new Response(JSON.stringify({ error: "Quiz title is required" }), { status: 400, headers: { "Content-Type": "application/json" } })
+    // Validate all required fields
+    const errors = []
+    if (!title || typeof title !== "string" || !title.trim()) errors.push("Quiz Title is required")
+    if (!pageTitle || typeof pageTitle !== "string" || !pageTitle.trim()) errors.push("Page Title is required")
+    if (typeof passingScore !== "number" || !Number.isFinite(passingScore)) errors.push("Passing Score is required")
+    if (typeof week !== "number" || !Number.isFinite(week) || week < 1 || week > 5) errors.push("Week (1-5) is required")
+
+    if (errors.length > 0) {
+      return new Response(JSON.stringify({ error: errors.join(", ") }), { status: 400, headers: { "Content-Type": "application/json" } })
     }
 
     // Create the quiz record
-    const quizFields = { "Quiz Title": title.trim() }
-    if (typeof pageTitle === "string" && pageTitle.trim()) quizFields["Page Title"] = pageTitle.trim()
-    if (typeof passingScore === "number" && Number.isFinite(passingScore)) quizFields["Passing Score"] = passingScore
-    if (typeof week === "number" && Number.isFinite(week) && week >= 1) quizFields["Week"] = week
+    const quizFields = {
+      "Quiz Title": title.trim(),
+      "Page Title": pageTitle.trim(),
+      "Passing Score": passingScore,
+      "Week": week
+    }
 
     const quizRecord = await base("Onboarding Quizzes").create([{ fields: quizFields }])
     const quizId = quizRecord[0].id
@@ -92,19 +101,19 @@ export async function POST(request) {
       }
     }
 
-    logAuditEvent({
+    await logAuditEvent({
       eventType: "Quiz Created",
       eventStatus: "Success",
       userRole,
       userName,
       userIdentifier: userEmail,
-      detailedMessage: `Admin: ${userName}. Quiz created: "${title.trim()}"${week ? ` (Week ${week})` : ""} with ${itemCount} item(s). Record ID: ${quizId}`,
+      detailedMessage: `Admin: ${userName}. Quiz created: "${title.trim()}" (Week ${week}) with ${itemCount} item(s). Record ID: ${quizId}`,
       request,
     })
 
     return new Response(JSON.stringify({ ok: true, quizId }), { status: 201, headers: { "Content-Type": "application/json" } })
   } catch (e) {
-    logAuditEvent({
+    await logAuditEvent({
       eventType: "Quiz Created",
       eventStatus: "Error",
       userRole: userRole || "Unknown",
