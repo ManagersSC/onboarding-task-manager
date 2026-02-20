@@ -89,6 +89,13 @@ export async function POST(request) {
     }
 
     const applicantRecord = applicantRecords[0];
+
+    // VULN-H2: Verify the task is assigned to this user (prevent IDOR)
+    const taskAssigned = taskLogRecord.fields["Assigned"] || [];
+    if (!taskAssigned.includes(applicantRecord.id)) {
+      return Response.json({ error: "This task is not assigned to you." }, { status: 403 });
+    }
+
     const isPaused = applicantRecord.fields["Onboarding Paused"] === true
     if (isPaused) {
       await logAuditEvent({

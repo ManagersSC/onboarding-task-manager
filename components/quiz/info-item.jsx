@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@components/ui/card"
 import { Info } from "lucide-react"
+import { sanitizeHtml } from "@/lib/utils/sanitize"
 
 export default function InfoItem({ item }) {
   return (
@@ -9,7 +10,7 @@ export default function InfoItem({ item }) {
           <Info className="h-5 w-5 text-info mt-1 flex-shrink-0" />
           {/* Use dangerouslySetInnerHTML for HTML content, ensure text is sanitized if from user input */}
           {/* Assuming quiz content is trusted admin input */}
-          <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: item.text }} />
+          <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.text) }} />
         </div>
       </CardContent>
     </Card>

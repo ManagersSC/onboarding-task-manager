@@ -95,7 +95,7 @@ export async function GET(req) {
     } catch (airtableErr) {
       console.error("Airtable fetch error:", airtableErr);
       return new Response(
-        JSON.stringify({ error: 'Airtable fetch error', details: airtableErr.message }),
+        JSON.stringify({ error: 'Failed to fetch tasks', details: process.env.NODE_ENV === "development" ? airtableErr.message : undefined }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -194,7 +194,7 @@ export async function GET(req) {
   } catch (error) {
     console.error("General GET error:", error);
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch tasks', details: error.message }),
+      JSON.stringify({ error: 'Failed to fetch tasks', details: process.env.NODE_ENV === "development" ? error.message : undefined }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -222,35 +222,64 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { title, description, assignTo, urgency, dueDate, createdBy, createdById, taskType } = body;
+    // VULN-M12: Only extract allowed fields (prevent mass assignment)
+    const { title, description, assignTo, urgency, dueDate, taskType } = body;
 
     // Validate required fields
-    if (!title || !assignTo || !urgency || !dueDate || !createdBy) {
+    if (!title || !assignTo || !urgency || !dueDate) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
+    // Validate urgency against allowed values
+    const VALID_URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
+    if (!VALID_URGENCIES.includes(urgency)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid urgency value' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate Airtable record ID format for assignTo
+    if (!/^rec[a-zA-Z0-9]{14}$/.test(assignTo)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid staff ID format' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
       return new Response(
-        JSON.stringify({ error: 'Airtable environment variables are missing' }),
+        JSON.stringify({ error: 'Server configuration error' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
+    // Use session staffId as createdBy (not from request body)
+    const auth = { userStaffId: null };
+    try {
+      const cookieStore2 = await cookies();
+      const sealedSession2 = cookieStore2.get("session")?.value;
+      if (sealedSession2) {
+        const sess = await unsealData(sealedSession2, { password: process.env.SESSION_SECRET });
+        auth.userStaffId = sess.userStaffId || null;
+      }
+    } catch {}
+
     // Map frontend fields to Airtable fields (ATS schema)
     const airtableFields = {
       '📌 Task': title,
       '📖 Task Detail': description || '',
-      '👨 Assigned Staff': [assignTo], // expects array of record IDs
+      '👨 Assigned Staff': [assignTo],
       '🚨 Urgency': urgency,
       '📆 Due Date': dueDate,
-      '👩 Created By': createdById ? [createdById] : [],
-      '🚀 Status': 'In-progress', // default status
-      ...(taskType ? { 'Task Type': taskType } : {}),
+      '👩 Created By': auth.userStaffId ? [auth.userStaffId] : [],
+      '🚀 Status': 'In-progress',
+      ...(taskType && ['Standard', 'Onboarding'].includes(taskType) ? { 'Task Type': taskType } : {}),
     };
 
     // Create the record in Airtable
@@ -291,7 +320,7 @@ export async function POST(req) {
       });
     } catch {}
     return new Response(
-      JSON.stringify({ error: 'Failed to create task', details: error.message }),
+      JSON.stringify({ error: 'Failed to create task', details: process.env.NODE_ENV === "development" ? error.message : undefined }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { escapeAirtableValue } from "@/lib/airtable/sanitize";
+import { validatePassword } from "@/lib/validation/password";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
@@ -23,9 +24,18 @@ export async function POST(request) {
     }
 
     if (newPassword !== confirmPassword) {
-      return Response.json({ 
+      return Response.json({
         error: "Passwords do not match",
         userError: "Passwords do not match"
+      }, { status: 400 });
+    }
+
+    // VULN-H5: Enforce password complexity
+    const passwordCheck = validatePassword(newPassword);
+    if (!passwordCheck.valid) {
+      return Response.json({
+        error: passwordCheck.message,
+        userError: passwordCheck.message
       }, { status: 400 });
     }
 
@@ -42,7 +52,7 @@ export async function POST(request) {
       return Response.json({ error: "Invalid or expired token" }, { status: 400 });
     }
 
-    const { email } = decoded;
+    const { email, nonce } = decoded;
     if (!email) {
       return Response.json({ error: "Invalid token payload" }, { status: 400 });
     }
@@ -55,13 +65,21 @@ export async function POST(request) {
       return Response.json({ error: "Invalid token or user not found" }, { status: 400 });
     }
 
+    // VULN-H6: Verify nonce matches (single-use token)
+    const storedNonce = users[0].fields["Reset Nonce"];
+    if (!nonce || !storedNonce || nonce !== storedNonce) {
+      return Response.json({ error: "This reset link has already been used" }, { status: 400 });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Clear nonce on use to prevent replay
     await base("Applicants").update([
       {
         id: users[0].id,
         fields: {
-          "Password": hashedPassword
+          "Password": hashedPassword,
+          "Reset Nonce": "",
         }
       }
     ]);

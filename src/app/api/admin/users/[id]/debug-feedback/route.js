@@ -6,6 +6,11 @@ import logger from "@/lib/utils/logger"
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
 export async function GET(request, { params }) {
+  // VULN-L1: Gate debug endpoint behind NODE_ENV
+  if (process.env.NODE_ENV === "production") {
+    return new Response(JSON.stringify({ error: "Not found" }), { status: 404 })
+  }
+
   try {
     // Fix for Next.js 15: await params before destructuring
     const { id } = await params

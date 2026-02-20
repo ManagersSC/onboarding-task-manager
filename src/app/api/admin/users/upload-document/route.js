@@ -33,10 +33,57 @@ export async function POST(request) {
     const files = formData.getAll('files')
 
     if (!applicantId || !documentType || !field || !category || files.length === 0) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: "Missing required fields",
         userError: "Please provide all required information and select files to upload."
       }), { status: 400 })
+    }
+
+    // VULN-M11: Allowlist valid upload field names
+    const ALLOWED_UPLOAD_FIELDS = [
+      'CV', 'Portfolio of Cases', 'Testimonials', 'Reference 1', 'Reference 2',
+      'DBS Check', 'DISC PDF', 'Passport', 'GDC Registration Certificate',
+      'Qualification Certificate', 'DBS', 'Indemnity Insurance', 'Hep B Immunity Record',
+      'CPD Training Certificates', 'Profile Photo', 'Basic Life Support Training',
+      'P45', 'New Starter Information and Next of Kin Document', 'Other Documents',
+    ]
+    if (!ALLOWED_UPLOAD_FIELDS.includes(field)) {
+      return new Response(JSON.stringify({
+        error: "Invalid field name",
+        userError: "The specified document field is not allowed."
+      }), { status: 400 })
+    }
+
+    // VULN-H9: File size limit (10MB per file)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024
+    // VULN-H10: Allowed MIME types
+    const ALLOWED_MIME_TYPES = [
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    ]
+    const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.html', '.htm', '.svg', '.js']
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        return new Response(JSON.stringify({
+          error: `File "${file.name}" exceeds the 10MB size limit`,
+          userError: `File "${file.name}" is too large. Maximum size is 10MB.`
+        }), { status: 400 })
+      }
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        return new Response(JSON.stringify({
+          error: `File type "${file.type}" is not allowed`,
+          userError: `File "${file.name}" has an unsupported file type. Please upload PDF, DOCX, or image files.`
+        }), { status: 400 })
+      }
+      const ext = (file.name || '').toLowerCase().match(/\.[^.]+$/)?.[0] || ''
+      if (BLOCKED_EXTENSIONS.includes(ext)) {
+        return new Response(JSON.stringify({
+          error: `File extension "${ext}" is not allowed`,
+          userError: `File "${file.name}" has a blocked file extension.`
+        }), { status: 400 })
+      }
     }
 
     logger.info(`Admin ${session.userEmail} uploading ${files.length} document(s) of type ${documentType} for applicant ${applicantId}`)

@@ -48,42 +48,29 @@ export async function POST(request) {
             }
         ).firstPage();
 
+        // VULN-M5+M6: Use identical messages and constant-time comparison
+        const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
+        const genericError = { error: "Invalid credentials", userError: "Invalid email or password." };
+
         if (admins.length === 0) {
-            return new Response(
-                JSON.stringify({
-                    error: "Invalid credentials",
-                    userError: "Invalid admin credentials or insufficient permissions.",
-                }),
-                { status: 401 },
-            )
+            await bcrypt.compare(password, DUMMY_HASH);
+            return new Response(JSON.stringify(genericError), { status: 401 })
         }
 
         const admin = admins[0];
         const recordID = admin.id;
-        
+
         const storedHashedPassword = admin.fields.Password;
 
-        // Not Registered or no password set
         if (!storedHashedPassword) {
-            return new Response(
-                JSON.stringify({
-                    error: "Invalid credentials",
-                    userError: "Admin account not properly configured. Please contact support.",
-                }),
-                { status: 401 },
-            )
+            await bcrypt.compare(password, DUMMY_HASH);
+            return new Response(JSON.stringify(genericError), { status: 401 })
         }
 
         // Compare Password
         const isMatch = await bcrypt.compare(password, storedHashedPassword)
         if (!isMatch) {
-            return new Response(
-                JSON.stringify({
-                    error: "Invalid credentials",
-                    userError: "Wrong email or password.",
-                }),
-                { status: 401 },
-            )
+            return new Response(JSON.stringify(genericError), { status: 401 })
         }
 
 
@@ -95,7 +82,10 @@ export async function POST(request) {
             userName: admin.fields.Name,
             userStaffId: recordID
         }
-        logger.debug(`Session Data to add: \nemail: ${sessionData.userEmail} \nrole: ${sessionData.userRole}`)
+        // VULN-L2: Don't log PII in production
+        if (process.env.NODE_ENV !== "production") {
+          logger.debug(`Session created for role: ${sessionData.userRole}`)
+        }
         const sealedSession = await sealData(sessionData, {
             password: process.env.SESSION_SECRET,
             ttl: 60 * 60 * 8, // 8 hours expiration
@@ -146,8 +136,8 @@ export async function POST(request) {
         
         return new Response(
             JSON.stringify({
-              error: `Internal server error. Error: ${error.message}`,
-              details: process.env.NODE_ENV === "development" ? error.message : null,
+              error: "Internal server error",
+              details: process.env.NODE_ENV === "development" ? error.message : undefined,
             }),
             { status: 500 },
         )

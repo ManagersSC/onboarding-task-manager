@@ -44,7 +44,7 @@ export async function POST(request) {
       return Response.json({ error: "Invalid or expired token" }, { status: 400 })
     }
 
-    const { staffId, email, type } = payload || {}
+    const { staffId, email, type, nonce } = payload || {}
     if (!staffId || !email || type !== "admin_invite") {
       return Response.json({ error: "Invalid token payload" }, { status: 400 })
     }
@@ -59,6 +59,12 @@ export async function POST(request) {
       return Response.json({ error: "Invite already used" }, { status: 400 })
     }
 
+    // VULN-H7: Verify invite nonce (single-use token)
+    const storedNonce = rec.fields?.["Invite Nonce"]
+    if (!nonce || !storedNonce || nonce !== storedNonce) {
+      return Response.json({ error: "This invite link has already been used or is invalid" }, { status: 400 })
+    }
+
     const hashed = await bcrypt.hash(password, 10)
     await base("Staff").update([
       {
@@ -66,6 +72,7 @@ export async function POST(request) {
         fields: {
           Password: hashed,
           IsAdmin: true,
+          "Invite Nonce": "", // Clear nonce on use
         },
       },
     ])

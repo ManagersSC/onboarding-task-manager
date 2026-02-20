@@ -20,7 +20,10 @@ const STRICT_RATE_LIMIT_PATHS = [
 
 export async function middleware(request) {
   const path = request.nextUrl.pathname;
-  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+  // VULN-H8: Use non-spoofable IP source
+  const realIp = request.headers.get('x-real-ip');
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : '127.0.0.1');
 
   // Debug: Log every request to middleware
   edgeLog('[MIDDLEWARE] Request:', {
@@ -43,6 +46,18 @@ export async function middleware(request) {
     if (response) {
       edgeLog('[MIDDLEWARE] Rate limit triggered for:', path);
       return response;
+    }
+  }
+
+  // VULN-M2: CSRF protection — verify same-origin requests using Sec-Fetch headers
+  // Browsers automatically set Sec-Fetch-Site on all requests; this blocks cross-origin form submissions
+  if (path.startsWith('/api/') && request.method !== 'GET' && request.method !== 'OPTIONS') {
+    const secFetchSite = request.headers.get('sec-fetch-site');
+    // Allow same-origin and same-site; block cross-site and none (direct navigation)
+    // Also allow requests with no sec-fetch-site (non-browser clients like Make.com webhooks)
+    if (secFetchSite && secFetchSite !== 'same-origin' && secFetchSite !== 'same-site') {
+      edgeLog('[MIDDLEWARE] CSRF validation failed for:', path);
+      return NextResponse.json({ error: 'CSRF validation failed' }, { status: 403 });
     }
   }
 
@@ -76,7 +91,8 @@ export async function middleware(request) {
       password: process.env.SESSION_SECRET,
       ttl: 60 * 60 * 8
     });
-    edgeLog('[MIDDLEWARE] Session validated for:', session.userEmail);
+    // VULN-L2: Don't log PII (email) in production
+    edgeLog('[MIDDLEWARE] Session validated, role:', session.userRole);
   } catch (error){
     edgeLog('[MIDDLEWARE] Invalid session:', error.message);
     return NextResponse.redirect(new URL("/", request.nextUrl));
