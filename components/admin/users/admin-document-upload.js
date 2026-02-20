@@ -32,24 +32,56 @@ const DOCUMENT_TYPES = {
   'other': { name: 'Other Documents', category: 'Miscellaneous', field: 'Other Documents' }
 }
 
+// VULN-M15: Client-side file validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.html', '.htm', '.svg', '.js']
+
+function validateFiles(fileList) {
+  const valid = []
+  const errors = []
+  for (const file of fileList) {
+    const ext = (file.name || '').toLowerCase().match(/\.[^.]+$/)?.[0] || ''
+    if (file.size > MAX_FILE_SIZE) {
+      errors.push(`"${file.name}" exceeds the 10MB size limit`)
+    } else if (BLOCKED_EXTENSIONS.includes(ext)) {
+      errors.push(`"${file.name}" has a blocked file type`)
+    } else if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      errors.push(`"${file.name}" has an unsupported file type`)
+    } else {
+      valid.push(file)
+    }
+  }
+  return { valid, errors }
+}
+
 export default function AdminDocumentUpload({ applicantId, applicantName, onUploadComplete, onClose }) {
   const [selectedDocType, setSelectedDocType] = useState('')
   const [files, setFiles] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState(null)
+  const [fileErrors, setFileErrors] = useState([])
   const inputRef = useRef(null)
 
   const onDrop = useCallback((e) => {
     e.preventDefault()
     setDragOver(false)
     const dropped = Array.from(e.dataTransfer.files || [])
-    if (dropped.length) setFiles((prev) => [...prev, ...dropped])
+    if (dropped.length) {
+      const { valid, errors } = validateFiles(dropped)
+      setFileErrors(errors)
+      if (valid.length) setFiles((prev) => [...prev, ...valid])
+    }
   }, [])
 
   const onPick = useCallback((e) => {
     const picked = Array.from(e.target.files || [])
-    if (picked.length) setFiles((prev) => [...prev, ...picked])
+    if (picked.length) {
+      const { valid, errors } = validateFiles(picked)
+      setFileErrors(errors)
+      if (valid.length) setFiles((prev) => [...prev, ...valid])
+    }
   }, [])
 
   const removeAt = (i) => setFiles((prev) => prev.filter((_, idx) => idx !== i))
@@ -170,15 +202,23 @@ export default function AdminDocumentUpload({ applicantId, applicantName, onUplo
         <div className="text-xs text-muted-foreground">
           PDF, DOCX, images. Multiple files supported.
         </div>
-        <input 
-          ref={inputRef} 
-          type="file" 
-          multiple 
-          className="hidden" 
-          onChange={onPick} 
-          aria-label="Choose files" 
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={onPick}
+          aria-label="Choose files"
+          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp"
         />
       </Card>
+
+      {/* File validation errors */}
+      {fileErrors.length > 0 && (
+        <div className="text-xs text-red-500 space-y-1">
+          {fileErrors.map((err, i) => <div key={i}>{err}</div>)}
+        </div>
+      )}
 
       {/* Selected Files */}
       {files.length > 0 && (

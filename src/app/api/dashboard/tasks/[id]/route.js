@@ -6,23 +6,34 @@ import { unsealData } from "iron-session";
 
 // src/app/api/dashboard/tasks/[id]/route.js
 
-export async function PATCH(req, { params }){
-  // --- Get session for audit logging ---
-  let userEmail = "Unknown";
-  let userName = "Unknown";
-  let userRole = "Unknown";
+// VULN-H3: Shared auth helper — returns session or 401 Response
+async function requireAuth() {
+  const cookieStore = await cookies();
+  const sealedSession = cookieStore.get("session")?.value;
+  if (!sealedSession) {
+    return { error: new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 }) };
+  }
   try {
-    const cookieStore = await cookies();
-    const sealedSession = cookieStore.get("session")?.value;
-    if (sealedSession) {
-      const session = await unsealData(sealedSession, {
-        password: process.env.SESSION_SECRET,
-      });
-      userEmail = session.userEmail || "Unknown";
-      userName = session.userName || "Unknown";
-      userRole = session.userRole || "Unknown";
+    const session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET });
+    if (!session.userEmail) {
+      return { error: new Response(JSON.stringify({ error: "Invalid session" }), { status: 401 }) };
     }
-  } catch (e) {}
+    return {
+      session,
+      userEmail: session.userEmail,
+      userName: session.userName || "Unknown",
+      userRole: session.userRole || "Unknown",
+      userStaffId: session.userStaffId || null,
+    };
+  } catch (e) {
+    return { error: new Response(JSON.stringify({ error: "Invalid session" }), { status: 401 }) };
+  }
+}
+
+export async function PATCH(req, { params }){
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userEmail, userName, userRole, userStaffId } = auth;
 
   const p = await params;
   const { action, ...fields } = await req.json();
@@ -31,16 +42,6 @@ export async function PATCH(req, { params }){
   switch (action){
     case "complete":
       try {
-        const cookieStore = await cookies();
-        const sealedSession = cookieStore.get("session")?.value;
-        let userStaffId = null, userEmail = "Unknown", userName = "Unknown", userRole = "Unknown";
-        if (sealedSession) {
-          const session = await unsealData(sealedSession, { password: process.env.SESSION_SECRET });
-          userStaffId = session.userStaffId || null;
-          userEmail = session.userEmail || "Unknown";
-          userName = session.userName || "Unknown";
-          userRole = session.userRole || "Unknown";
-        }
         await completeStaffTask(id, userStaffId || undefined);
         await logAuditEvent({
           eventType: 'Task Completed',
@@ -83,7 +84,6 @@ export async function PATCH(req, { params }){
         });
         return new Response(JSON.stringify({ success: true, task: updated }), { status: 200 });
       } catch (e) {
-        console.error("PATCH error:", e);
         await logAuditEvent({
           eventType: 'Admin Task Updated',
           eventStatus: 'Error',
@@ -98,25 +98,11 @@ export async function PATCH(req, { params }){
     case "flag":
       try {
         const reason = (fields && fields.flaggedReason) || '';
-        // get staff id for metadata
-        let userStaffId = null;
-        try {
-          const cookieStore = await cookies();
-          const sealedSession = cookieStore.get("session")?.value;
-          if (sealedSession) {
-            const session = await unsealData(sealedSession, {
-              password: process.env.SESSION_SECRET,
-            });
-            userStaffId = session.userStaffId || null;
-          }
-        } catch {}
         const updateFields = {
           status: 'Flagged',
           flaggedReason: reason,
-          // Only include flaggedById if we have a real record id
           ...(userStaffId ? { flaggedById: userStaffId } : {}),
           flaggedAt: new Date().toISOString(),
-          // Do not send empty arrays for link fields
           flagResolvedAt: null,
         };
         const updated = await editStaffTask(id, updateFields);
@@ -144,17 +130,6 @@ export async function PATCH(req, { params }){
       }
     case "resolveFlag":
       try {
-        let userStaffId = null;
-        try {
-          const cookieStore = await cookies();
-          const sealedSession = cookieStore.get("session")?.value;
-          if (sealedSession) {
-            const session = await unsealData(sealedSession, {
-              password: process.env.SESSION_SECRET,
-            });
-            userStaffId = session.userStaffId || null;
-          }
-        } catch {}
         const updated = await editStaffTask(id, {
           status: 'In-progress',
           flaggedReason: '',
@@ -186,17 +161,6 @@ export async function PATCH(req, { params }){
       }
     case "resolveAndComplete":
       try {
-        let userStaffId = null;
-        try {
-          const cookieStore = await cookies();
-          const sealedSession = cookieStore.get("session")?.value;
-          if (sealedSession) {
-            const session = await unsealData(sealedSession, {
-              password: process.env.SESSION_SECRET,
-            });
-            userStaffId = session.userStaffId || null;
-          }
-        } catch {}
         const updated = await editStaffTask(id, {
           status: 'Completed',
           flaggedReason: '',
@@ -232,17 +196,6 @@ export async function PATCH(req, { params }){
       }
     case "claim":
       try {
-        // Get the user's Airtable staff record ID from the session
-        // Assume session.userStaffId is set (if not, adjust as needed)
-        const cookieStore = await cookies();
-        const sealedSession = cookieStore.get("session")?.value;
-        let userStaffId = null;
-        if (sealedSession) {
-          const session = await unsealData(sealedSession, {
-            password: process.env.SESSION_SECRET,
-          });
-          userStaffId = session.userStaffId;
-        }
         if (!userStaffId) {
           return new Response(JSON.stringify({ error: "User staff ID not found in session" }), { status: 401 });
         }
@@ -301,22 +254,14 @@ export async function PATCH(req, { params }){
 }
 
 export async function DELETE(req, { params }) {
-  // --- Get session for audit logging ---
-  let userEmail = "Unknown";
-  let userName = "Unknown";
-  let userRole = "Unknown";
-  try {
-    const cookieStore = await cookies();
-    const sealedSession = cookieStore.get("session")?.value;
-    if (sealedSession) {
-      const session = await unsealData(sealedSession, {
-        password: process.env.SESSION_SECRET,
-      });
-      userEmail = session.userEmail || "Unknown";
-      userName = session.userName || "Unknown";
-      userRole = session.userRole || "Unknown";
-    }
-  } catch (e) {}
+  // VULN-H3: Mandatory auth + VULN-H4: Only admins can delete
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userEmail, userName, userRole } = auth;
+
+  if (userRole !== "admin") {
+    return new Response(JSON.stringify({ error: "Only admins can delete tasks" }), { status: 403 });
+  }
 
   const p = await params;
   const { id } = p;
@@ -333,7 +278,6 @@ export async function DELETE(req, { params }) {
     });
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (e) {
-    console.error("DELETE error:", e);
     await logAuditEvent({
       eventType: 'Admin Task Deleted',
       eventStatus: 'Error',
@@ -343,15 +287,19 @@ export async function DELETE(req, { params }) {
       detailedMessage: `Task deletion failed for task ID ${id}. Error: ${e.message}`,
       request: req,
     });
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Failed to delete task" }), { status: 500 });
   }
 }
 
 export async function GET(req, { params }) {
+  // VULN-H3: Add auth to GET
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
   const p = await params;
-  const { id } = params;
+  const { id } = p;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
-    return new Response(JSON.stringify({ error: "Airtable environment variables are missing" }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Server configuration error" }), { status: 500 });
   }
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
   try {
@@ -359,7 +307,6 @@ export async function GET(req, { params }) {
     if (!record) {
       return new Response(JSON.stringify({ error: "Task not found" }), { status: 404 });
     }
-    // Map fields similar to getTasksWithCreator
     const task = {
       id: record.id,
       title: record.fields["📌 Task"] || "",
@@ -374,7 +321,6 @@ export async function GET(req, { params }) {
     };
     return new Response(JSON.stringify({ task }), { status: 200 });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Failed to fetch task" }), { status: 500 });
   }
 }
-  

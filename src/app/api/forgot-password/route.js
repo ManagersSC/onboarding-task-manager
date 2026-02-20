@@ -39,9 +39,16 @@ export async function POST(request) {
       return Response.json({ error: "Server configuration error" }, { status: 500 });
     }
 
+    // VULN-H6: Generate unique nonce for single-use token
+    const resetNonce = crypto.randomUUID();
+    await base("Applicants").update([{
+      id: users[0].id,
+      fields: { "Reset Nonce": resetNonce }
+    }]);
+
     // Generate JWT-based reset token (expires in 1 hour).
     const expiryTime = "1h";
-    const payload = { email: normalisedEmail };
+    const payload = { email: normalisedEmail, nonce: resetNonce };
     const tokenOptions = { expiresIn: expiryTime };
     const resetToken = jwt.sign(payload, process.env.JWT_SECRET, tokenOptions);
 

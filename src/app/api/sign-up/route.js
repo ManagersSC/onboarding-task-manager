@@ -5,6 +5,7 @@ import { sealData } from "iron-session";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { escapeAirtableValue } from "@/lib/airtable/sanitize";
+import { validatePassword } from "@/lib/validation/password";
 
 // Sign up route with immediate post sign-up login.
 export async function POST(request) {
@@ -33,9 +34,18 @@ export async function POST(request) {
       }, { status: 400 });
     }
     if (password !== confirmPassword) {
-      return Response.json({ 
-        error: "Passwords do not match.", 
-        userError: "Passwords do not match.", 
+      return Response.json({
+        error: "Passwords do not match.",
+        userError: "Passwords do not match.",
+      }, { status: 400 });
+    }
+
+    // VULN-H5: Enforce password complexity
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+      return Response.json({
+        error: passwordCheck.message,
+        userError: passwordCheck.message,
       }, { status: 400 });
     }
 

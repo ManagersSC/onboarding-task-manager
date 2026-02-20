@@ -54,40 +54,30 @@ export async function POST(request) {
       })
       .firstPage();
 
+    // VULN-M5+M6: Use identical error messages and constant-time comparison to prevent enumeration/timing attacks
+    // Dummy hash for timing-safe comparison when user not found
+    const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
+    const genericError = { error: "Invalid credentials", userError: "Invalid email or password." };
+
     if (users.length === 0) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid credentials",
-          userError: "Invalid credentials, please register first.",
-        }),
-        { status: 401 }
-      );
+      // Compare against dummy hash to prevent timing attack
+      await bcrypt.compare(password, DUMMY_HASH);
+      return new Response(JSON.stringify(genericError), { status: 401 });
     }
 
     const user = users[0];
     const storedHashedPassword = user.fields.Password;
 
-    // Not Registered
     if (!storedHashedPassword) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid credentials",
-          userError: "Invalid credentials, please register first.",
-        }),
-        { status: 401 }
-      );
+      // Compare against dummy hash to prevent timing attack
+      await bcrypt.compare(password, DUMMY_HASH);
+      return new Response(JSON.stringify(genericError), { status: 401 });
     }
 
     // Compare Password
     const isMatch = await bcrypt.compare(password, storedHashedPassword);
     if (!isMatch) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid credentials",
-          userError: "Wrong email or password.",
-        }),
-        { status: 401 }
-      );
+      return new Response(JSON.stringify(genericError), { status: 401 });
     }
 
     // Set encrypted session cookie with user role
@@ -144,8 +134,8 @@ export async function POST(request) {
     });
     return new Response(
       JSON.stringify({
-        error: `Internal server error. Error: ${error.message}`,
-        details: process.env.NODE_ENV === "development" ? error.message : null,
+        error: "Internal server error",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
       }),
       { status: 500 }
     );

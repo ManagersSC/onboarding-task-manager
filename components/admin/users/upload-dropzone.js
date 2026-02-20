@@ -4,29 +4,62 @@ import { useCallback, useRef, useState, useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { Card } from "@components/ui/card"
 
+// VULN-M15: Client-side file validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const BLOCKED_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.html', '.htm', '.svg', '.js']
+
+function validateFiles(fileList) {
+  const valid = []
+  const errors = []
+  for (const file of fileList) {
+    const ext = (file.name || '').toLowerCase().match(/\.[^.]+$/)?.[0] || ''
+    if (file.size > MAX_FILE_SIZE) {
+      errors.push(`"${file.name}" exceeds the 10MB size limit`)
+    } else if (BLOCKED_EXTENSIONS.includes(ext)) {
+      errors.push(`"${file.name}" has a blocked file type`)
+    } else if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      errors.push(`"${file.name}" has an unsupported file type`)
+    } else {
+      valid.push(file)
+    }
+  }
+  return { valid, errors }
+}
+
 export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange, showActions = true, submitLabel = "Submit Feedback", maxFiles = Infinity }) {
   const [files, setFiles] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
 
+  const [fileErrors, setFileErrors] = useState([])
+
   const onDrop = useCallback((e) => {
     e.preventDefault()
     setDragOver(false)
     const dropped = Array.from(e.dataTransfer.files || [])
-    if (dropped.length) setFiles((prev) => {
-      const next = [...prev, ...dropped]
-      if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
-      return next
-    })
+    if (dropped.length) {
+      const { valid, errors } = validateFiles(dropped)
+      setFileErrors(errors)
+      if (valid.length) setFiles((prev) => {
+        const next = [...prev, ...valid]
+        if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
+        return next
+      })
+    }
   }, [])
 
   const onPick = useCallback((e) => {
     const picked = Array.from(e.target.files || [])
-    if (picked.length) setFiles((prev) => {
-      const next = [...prev, ...picked]
-      if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
-      return next
-    })
+    if (picked.length) {
+      const { valid, errors } = validateFiles(picked)
+      setFileErrors(errors)
+      if (valid.length) setFiles((prev) => {
+        const next = [...prev, ...valid]
+        if (Number.isFinite(maxFiles)) return next.slice(0, maxFiles)
+        return next
+      })
+    }
   }, [])
 
   const removeAt = (i) => setFiles((prev) => prev.filter((_, idx) => idx !== i))
@@ -66,8 +99,14 @@ export default function UploadDropzone({ onSubmit, registerSubmit, onFilesChange
           </button>
         </div>
         <div className="text-xs text-muted-foreground">PDF, DOCX, images.</div>
-        <input ref={inputRef} type="file" multiple className="hidden" onChange={onPick} aria-label="Choose files" />
+        <input ref={inputRef} type="file" multiple className="hidden" onChange={onPick} aria-label="Choose files" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp" />
       </Card>
+
+      {fileErrors.length > 0 && (
+        <div className="text-xs text-red-500 space-y-1">
+          {fileErrors.map((err, i) => <div key={i}>{err}</div>)}
+        </div>
+      )}
 
       {files.length > 0 && (
         <div className="rounded-md border">

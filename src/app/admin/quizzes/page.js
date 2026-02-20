@@ -20,6 +20,7 @@ import PreviewRenderer from "@components/quiz/preview-renderer"
 import RichTextEditor from "@components/editor/rich-text-editor"
 import { splitOptionsString, joinOptionsArray } from "@/lib/quiz/options"
 import { validateAll } from "@/lib/quiz/validation"
+import { sanitizeHtml } from "@/lib/utils/sanitize"
 import { RadioGroup, RadioGroupItem } from "@components/ui/radio-group"
 import { Checkbox } from "@components/ui/checkbox"
 import { Label } from "@components/ui/label"
@@ -1175,7 +1176,7 @@ function AdminQuizzesPageContent() {
                                                   }}
                                                 />
                                                 <Label htmlFor={id} className="cursor-pointer">
-                                                  <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(opt || "") }} />
                                                 </Label>
                                               </div>
                                             )
@@ -1197,7 +1198,7 @@ function AdminQuizzesPageContent() {
                                               <div key={id} className="flex items-center gap-2 text-sm">
                                             <RadioGroupItem value={String(oi)} id={id} />
                                                 <Label htmlFor={id} className="cursor-pointer">
-                                                  <span dangerouslySetInnerHTML={{ __html: opt || "" }} />
+                                                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(opt || "") }} />
                                                 </Label>
                                               </div>
                                             )

@@ -141,7 +141,7 @@ export async function POST(req) {
         request: req,
       });
     } catch {}
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Failed to claim tasks" }), { status: 500 });
   }
 }
 

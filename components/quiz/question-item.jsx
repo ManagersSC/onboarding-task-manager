@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@components/ui/radio-group"
 import { Checkbox } from "@components/ui/checkbox"
 import { Label } from "@components/ui/label"
 import { CheckCircle, XCircle, HelpCircle } from "lucide-react"
+import { sanitizeHtml } from "@/lib/utils/sanitize"
 
 export default function QuestionItem({ question, onAnswerChange, userAnswer, isSubmitted, correctAnswer }) {
   const { id, questionText, questionType, options, points } = question
@@ -63,7 +64,7 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
       <CardHeader>
         <CardTitle className="text-xl flex items-start">
           <HelpCircle className="h-6 w-6 text-primary mr-3 mt-1 flex-shrink-0" />
-          <span dangerouslySetInnerHTML={{ __html: questionText }} />
+          <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(questionText) }} />
         </CardTitle>
         <CardDescription>
           {points} point{points === 1 ? "" : "s"}
@@ -92,7 +93,7 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
                     className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ease-in-out ${optionClasses[optionState]} ${isSubmitted ? "cursor-default" : "hover:shadow-lg"}`}
                   >
                     <RadioGroupItem value={option} id={`${id}-${index}`} className="mr-3 flex-shrink-0" />
-                    <span className="flex-grow" dangerouslySetInnerHTML={{ __html: option }} />
+                    <span className="flex-grow" dangerouslySetInnerHTML={{ __html: sanitizeHtml(option) }} />
                     <IconComponent state={optionState} />
                   </Label>
                 </motion.div>
@@ -123,7 +124,7 @@ export default function QuestionItem({ question, onAnswerChange, userAnswer, isS
                       disabled={isSubmitted}
                       className="mr-3 flex-shrink-0"
                     />
-                    <span className="flex-grow" dangerouslySetInnerHTML={{ __html: option }} />
+                    <span className="flex-grow" dangerouslySetInnerHTML={{ __html: sanitizeHtml(option) }} />
                     <IconComponent state={optionState} />
                   </Label>
                 </motion.div>

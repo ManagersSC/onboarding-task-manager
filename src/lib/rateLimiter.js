@@ -12,7 +12,10 @@ let lastCleanup = Date.now();
 // Rate limiter middleware
 export function rateLimiter(limit = 5, windowMs = 60 * 1000) {
   return (req) => {
-    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    // VULN-H8: Use x-real-ip (Vercel-provided, non-spoofable), fallback to first IP from forwarded-for
+    const realIp = req.headers.get('x-real-ip');
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    const ip = realIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : '127.0.0.1');
     const now = Date.now();
     const windowStart = now - windowMs;
 

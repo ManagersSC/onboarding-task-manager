@@ -85,16 +85,25 @@ export async function POST(request) {
       return Response.json({ error: "User already has an admin account" }, { status: 400 })
     }
 
+    // VULN-H7: Generate invite nonce for single-use token
+    const inviteNonce = crypto.randomUUID()
+    await base("Staff").update([{
+      id: staffId,
+      fields: { "Invite Nonce": inviteNonce }
+    }])
+
     // Create 24h invite token
-    const token = jwt.sign({ staffId, email: normalisedEmail, type: "admin_invite" }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ staffId, email: normalisedEmail, type: "admin_invite", nonce: inviteNonce }, process.env.JWT_SECRET, {
       expiresIn: "24h",
     })
 
-    // Build accept link
+    // VULN-L4: Require APP_BASE_URL in production to prevent host header injection
     const envBase = process.env.APP_BASE_URL && process.env.APP_BASE_URL.trim()
-    const host = request.headers.get("host")
-    const proto = request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https")
-    const baseUrl = envBase || `${proto}://${host}`
+    if (!envBase && process.env.NODE_ENV === "production") {
+      logger.error("APP_BASE_URL is required in production for invite links")
+      return Response.json({ error: "Server configuration error" }, { status: 500 })
+    }
+    const baseUrl = envBase || `http://localhost:3000`
     const inviteLink = `${baseUrl}/accept-admin-invite?token=${encodeURIComponent(token)}`
 
     // Notify via Make.com webhook

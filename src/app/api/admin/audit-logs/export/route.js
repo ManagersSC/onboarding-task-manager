@@ -192,7 +192,11 @@ export async function GET(request) {
     ]
     const escape = (s) => {
       if (s == null) return ""
-      const str = String(s)
+      let str = String(s)
+      // VULN-M13: Prevent CSV formula injection — prefix dangerous characters
+      if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(str[0])) {
+        str = "'" + str
+      }
       if (str.includes(",") || str.includes("\n") || str.includes('"')) {
         return '"' + str.replace(/"/g, '""') + '"'
       }

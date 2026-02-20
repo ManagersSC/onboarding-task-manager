@@ -30,7 +30,10 @@ rl.question('Enter the code from that page here: ', (code) => {
       rl.close();
       return;
     }
-    console.log('Your refresh token:', token.refresh_token);
+    // VULN-H14: Write to file instead of logging to console
+    const fs = await import('fs');
+    fs.default.writeFileSync('.google-refresh-token', token.refresh_token);
+    console.log('Refresh token saved to .google-refresh-token — add this file to .gitignore');
     rl.close();
   });
 });
