@@ -478,8 +478,8 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
         </AnimatePresence>
 
         {/* Table - Added table-fixed class to ensure widths are respected */}
-        <div className="rounded-md border" ref={tableRef}>
-          <Table className="table-fixed w-full">
+        <div className="overflow-x-auto rounded-md border" ref={tableRef}>
+          <Table className="table-fixed w-full min-w-[1440px]">
             <TableHeader>
               <TableRow>
                 <TableHead style={{ width: `${columnWidths.name}px` }}>
@@ -672,11 +672,11 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
                       }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                     >
-                      <TableCell className="font-medium" style={{ width: `${columnWidths.name}px` }}>
+                      <TableCell className="font-medium truncate" style={{ width: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }}>
                         {log.name}
                       </TableCell>
-                      <TableCell style={{ width: `${columnWidths.email}px` }}>{log.email}</TableCell>
-                      <TableCell style={{ width: `${columnWidths.title}px` }}>{log.title}</TableCell>
+                      <TableCell className="truncate" style={{ width: `${columnWidths.email}px`, maxWidth: `${columnWidths.email}px` }}>{log.email}</TableCell>
+                      <TableCell className="truncate" style={{ width: `${columnWidths.title}px`, maxWidth: `${columnWidths.title}px` }}>{log.title}</TableCell>
                       <TableCell className="max-w-[220px] truncate" style={{ width: `${columnWidths.description}px` }}>
                         {log.description}
                       </TableCell>

@@ -13,7 +13,7 @@ export function AssignedTasksLogsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Onboarding AssignedTasks</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Assigned Tasks</h1>
           <p className="text-sm text-muted-foreground">View onboarding tasks assigned to applicants and managers.</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
