@@ -2,7 +2,6 @@ import { DashboardHeader } from "@components/dashboard/DashboardHeader"
 import { QuickMetrics } from "@components/dashboard/QuickMetrics"
 import { ActivityFeed } from "@components/dashboard/ActivityFeed"
 import { TaskManagement } from "@components/dashboard/TaskManagement"
-import { OnboardingHealth } from "@components/dashboard/OnboardingHealth"
 import { NewHireTracker } from "@components/dashboard/NewHireTracker"
 import { NotificationCenter } from "@components/dashboard/NotificationCenter"
 import dynamic from "next/dynamic"
@@ -56,8 +55,7 @@ export default async function DashboardPage() {
           <Suspense fallback={<div className="h-40 w-full rounded-xl bg-muted/30 animate-pulse" />}>
             <CalendarPreviewLazy />
           </Suspense>
-          <OnboardingHealth />
-        </div>
+</div>
 
         {/* Row 4: NewHireTracker + ActivityFeed */}
         <div className="lg:col-span-3 animate-fade-in-up stagger-4">
