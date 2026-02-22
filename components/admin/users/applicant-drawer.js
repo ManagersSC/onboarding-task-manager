@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Clock as ClockIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useQuizSubmissions } from "@/hooks/useQuizSubmissions"
+import { useApplicantTasks } from "@/hooks/useApplicantTasks"
 import { QuizSubmissionAnswersModal } from "./quiz-submission-answers-modal"
 import { updateApplicant } from "@/app/admin/users/actions"
 import AppraisalQuestionEditor from "./AppraisalQuestionEditor"
@@ -1035,6 +1036,9 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                         </div>
                       )}
 
+                      {/* F - Assigned Tasks */}
+                      <ApplicantTasksSection applicantId={applicant?.id} enabled={!!applicant?.id && wideView} />
+
                       {/* E - Feedback Documents */}
                       <div className="rounded-lg border border-border/30 p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -1439,6 +1443,235 @@ function RatingStars({ value = 0, onChange }) {
           <Star className={`h-5 w-5 ${n <= value ? "fill-warning stroke-warning" : "stroke-muted-foreground"}`} />
         </button>
       ))}
+    </div>
+  )
+}
+
+function ApplicantTasksSection({ applicantId, enabled }) {
+  const { active, overdue, completed, pendingVerification, isLoading, refresh } = useApplicantTasks(applicantId, {
+    enabled: enabled && !!applicantId,
+    revalidateOnFocus: false,
+  })
+
+  const [openGroups, setOpenGroups] = useState({ active: true, overdue: true, completed: false, pendingVerification: true })
+  const toggle = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
+
+  const priorityDotClass = (priority) => {
+    const p = (priority || "").toLowerCase()
+    if (p === "very high" || p === "high") return "bg-error"
+    if (p === "medium") return "bg-warning"
+    return "bg-success"
+  }
+
+  const fmtDate = (d) => {
+    if (!d) return null
+    try {
+      return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    } catch { return String(d) }
+  }
+
+  const totalCount = active.length + overdue.length + completed.length + pendingVerification.length
+
+  const groups = [
+    {
+      key: "active",
+      label: "Active",
+      tasks: active,
+      accentClass: "text-info",
+      badgeClass: "bg-info-muted text-info border-info/20",
+      borderClass: "border-l-info",
+      emptyText: "No active tasks",
+    },
+    {
+      key: "overdue",
+      label: "Overdue",
+      tasks: overdue,
+      accentClass: "text-error",
+      badgeClass: "bg-error-muted text-error border-error/20",
+      borderClass: "border-l-error",
+      emptyText: "No overdue tasks",
+    },
+    {
+      key: "completed",
+      label: "Completed",
+      tasks: completed,
+      accentClass: "text-success",
+      badgeClass: "bg-success-muted text-success border-success/20",
+      borderClass: "border-l-success",
+      emptyText: "No completed tasks",
+    },
+    {
+      key: "pendingVerification",
+      label: "Awaiting Review",
+      tasks: pendingVerification,
+      accentClass: "text-warning",
+      badgeClass: "bg-warning-muted text-warning border-warning/20",
+      borderClass: "border-l-warning",
+      emptyText: "No tasks awaiting review",
+    },
+  ]
+
+  return (
+    <div className="rounded-lg border border-border/30 p-4">
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-baseline gap-2">
+          <h4 className="text-body-sm font-semibold">Assigned Tasks</h4>
+          {!isLoading && totalCount > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {[
+                active.length > 0 && `${active.length} active`,
+                overdue.length > 0 && `${overdue.length} overdue`,
+                completed.length > 0 && `${completed.length} done`,
+                pendingVerification.length > 0 && `${pendingVerification.length} awaiting review`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={() => refresh()}
+          title="Refresh tasks"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-1.5">
+          {[80, 60, 70].map((w, i) => (
+            <div key={i} className="flex items-center gap-2 py-1.5">
+              <div className="h-2 w-2 rounded-full bg-muted animate-pulse flex-shrink-0" />
+              <div
+                className="h-3 rounded bg-muted animate-pulse"
+                style={{ width: `${w}%`, animationDelay: `${i * 80}ms` }}
+              />
+            </div>
+          ))}
+        </div>
+      ) : totalCount === 0 ? (
+        <p className="text-xs text-muted-foreground py-3 text-center">No tasks linked to this applicant.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {groups.map((g) => (
+            <div key={g.key} className="rounded-md overflow-hidden border border-border/20">
+              {/* Group toggle header */}
+              <button
+                type="button"
+                onClick={() => toggle(g.key)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-muted/40 transition-colors duration-150 text-left"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] font-semibold tracking-wide uppercase ${g.accentClass}`}>
+                    {g.label}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 h-4 font-medium border ${
+                      g.tasks.length > 0 ? g.badgeClass : "text-muted-foreground border-border/30"
+                    }`}
+                  >
+                    {g.tasks.length}
+                  </Badge>
+                </div>
+                <motion.div animate={{ rotate: openGroups[g.key] ? 180 : 0 }} transition={{ duration: 0.15 }}>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </motion.div>
+              </button>
+
+              {/* Animated group body */}
+              <AnimatePresence initial={false}>
+                {openGroups[g.key] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-2 pb-2 pt-0.5 space-y-1">
+                      {g.tasks.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground/60 italic py-1.5 text-center">
+                          {g.emptyText}
+                        </p>
+                      ) : (
+                        g.tasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className={`rounded border-l-[3px] ${g.borderClass} pl-2 pr-2 py-1.5 bg-muted/20 hover:bg-muted/40 transition-colors duration-100`}
+                          >
+                            {/* Main task row */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                                {g.key === "pendingVerification" ? (
+                                  <ClockIcon className="mt-[3px] h-3 w-3 text-warning flex-shrink-0" />
+                                ) : (
+                                  <span
+                                    className={`mt-[5px] h-1.5 w-1.5 rounded-full flex-shrink-0 ${priorityDotClass(task.priority)}`}
+                                    title={task.priority}
+                                  />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm text-foreground leading-tight truncate">{task.title}</p>
+                                  {task.taskType && task.taskType !== "Default" && (
+                                    <span className="inline-block mt-0.5 text-[10px] px-1.5 py-0 rounded-sm bg-muted text-muted-foreground font-normal leading-4">
+                                      {task.taskType}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Due date (admin tasks) */}
+                              {g.key !== "pendingVerification" && task.dueDate && (
+                                <div
+                                  className={`flex items-center gap-0.5 flex-shrink-0 text-[10px] ${
+                                    g.key === "overdue" ? "text-error font-medium" : "text-muted-foreground"
+                                  }`}
+                                >
+                                  <ClockIcon className="h-2.5 w-2.5" />
+                                  <span>{fmtDate(task.dueDate)}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Verified-by row — completed tasks only */}
+                            {g.key === "completed" && task.completedByName && (
+                              <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/10">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-success flex-shrink-0" />
+                                <span className="text-[10px] text-muted-foreground leading-none">
+                                  Verified by{" "}
+                                  <span className="font-medium text-foreground">{task.completedByName}</span>
+                                  {task.completedAt && (
+                                    <span className="text-muted-foreground/70"> · {fmtDate(task.completedAt)}</span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Hire completion row — pending verification tasks only */}
+                            {g.key === "pendingVerification" && task.completedAt && (
+                              <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/10">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-warning flex-shrink-0" />
+                                <span className="text-[10px] text-muted-foreground leading-none">
+                                  Completed by hire
+                                  <span className="text-muted-foreground/70"> · {fmtDate(task.completedAt)}</span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

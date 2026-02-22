@@ -224,6 +224,10 @@ export function TaskManagement({ initialTasks }) {
   // Selection state for bulk actions
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set())
 
+  // All actively onboarding hires for hire completions modal (must be before applicantGroups IIFE)
+  const [allOnboardingHires, setAllOnboardingHires] = useState([])
+  const [onboardingHiresLoading, setOnboardingHiresLoading] = useState(false)
+
   // Simple admin gate – this component is used on admin dashboard
   const isAdmin = true
   const canDeleteTask = (task) => {
@@ -282,7 +286,7 @@ function isAppraisalActionPlanTask(task) {
   if (!task?.isAppraisal) return false
   return typeStr === "appraisal: action plan" || typeStr === "action: action plan" || typeStr.includes("action plan")
 }
-  // Build groups of tasks by applicant (both unclaimed and claimed)
+  // Build groups of tasks by applicant — includes all actively onboarding hires even with no tasks
   const applicantGroups = (() => {
     const groups = {}
     const all = [...(tasks.upcoming || []), ...(tasks.overdue || []), ...(tasks.flagged || [])]
@@ -297,6 +301,17 @@ function isAppraisalActionPlanTask(task) {
         }
       }
       groups[key].tasks.push(t)
+    }
+    // Also include all actively onboarding hires even if they have no tasks yet
+    for (const hire of allOnboardingHires) {
+      if (!hire?.id) continue
+      if (!groups[hire.id]) {
+        groups[hire.id] = {
+          applicantId: hire.id,
+          applicantName: hire.name || hire.applicantName || "Unknown",
+          tasks: [],
+        }
+      }
     }
     const arr = Object.values(groups)
     // Sort by number of tasks desc then name
@@ -399,32 +414,6 @@ function isAppraisalActionPlanTask(task) {
   const [monthlyPeople, setMonthlyPeople] = useState([])
   const [monthlySelected, setMonthlySelected] = useState({})
   const [monthlyReviewsTaskId, setMonthlyReviewsTaskId] = useState(null)
-  // Hire completion history state
-  const [showHistory, setShowHistory] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyItems, setHistoryItems] = useState([])
-  const [historySearch, setHistorySearch] = useState("")
-
-  const fetchHireCompletionHistory = async ({ applicantId, limit = 30 } = {}) => {
-    setHistoryLoading(true)
-    try {
-      const qs = new URLSearchParams({ limit: String(limit) })
-      if (applicantId) qs.set("applicantId", applicantId)
-      const res = await fetch(`/api/admin/reports/hire-completions?${qs.toString()}`)
-      const data = await res.json().catch(() => ({}))
-      if (res.ok) {
-        setHistoryItems(Array.isArray(data.items) ? data.items : [])
-      } else {
-        setHistoryItems([])
-        toast.error(data?.error || "Failed to load history")
-      }
-    } catch (e) {
-      setHistoryItems([])
-      toast.error(e.message || "Failed to load history")
-    } finally {
-      setHistoryLoading(false)
-    }
-  }
 
   const openResolveDialog = (task) => {
     setResolveDialogTask(task)
@@ -834,11 +823,27 @@ function isAppraisalActionPlanTask(task) {
     } catch {}
   }, [])
 
-  // When history is visible, refetch on applicant change
+  // Fetch all actively onboarding hires when hire completions modal opens
   useEffect(() => {
-    if (!showHistory) return
-    fetchHireCompletionHistory({ applicantId: selectedApplicantId })
-  }, [showHistory, selectedApplicantId])
+    if (!showGroupsModal) return
+    ;(async () => {
+      setOnboardingHiresLoading(true)
+      try {
+        const res = await fetch("/api/admin/dashboard/new-hires")
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data?.error || "Failed to fetch hires")
+        const hires = Array.isArray(data?.newHires) ? data.newHires : []
+        const onboarding = hires.filter(
+          (h) => h?.onboardingStarted === true || String(h?.onboardingStatus || "").toLowerCase() === "onboarding"
+        )
+        setAllOnboardingHires(onboarding)
+      } catch {
+        setAllOnboardingHires([])
+      } finally {
+        setOnboardingHiresLoading(false)
+      }
+    })()
+  }, [showGroupsModal])
 
   const handleNewTaskCreated = async (taskData) => {
     try {
@@ -1905,26 +1910,6 @@ function isAppraisalActionPlanTask(task) {
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Hire Completions</h2>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        variant={showHistory ? "default" : "outline"}
-                        size="sm"
-                        className="h-8"
-                        onClick={() => {
-                          const next = !showHistory
-                          setShowHistory(next)
-                          if (next) {
-                            const fallbackApplicantId =
-                              selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId) || null
-                            if (!selectedApplicantId && fallbackApplicantId) {
-                              setSelectedApplicantId(fallbackApplicantId)
-                            } else {
-                              fetchHireCompletionHistory({ applicantId: fallbackApplicantId })
-                            }
-                          }
-                        }}
-                      >
-                        {showHistory ? "Back to Tasks" : "History"}
-                      </Button>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => setShowGroupsModal(false)} className="h-8 w-8">
@@ -1940,8 +1925,10 @@ function isAppraisalActionPlanTask(task) {
 
                   {/* Scrollable body */}
                   <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4">
-                    {applicantGroups.length === 0 ? (
-                      <div className="py-16 text-center text-sm text-muted-foreground">No unclaimed tasks from hires.</div>
+                    {onboardingHiresLoading ? (
+                      <div className="py-16 text-center text-sm text-muted-foreground">Loading onboarding hires…</div>
+                    ) : applicantGroups.length === 0 ? (
+                      <div className="py-16 text-center text-sm text-muted-foreground">No actively onboarding hires found.</div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Left: Applicants */}
@@ -1966,100 +1953,9 @@ function isAppraisalActionPlanTask(task) {
                           </div>
                         </div>
 
-                        {/* Right: Tasks for selected applicant OR History */}
+                        {/* Right: Tasks for selected applicant */}
                         <div className="md:col-span-2 border rounded-lg p-3 bg-card/50">
-                          {showHistory ? (
-                            <div>
-                              <div className="flex items-center justify-between mb-3 gap-3">
-                                <div className="min-w-0">
-                                  <h3 className="text-base font-semibold">Recent Verifications</h3>
-                                  <p className="text-xs text-muted-foreground">
-                                    {historyLoading ? "Loading…" : `${historyItems.length} item${historyItems.length === 1 ? "" : "s"}`}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="relative">
-                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                    <Input
-                                      value={historySearch}
-                                      onChange={(e) => setHistorySearch(e.target.value)}
-                                      placeholder="Search verifications..."
-                                      className="pl-7 h-8 w-56"
-                                    />
-                                  </div>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        className="h-8 w-8"
-                                        onClick={() => fetchHireCompletionHistory({ applicantId: selectedApplicantId })}
-                                      >
-                                        <RefreshCw className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                      <p>Refresh</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                              </div>
-                              {historyLoading ? (
-                                <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
-                              ) : historyItems.length === 0 ? (
-                                <div className="py-10 text-center text-sm text-muted-foreground">No recent verifications.</div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {historyItems
-                                    .filter((it) => {
-                                      const q = (historySearch || "").trim().toLowerCase()
-                                      if (!q) return true
-                                      const hay = [
-                                        it.message,
-                                        it.title,
-                                        it.applicantName,
-                                        it.completedByName,
-                                        it.completedAt,
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" ")
-                                        .toLowerCase()
-                                      return hay.includes(q)
-                                    })
-                                    .map((it) => (
-                                    <div key={it.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
-                                      <div className="min-w-0 flex-1">
-                                        <div className="text-sm font-medium break-words whitespace-normal leading-5">
-                                          {it.message || `Task "${it.title || ""}" was completed by ${it.completedByName || "-"} on ${it.completedAt || "—"}.`}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground truncate mt-0.5">
-                                          {it.applicantName} • Verified by {it.completedByName || "-"} •{" "}
-                                          {it.completedAt ? new Date(it.completedAt).toLocaleString() : "—"}
-                                        </div>
-                                      </div>
-                                      {it.taskDocumentUrl && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="outline"
-                                              size="icon"
-                                              className="h-8 w-8 shrink-0"
-                                              onClick={() => window.open(it.taskDocumentUrl, "_blank", "noopener,noreferrer")}
-                                            >
-                                              <FileText className="h-3.5 w-3.5 text-primary" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="left">
-                                            <p>Open Resource Link</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ) : (() => {
+                          {(() => {
                             const selected = applicantGroups.find((g) => g.applicantId === (selectedApplicantId || (applicantGroups[0] && applicantGroups[0].applicantId)))
                             const tasksForRaw = selected ? selected.tasks : []
                             const tasksFor = groupSearch
@@ -2099,6 +1995,11 @@ function isAppraisalActionPlanTask(task) {
                                 </div>
 
                                 <div className="space-y-2">
+                                  {tasksFor.length === 0 && (
+                                    <div className="py-10 text-center text-sm text-muted-foreground">
+                                      {groupSearch ? "No tasks match your search." : "No pending verification tasks for this hire."}
+                                    </div>
+                                  )}
                                   {tasksFor.map((t) => (
                                     <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background gap-3">
                                       <div className="min-w-0 flex-1">
