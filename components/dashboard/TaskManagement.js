@@ -224,6 +224,10 @@ export function TaskManagement({ initialTasks }) {
   // Selection state for bulk actions
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set())
 
+  // All actively onboarding hires for hire completions modal (must be before applicantGroups IIFE)
+  const [allOnboardingHires, setAllOnboardingHires] = useState([])
+  const [onboardingHiresLoading, setOnboardingHiresLoading] = useState(false)
+
   // Simple admin gate – this component is used on admin dashboard
   const isAdmin = true
   const canDeleteTask = (task) => {
@@ -410,9 +414,6 @@ function isAppraisalActionPlanTask(task) {
   const [monthlyPeople, setMonthlyPeople] = useState([])
   const [monthlySelected, setMonthlySelected] = useState({})
   const [monthlyReviewsTaskId, setMonthlyReviewsTaskId] = useState(null)
-  // All actively onboarding hires for hire completions modal
-  const [allOnboardingHires, setAllOnboardingHires] = useState([])
-  const [onboardingHiresLoading, setOnboardingHiresLoading] = useState(false)
 
   const openResolveDialog = (task) => {
     setResolveDialogTask(task)
