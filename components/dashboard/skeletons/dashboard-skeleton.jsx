@@ -5,7 +5,6 @@ import { TaskManagementSkeleton } from "./task-management-skeleton"
 import { NewHireTrackerSkeleton } from "./new-hire-tracker-skeleton"
 import { CalendarPreviewSkeleton } from "./calendar-preview-skeleton"
 import { ResourceHubSkeleton } from "./resource-hub-skeleton"
-import { OnboardingHealthSkeleton } from "./onboarding-health-skeleton"
 import { QuickActionsSkeleton } from "./quick-actions-skeleton"
 import { NotificationCenterSkeleton } from "./notification-center-skeleton"
 import { ActivityFeedSkeleton } from "./activity-feed-skeleton"
@@ -31,7 +30,6 @@ export function DashboardSkeleton() {
         <div className="col-span-1 md:col-span-2 space-y-4 order-4">
           <CalendarPreviewSkeleton />
           <ResourceHubSkeleton />
-          <OnboardingHealthSkeleton />
         </div>
 
         {/* Bottom Row */}
