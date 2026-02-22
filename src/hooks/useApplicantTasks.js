@@ -39,6 +39,7 @@ export function useApplicantTasks(applicantId, options = {}) {
     active: data?.active || [],
     overdue: data?.overdue || [],
     completed: data?.completed || [],
+    pendingVerification: data?.pendingVerification || [],
     isLoading,
     isValidating,
     error: error?.info || error,

@@ -1448,12 +1448,12 @@ function RatingStars({ value = 0, onChange }) {
 }
 
 function ApplicantTasksSection({ applicantId, enabled }) {
-  const { active, overdue, completed, isLoading, refresh } = useApplicantTasks(applicantId, {
+  const { active, overdue, completed, pendingVerification, isLoading, refresh } = useApplicantTasks(applicantId, {
     enabled: enabled && !!applicantId,
     revalidateOnFocus: false,
   })
 
-  const [openGroups, setOpenGroups] = useState({ active: true, overdue: true, completed: false })
+  const [openGroups, setOpenGroups] = useState({ active: true, overdue: true, completed: false, pendingVerification: true })
   const toggle = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const priorityDotClass = (priority) => {
@@ -1470,7 +1470,7 @@ function ApplicantTasksSection({ applicantId, enabled }) {
     } catch { return String(d) }
   }
 
-  const totalCount = active.length + overdue.length + completed.length
+  const totalCount = active.length + overdue.length + completed.length + pendingVerification.length
 
   const groups = [
     {
@@ -1500,6 +1500,15 @@ function ApplicantTasksSection({ applicantId, enabled }) {
       borderClass: "border-l-success",
       emptyText: "No completed tasks",
     },
+    {
+      key: "pendingVerification",
+      label: "Awaiting Review",
+      tasks: pendingVerification,
+      accentClass: "text-warning",
+      badgeClass: "bg-warning-muted text-warning border-warning/20",
+      borderClass: "border-l-warning",
+      emptyText: "No tasks awaiting review",
+    },
   ]
 
   return (
@@ -1514,6 +1523,7 @@ function ApplicantTasksSection({ applicantId, enabled }) {
                 active.length > 0 && `${active.length} active`,
                 overdue.length > 0 && `${overdue.length} overdue`,
                 completed.length > 0 && `${completed.length} done`,
+                pendingVerification.length > 0 && `${pendingVerification.length} awaiting review`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -1597,10 +1607,14 @@ function ApplicantTasksSection({ applicantId, enabled }) {
                             {/* Main task row */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                                <span
-                                  className={`mt-[5px] h-1.5 w-1.5 rounded-full flex-shrink-0 ${priorityDotClass(task.priority)}`}
-                                  title={task.priority}
-                                />
+                                {g.key === "pendingVerification" ? (
+                                  <ClockIcon className="mt-[3px] h-3 w-3 text-warning flex-shrink-0" />
+                                ) : (
+                                  <span
+                                    className={`mt-[5px] h-1.5 w-1.5 rounded-full flex-shrink-0 ${priorityDotClass(task.priority)}`}
+                                    title={task.priority}
+                                  />
+                                )}
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm text-foreground leading-tight truncate">{task.title}</p>
                                   {task.taskType && task.taskType !== "Default" && (
@@ -1610,8 +1624,8 @@ function ApplicantTasksSection({ applicantId, enabled }) {
                                   )}
                                 </div>
                               </div>
-                              {/* Due date */}
-                              {task.dueDate && (
+                              {/* Due date (admin tasks) */}
+                              {g.key !== "pendingVerification" && task.dueDate && (
                                 <div
                                   className={`flex items-center gap-0.5 flex-shrink-0 text-[10px] ${
                                     g.key === "overdue" ? "text-error font-medium" : "text-muted-foreground"
@@ -1633,6 +1647,17 @@ function ApplicantTasksSection({ applicantId, enabled }) {
                                   {task.completedAt && (
                                     <span className="text-muted-foreground/70"> · {fmtDate(task.completedAt)}</span>
                                   )}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Hire completion row — pending verification tasks only */}
+                            {g.key === "pendingVerification" && task.completedAt && (
+                              <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/10">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-warning flex-shrink-0" />
+                                <span className="text-[10px] text-muted-foreground leading-none">
+                                  Completed by hire
+                                  <span className="text-muted-foreground/70"> · {fmtDate(task.completedAt)}</span>
                                 </span>
                               </div>
                             )}
