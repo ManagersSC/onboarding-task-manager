@@ -13,7 +13,7 @@
 - [x] Show all actively onboarding hires in hire completions modal (even with 0 tasks)
 - [x] Create `/api/admin/users/[id]/tasks` API endpoint
 - [x] Create `useApplicantTasks` SWR hook
-- [ ] Add `useApplicantTasks` import to `applicant-drawer.js`
-- [ ] Add `ApplicantTasksSection` sub-component to `applicant-drawer.js`
-- [ ] Insert Tasks section JSX between Appraisals and Feedback Documents in drawer
-- [ ] Commit final changes and push branch
+- [x] Add `useApplicantTasks` import to `applicant-drawer.js`
+- [x] Add `ApplicantTasksSection` sub-component to `applicant-drawer.js`
+- [x] Insert Tasks section JSX between Appraisals and Feedback Documents in drawer
+- [x] Commit final changes and push branch
