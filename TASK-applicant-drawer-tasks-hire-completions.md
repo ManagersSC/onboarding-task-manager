@@ -16,4 +16,8 @@
 - [x] Add `useApplicantTasks` import to `applicant-drawer.js`
 - [x] Add `ApplicantTasksSection` sub-component to `applicant-drawer.js`
 - [x] Insert Tasks section JSX between Appraisals and Feedback Documents in drawer
+- [x] Fix TDZ bug (`allOnboardingHires` referenced before initialization in `applicantGroups` IIFE)
+- [x] Add `pendingVerification` bucket to API (cross-reference Onboarding Tasks Logs with admin Tasks)
+- [x] Expose `pendingVerification` in `useApplicantTasks` hook
+- [x] Add "Awaiting Review" amber accordion group to `ApplicantTasksSection`
 - [x] Commit final changes and push branch
