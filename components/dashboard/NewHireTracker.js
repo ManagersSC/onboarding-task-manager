@@ -129,25 +129,6 @@ export function NewHireTracker({ initialNewHires = [] }) {
     setResumeDateOverride("")
   }
 
-  // Task preview state for modal
-  const [hireTasks, setHireTasks] = useState({})
-  const [hireTasksLoading, setHireTasksLoading] = useState({})
-
-  const fetchHireTasks = useCallback(async (hireId) => {
-    if (hireTasks[hireId] || hireTasksLoading[hireId]) return
-    setHireTasksLoading((prev) => ({ ...prev, [hireId]: true }))
-    try {
-      const response = await fetch(`/api/admin/dashboard/new-hires/${hireId}/tasks`)
-      if (!response.ok) throw new Error("Failed to fetch tasks")
-      const data = await response.json()
-      setHireTasks((prev) => ({ ...prev, [hireId]: data }))
-    } catch (error) {
-      console.error("Error fetching hire tasks:", error)
-      setHireTasks((prev) => ({ ...prev, [hireId]: { tasks: [], hasMore: false } }))
-    } finally {
-      setHireTasksLoading((prev) => ({ ...prev, [hireId]: false }))
-    }
-  }, [hireTasks, hireTasksLoading])
 
   const emailTemplates = [
     {
@@ -469,12 +450,6 @@ export function NewHireTracker({ initialNewHires = [] }) {
     }
   }
 
-  // Fetch tasks when a hire is selected (modal opens)
-  useEffect(() => {
-    if (selectedHire?.id) {
-      fetchHireTasks(selectedHire.id)
-    }
-  }, [selectedHire?.id])
 
   // Fetch new hires data
   useEffect(() => {
@@ -1157,80 +1132,26 @@ export function NewHireTracker({ initialNewHires = [] }) {
                         </p>
                       </div>
 
-                      {/* Upcoming Tasks */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium flex items-center gap-2">
-                            <ListTodo className="h-4 w-4 text-muted-foreground" />
-                            Upcoming Tasks
-                          </h4>
-                          {hireTasks[hire.id]?.tasks?.length > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              {hire.tasks?.total - hire.tasks?.completed || 0} remaining
-                            </span>
-                          )}
+                      {/* View Tasks Button */}
+                      <a
+                        href={`/admin/users?applicantId=${hire.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between w-full rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-border px-4 py-3 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                            <ListTodo className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium leading-none">View Tasks</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {hire.tasks?.total - hire.tasks?.completed || 0} remaining · {hire.tasks?.total || 0} total
+                            </p>
+                          </div>
                         </div>
-                        <div className="rounded-lg border border-border/50 overflow-hidden">
-                          {hireTasksLoading[hire.id] ? (
-                            <div className="p-3 space-y-2.5">
-                              {[...Array(3)].map((_, i) => (
-                                <div key={i} className="flex items-center gap-3 animate-pulse">
-                                  <div className="h-2 w-2 rounded-full bg-muted flex-shrink-0" />
-                                  <div className="h-3.5 bg-muted rounded flex-1" />
-                                  <div className="h-4 w-10 bg-muted rounded" />
-                                </div>
-                              ))}
-                            </div>
-                          ) : hireTasks[hire.id]?.tasks?.length > 0 ? (
-                            <>
-                              <div className="divide-y divide-border/30">
-                                {hireTasks[hire.id].tasks.map((task, taskIdx) => (
-                                  <motion.div
-                                    key={task.id}
-                                    initial={{ opacity: 0, x: -8 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.2, delay: taskIdx * 0.04 }}
-                                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted/20 transition-colors"
-                                  >
-                                    <div
-                                      className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
-                                        task.status === "Overdue"
-                                          ? "bg-destructive"
-                                          : "bg-amber-500"
-                                      }`}
-                                    />
-                                    <span className="text-sm truncate flex-1">{task.title}</span>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-normal"
-                                    >
-                                      {task.type}
-                                    </Badge>
-                                  </motion.div>
-                                ))}
-                              </div>
-                              <div className="flex items-center justify-between px-3 py-1.5 border-t border-border/30 bg-muted/10">
-                                {hireTasks[hire.id].hasMore && (
-                                  <span className="text-xs text-muted-foreground/60 tracking-widest">...</span>
-                                )}
-                                <a
-                                  href={`/admin/users?applicantId=${hire.id}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors ml-auto"
-                                >
-                                  See more
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="p-4 text-center">
-                              <p className="text-xs text-muted-foreground">No pending tasks</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
+                      </a>
 
                       {/* Contact Information */}
                       <div className="space-y-3">
