@@ -4,6 +4,7 @@ import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -66,7 +67,7 @@ export async function POST(request, { params }) {
         await createNotification({
           title: "Monthly Review Scheduled",
           body: `${title} on ${dateStr}${startTime && endTime ? ` ${startTime}-${endTime}` : ""}`,
-          type: "Monthly Review",
+          type: NOTIFICATION_TYPES.MONTHLY_REVIEW,
           severity: "Info",
           recipientId: staff.id,
           actionUrl: "/admin/users",
