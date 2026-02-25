@@ -4,6 +4,7 @@ import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { unsealData } from "iron-session";
 import { createNotification } from "@/lib/notifications";
+import { NOTIFICATION_TYPES } from "@/lib/notification-types";
 import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
 // Complete tasks
@@ -267,7 +268,7 @@ export async function POST(request) {
       createNotification({
         title: "Task Completed",
         body: `${applicantName} has completed the task: \"${taskTitle}\".`,
-        type: "Task",
+        type: NOTIFICATION_TYPES.TASK_COMPLETION,
         severity: "Success",
         recipientId: admin.id,
         actionUrl: `https://yourapp.com/tasks/${taskId}`,

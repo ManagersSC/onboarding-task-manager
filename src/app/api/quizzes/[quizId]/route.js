@@ -5,6 +5,7 @@ import { unsealData } from "iron-session";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { NextResponse } from 'next/server';
 import { createNotification } from "@/lib/notifications";
+import { NOTIFICATION_TYPES } from "@/lib/notification-types";
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -213,7 +214,7 @@ export async function POST(req, { params }) {
         await createNotification({
           title: `Quiz Completed: ${quiz.fields["Quiz Title"] || quizId}`,
           body: `Applicant ${applicant.fields["Name"] || user.userEmail} has completed the quiz '${quiz.fields["Quiz Title"] || quizId}' with a score of ${score}/${total} (${Math.round(percent)}%).`,
-          type: "Quiz Completion",
+          type: NOTIFICATION_TYPES.QUIZ_COMPLETION,
           severity: "Info",
           recipientId: admin.id,
           actionUrl: `/admin/quizzes/${quizId}/submissions`,

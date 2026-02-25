@@ -4,6 +4,7 @@ import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 import { parseAirtableQuestionsField } from "@/lib/utils/appraisal-questions"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
@@ -158,7 +159,7 @@ export async function POST(request, { params }) {
         await createNotification({
           title: "Appraisal Date Updated",
           body: `Appraisal set to ${dateStr}. An appointment event has been created in the calendar.`,
-          type: "Appraisal",
+          type: NOTIFICATION_TYPES.APPRAISAL,
           severity: "Info",
           recipientId: staff.id,
           actionUrl: "/admin/users",

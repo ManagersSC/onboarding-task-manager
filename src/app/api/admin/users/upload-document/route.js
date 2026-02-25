@@ -3,6 +3,7 @@ import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -163,7 +164,7 @@ export async function POST(request) {
         await createNotification({
           title: `Documents Uploaded`,
           body: `${uploadedFiles.length} document(s) uploaded for ${applicantName}`,
-          type: 'Document Upload',
+          type: NOTIFICATION_TYPES.DOCUMENT_UPLOAD,
           severity: 'Success',
           recipientId: session.userId,
           source: 'Admin Panel',
