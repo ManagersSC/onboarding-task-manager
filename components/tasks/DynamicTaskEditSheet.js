@@ -19,10 +19,20 @@ import {
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@components/ui/form"
 import { Skeleton } from "@components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
-import { AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip, Plus, ChevronsUpDown } from "lucide-react"
+import { AlertCircle, Info, LinkIcon, FileIcon, X, Upload, Paperclip, Plus, ChevronsUpDown, Trash2, Loader2 } from "lucide-react"
 import { cn } from "@components/lib/utils"
 import { toast } from "sonner"
 import { Badge } from "@components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@components/ui/alert-dialog"
 
 export function DynamicTaskEditSheet({
   open,
@@ -30,10 +40,12 @@ export function DynamicTaskEditSheet({
   taskId,
   getEndpoint,
   patchEndpoint,
+  deleteEndpoint,
   fields,
   mapApiToForm,
   mapFormToApi,
   onEditSuccess,
+  onDeleteSuccess,
   folderOptions = [],
 }) {
   const [loading, setLoading] = useState(false)
@@ -42,6 +54,8 @@ export function DynamicTaskEditSheet({
   const [attachments, setAttachments] = useState([])
   const [isDragging, setIsDragging] = useState(false)
   const [formModified, setFormModified] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form definition (dynamic fields)
   const defaultValues = fields.reduce((acc, f) => {
@@ -67,6 +81,24 @@ export function DynamicTaskEditSheet({
         form.setValue("attachments", [])
       }
       setFormModified(false)
+    }
+  }
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!deleteEndpoint) return
+    setIsDeleting(true)
+    try {
+      const response = await fetch(deleteEndpoint, { method: "DELETE" })
+      if (!response.ok) throw new Error("Failed to delete record")
+      toast.success("Record deleted successfully")
+      setIsDeleteDialogOpen(false)
+      onOpenChange(false)
+      if (typeof onDeleteSuccess === "function") onDeleteSuccess()
+    } catch (err) {
+      toast.error("Error deleting record", { description: err.message })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -392,9 +424,22 @@ export function DynamicTaskEditSheet({
           >
             <SheetContent className="sm:max-w-md overflow-y-auto">
               <SheetHeader className="pb-4 border-b">
-                <SheetTitle className="text-xl">
-                  {loading ? <Skeleton className="h-8 w-3/4" /> : "Record Details"}
-                </SheetTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <SheetTitle className="text-xl">
+                    {loading ? <Skeleton className="h-8 w-3/4" /> : "Record Details"}
+                  </SheetTitle>
+                  {deleteEndpoint && !loading && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 {loading ? (
                   <div className="text-sm text-muted-foreground">
                     <Skeleton className="h-4 w-full" />
@@ -460,6 +505,41 @@ export function DynamicTaskEditSheet({
           </Sheet>
         )}
       </AnimatePresence>
+
+      {/* Delete confirmation dialog — outside the Sheet so it renders at the document root */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete Record
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 } 
