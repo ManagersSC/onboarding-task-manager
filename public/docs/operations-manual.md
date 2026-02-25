@@ -41,6 +41,8 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 
 **What it is NOT:** This is not a payroll system, a scheduling rota, or an HR system. It handles the *onboarding process only* — getting a new hire from application to being ready to work.
 
+> 📸 **Screenshot:** _Onboarding Task Manager homepage / login screen_
+
 ---
 
 ## 2. Who Uses What (Roles)
@@ -52,6 +54,8 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 | **Team Member** | New hires, staff completing onboarding | See their own tasks, upload documents, take quizzes |
 
 > **Important:** If you need to give someone access, an Admin must create their account. Team Members and Clinic Managers cannot create accounts for others.
+
+> 📸 **Screenshot:** _User Management page showing role badges next to each staff member_
 
 ---
 
@@ -169,6 +173,10 @@ The navigation on the left gives you access to:
 - **Audit Logs** — complete activity history
 - **Resources** — shared document/link hub
 
+> 📸 **Screenshot:** _Admin dashboard showing Active Onboardings and Tasks Due This Week metrics_
+
+> 📸 **Screenshot:** _Left sidebar navigation with all sections visible_
+
 ---
 
 ## 5. Daily Operations
@@ -183,6 +191,10 @@ The navigation on the left gives you access to:
 
 > **Tip:** If the applicant submitted the form themselves, their record is already there — just search for their name.
 
+> 📸 **Screenshot:** _Applicants list page showing all new hires with their status_
+
+> 📸 **Screenshot:** _Add Applicant form with fields filled in_
+
 ---
 
 ### Assigning Onboarding Tasks
@@ -195,6 +207,10 @@ The navigation on the left gives you access to:
 6. The team member will receive an email notification automatically
 
 > **Note:** Task templates are pre-created. If you need a new type of task, an Admin can create it under the **Tasks** section.
+
+> 📸 **Screenshot:** _Assign Tasks modal showing task template list with due date fields_
+
+> 📸 **Screenshot:** _Hire's profile page showing their assigned task list_
 
 ---
 
@@ -211,6 +227,10 @@ The navigation on the left gives you access to:
 **Maximum file size:** 10 MB per file
 
 > **If an upload fails:** Check that the file is not larger than 10 MB and is one of the accepted types.
+
+> 📸 **Screenshot:** _Document upload modal with file type selector and drag-and-drop zone_
+
+> 📸 **Screenshot:** _Hire's profile showing the Documents section with uploaded files listed_
 
 ---
 
@@ -229,6 +249,12 @@ Quizzes are assessments new hires take as part of their onboarding.
 3. Add questions (multiple choice, checkboxes, or info blocks)
 4. Save — the quiz is now available to assign as a task
 
+> 📸 **Screenshot:** _Quizzes page showing list of quizzes with question count_
+
+> 📸 **Screenshot:** _Quiz builder showing question types (multiple choice, checkboxes, info block)_
+
+> 📸 **Screenshot:** _Hire's quiz submission view showing their answers and score_
+
 ---
 
 ### Sending a Custom Email
@@ -237,6 +263,8 @@ Quizzes are assessments new hires take as part of their onboarding.
 2. Look for the **"Send Email"** option
 3. Compose your message
 4. Click **Send** — the email is delivered automatically via the email system
+
+> 📸 **Screenshot:** _Custom email compose screen with recipient, subject, and body fields_
 
 ---
 
@@ -251,6 +279,8 @@ Quizzes are assessments new hires take as part of their onboarding.
 5. Hire works through tasks: uploads documents, completes quizzes, reads materials
 6. Admin reviews submitted documents and marks each task complete
 7. Once all tasks are complete, the hire's onboarding is marked as finished
+
+> 📸 **Screenshot:** _Hire's profile page showing completed tasks with green checkmarks_
 
 ---
 
@@ -285,6 +315,8 @@ The audit log records every significant action in the system — who did what an
 2. Filter by date range, user, or action type
 3. To export: click **"Export CSV"** — this downloads a spreadsheet of all logged actions
 
+> 📸 **Screenshot:** _Audit Logs page showing action history with date, user, and action columns_
+
 ---
 
 ### Walkthrough: Managing Notification Preferences
@@ -297,6 +329,8 @@ Each staff member can control which notifications they receive:
 4. Set their preferred channel: **Email**, **Slack**, or both
 5. Save — changes take effect immediately
 
+> 📸 **Screenshot:** _Notification preferences panel showing toggles for Email, Slack, and In-app per notification type_
+
 ---
 
 ### Walkthrough: Adding a Resource to the Resource Hub
@@ -307,6 +341,8 @@ The Resource Hub is a shared library of links and documents for staff.
 2. Click **"Add Resource"**
 3. Enter the title, link or upload file, and category
 4. Save — it appears in the hub immediately for all staff
+
+> 📸 **Screenshot:** _Resource Hub page showing resources listed by category_
 
 ---
 
@@ -321,6 +357,8 @@ Staff can receive notifications in two places:
 | **Slack** | Posted to a Slack channel, if enabled in preferences and Slack is connected |
 
 > **To change notification preferences:** Go to Users → select the staff member → Notification Preferences section.
+
+> 📸 **Screenshot:** _In-app notification bell open showing unread notifications_
 
 ---
 
