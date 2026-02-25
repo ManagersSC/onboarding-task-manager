@@ -25,6 +25,7 @@ export const NOTIFICATION_TYPES = {
 
   // Quizzes
   QUIZ_COMPLETION:               "Quiz Completion",
+  QUIZ_FAILED:                   "Quiz Failed",
 
   // Applicant / onboarding
   APPLICANT_STAGE_UPDATED:       "Applicant Stage Updated",
@@ -40,6 +41,7 @@ export const NOTIFICATION_TYPES = {
   // Scheduling
   APPRAISAL:                     "Appraisal",
   MONTHLY_REVIEW:                "Monthly Review",
+  MONTHLY_REVIEW_CANCELLED:      "Monthly Review Cancelled",
 
   // System
   ANNOUNCEMENT:                  "Announcement",
