@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
-import { ExternalLink, ChevronLeft, ChevronRight, Paperclip } from "lucide-react"
+import { Checkbox } from "@components/ui/checkbox"
+import { ExternalLink, ChevronLeft, ChevronRight, Paperclip, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -17,6 +18,7 @@ import { PageTransition } from "./table/PageTransition"
 import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
 import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
 import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
+import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 
 // All table filters
 function TableFilters({
@@ -127,7 +129,7 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
   )
 }
 
-export function AssignedTasksLogsTable({ onOpenCreateTask }) {
+export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -139,12 +141,17 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
   const [folderFilter, setFolderFilter] = useState("all")
   const [assignedDateFilter, setAssignedDateFilter] = useState("")
 
+  // Row selection
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
+
   // Task Editing
   const [selectedLogId, setSelectedLogId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   // Column resizing - using refs instead of state to avoid stale closures
   const [columnWidths, setColumnWidths] = useState({
+    checkbox: 48,
     name: 160,
     email: 200,
     title: 200,
@@ -318,6 +325,48 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
   const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
   const handleAssignedDateChange = useCallback((value) => setAssignedDateFilter(value), [])
 
+  // Selection helpers
+  const allCurrentIds = logs.map((l) => l.id)
+  const allSelected = allCurrentIds.length > 0 && allCurrentIds.every((id) => selectedIds.has(id))
+  const someSelected = allCurrentIds.some((id) => selectedIds.has(id)) && !allSelected
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        allCurrentIds.forEach((id) => next.delete(id))
+        return next
+      })
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        allCurrentIds.forEach((id) => next.add(id))
+        return next
+      })
+    }
+  }
+
+  const toggleSelectRow = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (typeof onSelectionChange === "function") {
+      onSelectionChange(logs.filter((l) => selectedIds.has(l.id)))
+    }
+  }, [selectedIds, logs, onSelectionChange])
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [logs])
+
   // Open edit sheet
   const handleOpenEditSheet = (logId) => {
     setSelectedLogId(logId)
@@ -385,7 +434,7 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
   const renderSkeletonRows = () =>
     Array(Math.min(pagination.pageSize, 5))
       .fill(0)
-      .map((_, i) => <SkeletonRow key={i} />)
+      .map((_, i) => <SkeletonRow key={i} colSpan={10} />)
 
   // Custom resizable header component
   const ResizableHeader = ({ children, column }) => (
@@ -478,10 +527,43 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
         </AnimatePresence>
 
         {/* Table - Added table-fixed class to ensure widths are respected */}
+        {/* Bulk action bar */}
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2"
+            >
+              <span className="text-sm font-medium text-destructive">
+                {selectedIds.size} row{selectedIds.size !== 1 ? "s" : ""} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete selected
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="overflow-x-auto rounded-md border" ref={tableRef}>
-          <Table className="table-fixed w-full min-w-[1440px]">
+          <Table className="table-fixed w-full min-w-[1488px]">
             <TableHeader>
               <TableRow>
+                <TableHead style={{ width: `${columnWidths.checkbox}px` }} className="px-3">
+                  <Checkbox
+                    checked={allSelected}
+                    data-state={someSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead style={{ width: `${columnWidths.name}px` }}>
                   <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
                     <div
@@ -642,13 +724,13 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
                 renderSkeletonRows()
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-error">
+                  <TableCell colSpan={10} className="h-24 text-center text-error">
                     Error: {error}
                   </TableCell>
                 </TableRow>
               ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-auto py-8">
+                  <TableCell colSpan={10} className="h-auto py-8">
                     <AnimatedEmptyState
                       message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No assigned tasks found"}
                       actionLabel={searchTerm ? "Clear Search" : "Create Task"}
@@ -671,7 +753,15 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
                         ease: "easeOut",
                       }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                      data-state={selectedIds.has(log.id) ? "selected" : undefined}
                     >
+                      <TableCell className="px-3" style={{ width: `${columnWidths.checkbox}px` }}>
+                        <Checkbox
+                          checked={selectedIds.has(log.id)}
+                          onCheckedChange={() => toggleSelectRow(log.id)}
+                          aria-label={`Select row for ${log.name}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium truncate" style={{ width: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }}>
                         {log.name}
                       </TableCell>
@@ -772,10 +862,24 @@ export function AssignedTasksLogsTable({ onOpenCreateTask }) {
           taskId={selectedLogId}
           getEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
           patchEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+          deleteEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
           fields={logFields}
           mapApiToForm={mapApiToForm}
           mapFormToApi={mapFormToApi}
           onEditSuccess={() => fetchLogs(pagination.currentCursor)}
+          onDeleteSuccess={() => fetchLogs(pagination.currentCursor)}
+        />
+
+        {/* Bulk delete modal */}
+        <BulkDeleteTasksModal
+          open={isBulkDeleteOpen}
+          onOpenChange={setIsBulkDeleteOpen}
+          selectedTasks={logs.filter((l) => selectedIds.has(l.id))}
+          deleteEndpoint="/api/admin/tasks/assigned-tasks/bulk-delete"
+          onDeleteSuccess={() => {
+            setSelectedIds(new Set())
+            fetchLogs(null)
+          }}
         />
       </div>
     </PageTransition>
