@@ -22,5 +22,6 @@
 - [x] Improve error handling in TaskEditSheet — surface actual server error message in toast
 - [x] Improve success toast — add description "All changes have been saved."
 - [x] Verify all other inputs (title, description, type, location, resourceUrl, attachments) are handled correctly
+- [x] Replace placeholder notification with real logic — query Onboarding Tasks Logs, notify each assigned applicant
 - [ ] Commit and push changes
 - [ ] Open PR

@@ -221,19 +221,37 @@ export async function PATCH(request, { params }) {
       fieldsToUpdate[airtableKey] = raw
     }
 
-    // 5. Update record metadata & strip attachments if you support removal
+    // 5. Update record in Airtable
     if (Object.keys(fieldsToUpdate).length) {
       await base("Onboarding Tasks").update([{ id: recordId, fields: fieldsToUpdate }])
+    }
 
-      // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
-      await createNotification({
-        title: "Task Updated",
-        body: `A task you were assigned ("${formData.get("title")}") has been updated.`,
-        type: "Task",
-        severity: "Info",
-        recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
-        source: "System"
-      });
+    // 6. Notify all applicants who have this task assigned
+    try {
+      const taskTitle = formData.get("title") || "a task"
+      const logs = await base("Onboarding Tasks Logs")
+        .select({
+          filterByFormula: `FIND("${recordId}", ARRAYJOIN({Task}))`,
+          fields: ["Assigned"],
+        })
+        .all()
+
+      for (const log of logs) {
+        const assignedIds = log.fields["Assigned"] || []
+        for (const assignedId of assignedIds) {
+          await createNotification({
+            title: "Task Updated",
+            body: `A task you were assigned ("${taskTitle}") has been updated.`,
+            type: "Task",
+            severity: "Info",
+            recipientId: assignedId,
+            source: "System",
+          })
+        }
+      }
+    } catch (notifErr) {
+      // Notification failure must not break the save
+      logger.error("Error sending task update notifications:", notifErr)
     }
 
     // 6. Upload new files
