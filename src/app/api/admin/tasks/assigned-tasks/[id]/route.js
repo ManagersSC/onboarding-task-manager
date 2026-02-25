@@ -103,6 +103,43 @@ export async function PATCH(request, { params }) {
   }
 }
 
+export async function DELETE(request, { params }) {
+  const { id } = params
+  const sessionCookie = (await cookies()).get("session")?.value
+  if (!sessionCookie) return new Response(null, { status: 401 })
+  let session
+  try {
+    session = await unsealData(sessionCookie, {
+      password: process.env.SESSION_SECRET,
+      ttl: 60 * 60 * 8,
+    })
+  } catch (err) {
+    return Response.json({ error: "Invalid Session" }, { status: 401 })
+  }
+  if (session.userRole !== "admin") return new Response(null, { status: 403 })
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    logger.error("Missing Airtable credentials")
+    return new Response(null, { status: 500 })
+  }
+  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+  try {
+    await base("Onboarding Tasks Logs").destroy(id)
+    logAuditEvent({
+      eventType: "Assigned Task Deletion",
+      eventStatus: "Success",
+      userRole: session.userRole,
+      userName: session.userName,
+      userIdentifier: session.userEmail,
+      detailedMessage: `Deleted assigned task log: ${id}`,
+      request,
+    })
+    return new Response(null, { status: 204 })
+  } catch (error) {
+    logger.error("Error deleting assigned task log", error)
+    return Response.json({ error: "Failed to delete record" }, { status: 500 })
+  }
+}
+
 // Helper for file upload (copy from core-tasks)
 async function uploadFileViaJson(recordId, fieldName, file) {
   const arrayBuffer = await file.arrayBuffer()
