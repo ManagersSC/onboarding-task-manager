@@ -418,7 +418,7 @@ Staff can receive notifications in two places:
 ## 9. FAQ
 
 **Q: Can I delete a task that was assigned by mistake?**
-A: Yes, but only Admins can delete tasks. Go to the hire's profile → find the task → click the delete option.
+A: Admins can manage assigned tasks from the **Assigned Tasks** page (`/admin/assigned-tasks`). Note: the delete functionality for individual tasks is not yet implemented — contact us if you need a task removed and we can handle it directly.
 
 **Q: Can two people have the same email address?**
 A: No. Each email address must be unique in the system.
@@ -432,14 +432,11 @@ A: Yes — go to the Tasks section and edit any task template. Changes affect ne
 **Q: How long are documents stored?**
 A: Documents are stored in Airtable indefinitely. There is no automatic deletion.
 
-**Q: Can I undo a "task completed" action?**
-A: No. Once a task is marked complete, it cannot be undone in the system. Contact your developer if this needs to be changed in Airtable directly.
-
 **Q: Is there a mobile app?**
 A: No — the system is a web app that works in any browser on mobile, tablet, or desktop. No separate app needs to be installed.
 
 **Q: What if Make.com (the automation service) is down?**
-A: The web app will still work — staff can still log in, tasks will still show up, and documents can still be uploaded. The only thing that won't work is automatic email notifications. You would need to notify people manually until Make.com is restored.
+A: The web app will still work — staff can still log in and documents can still be uploaded. However, two things will stop working: automatic email notifications and task assignment (since task assignment emails are delivered through Make.com). You would need to notify people manually and defer any task assignments until Make.com is restored.
 
 **Q: Can I see who made a change in the system?**
 A: Yes — go to Audit Logs. Every significant action is recorded with the user's name and timestamp.
@@ -448,15 +445,17 @@ A: Yes — go to Audit Logs. Every significant action is recorded with the user'
 
 ## 10. Who to Contact
 
-| Need | Contact |
-|------|---------|
-| Something in the app is broken | Your developer — [add contact details] |
-| Make.com automation issue | Your developer first, then Make.com support at make.com/help |
-| Airtable data issue | Your developer first, then Airtable support at support.airtable.com |
-| Vercel (hosting) issue | Your developer — they manage the Vercel account |
-| Adding a new feature | Your developer — [add contact details] |
+This platform was built and is maintained by **FlowFusion AI**. For any technical issues, changes, or questions, please reach out to us directly.
 
-> **Before contacting your developer:** Note the exact steps that caused the issue, what you expected to happen, and what actually happened. A screenshot is extremely helpful.
+| Issue | Who to contact |
+|-------|----------------|
+| Something in the app is broken | **FlowFusion AI** — reach out via email or WhatsApp |
+| Make.com automation not working (emails not sending, etc.) | **FlowFusion AI** — we monitor and manage all Make.com scenarios |
+| Airtable data issue (record incorrect, automation not firing) | **FlowFusion AI** — we manage the Airtable base and automations |
+| Hosting issue (site down or not loading) | **FlowFusion AI** — we manage the Vercel deployment |
+| Requesting a new feature or change | **FlowFusion AI** — get in touch and we'll scope it out |
+
+> **When reporting an issue:** Please describe the exact steps that led to the problem, what you expected to happen, and what actually happened. A screenshot is extremely helpful and speeds up resolution significantly.
 
 ---
 
