@@ -1,0 +1,2732 @@
+{
+    "subflows": [
+        {
+            "flow": [
+                {
+                    "id": 28,
+                    "module": "airtable:webhook",
+                    "version": 3,
+                    "parameters": {
+                        "__IMTHOOK__": 1100889
+                    },
+                    "mapper": {},
+                    "metadata": {
+                        "designer": {
+                            "x": 267,
+                            "y": -148
+                        },
+                        "restore": {
+                            "parameters": {
+                                "__IMTHOOK__": {
+                                    "data": {
+                                        "editable": "false"
+                                    },
+                                    "label": "New Applicant"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "__IMTHOOK__",
+                                "type": "hook:airtable",
+                                "label": "Webhook",
+                                "required": true
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 8,
+                    "module": "airtable:ActionGetRecord",
+                    "version": 3,
+                    "parameters": {
+                        "__IMTCONN__": 1129955
+                    },
+                    "mapper": {
+                        "id": "{{28.job}}",
+                        "base": "appZ4QT8rXFlX6LrZ",
+                        "table": "tblSrLl0u8iWBmTRX",
+                        "useColumnId": false
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 600,
+                            "y": 0,
+                            "name": "Get Job"
+                        },
+                        "restore": {
+                            "expect": {
+                                "base": {
+                                    "mode": "chose",
+                                    "label": "Application Tracking System"
+                                },
+                                "table": {
+                                    "mode": "chose",
+                                    "label": "Jobs"
+                                },
+                                "useColumnId": {
+                                    "mode": "chose"
+                                }
+                            },
+                            "parameters": {
+                                "__IMTCONN__": {
+                                    "data": {
+                                        "scoped": "true",
+                                        "connection": "airtable2"
+                                    },
+                                    "label": "Smile Cliniq - ATS"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "__IMTCONN__",
+                                "type": "account:airtable3,airtable2",
+                                "label": "Connection",
+                                "required": true
+                            }
+                        ],
+                        "expect": [
+                            {
+                                "name": "base",
+                                "type": "select",
+                                "label": "Base",
+                                "required": true
+                            },
+                            {
+                                "name": "useColumnId",
+                                "type": "boolean",
+                                "label": "Use Column ID",
+                                "required": true
+                            },
+                            {
+                                "name": "table",
+                                "type": "select",
+                                "label": "Table",
+                                "required": true
+                            },
+                            {
+                                "name": "id",
+                                "type": "text",
+                                "label": "Record ID",
+                                "required": true
+                            }
+                        ],
+                        "interface": [
+                            {
+                                "name": "id",
+                                "type": "text",
+                                "label": "ID"
+                            },
+                            {
+                                "name": "createdTime",
+                                "type": "date",
+                                "label": "Created Time"
+                            },
+                            {
+                                "name": "Title",
+                                "type": "text",
+                                "label": "Title"
+                            },
+                            {
+                                "name": "Ad Doc",
+                                "spec": [
+                                    {
+                                        "name": "id",
+                                        "type": "text",
+                                        "label": "ID"
+                                    },
+                                    {
+                                        "name": "width",
+                                        "type": "uinteger",
+                                        "label": "Width"
+                                    },
+                                    {
+                                        "name": "height",
+                                        "type": "uinteger",
+                                        "label": "Height"
+                                    },
+                                    {
+                                        "name": "url",
+                                        "type": "url",
+                                        "label": "URL"
+                                    },
+                                    {
+                                        "name": "filename",
+                                        "type": "filename",
+                                        "label": "File name"
+                                    },
+                                    {
+                                        "name": "size",
+                                        "type": "uinteger",
+                                        "label": "Size"
+                                    },
+                                    {
+                                        "name": "type",
+                                        "type": "text",
+                                        "label": "MIME type"
+                                    },
+                                    {
+                                        "name": "thumbnails",
+                                        "spec": [
+                                            {
+                                                "name": "small",
+                                                "spec": [
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Small"
+                                            },
+                                            {
+                                                "name": "large",
+                                                "spec": [
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Large"
+                                            },
+                                            {
+                                                "name": "full",
+                                                "spec": [
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Full"
+                                            }
+                                        ],
+                                        "type": "collection",
+                                        "label": "Thumbnails"
+                                    }
+                                ],
+                                "type": "array",
+                                "label": "Ad Doc"
+                            },
+                            {
+                                "name": "Job Status",
+                                "type": "text",
+                                "label": "Job Status"
+                            },
+                            {
+                                "name": "Relevant Channel IDs",
+                                "type": "text",
+                                "label": "Relevant Channel IDs"
+                            },
+                            {
+                                "name": "Description",
+                                "type": "text",
+                                "label": "Description",
+                                "multiline": true
+                            },
+                            {
+                                "name": "Required Experience",
+                                "type": "text",
+                                "label": "Required Experience"
+                            },
+                            {
+                                "name": "Applicants",
+                                "spec": {
+                                    "label": "Record ID"
+                                },
+                                "type": "array",
+                                "label": "Applicants"
+                            },
+                            {
+                                "name": "Interviewers",
+                                "spec": {
+                                    "label": "Record ID"
+                                },
+                                "type": "array",
+                                "label": "Interviewers"
+                            },
+                            {
+                                "name": "Required Documents",
+                                "type": "array",
+                                "label": "Required Documents",
+                                "dynamic": true,
+                                "editable": true
+                            },
+                            {
+                                "name": "Documents",
+                                "spec": {
+                                    "label": "Record ID"
+                                },
+                                "type": "array",
+                                "label": "Documents"
+                            },
+                            {
+                                "name": "Total Applicants",
+                                "type": "array",
+                                "label": "Total Applicants"
+                            },
+                            {
+                                "name": "Job Offered",
+                                "type": "array",
+                                "label": "Job Offered"
+                            },
+                            {
+                                "name": "Offer Rate",
+                                "type": "text",
+                                "label": "Offer Rate"
+                            },
+                            {
+                                "name": "Application Form",
+                                "type": "text",
+                                "label": "Application Form"
+                            }
+                        ]
+                    },
+                    "onerror": [
+                        {
+                            "id": 20,
+                            "module": "builtin:Break",
+                            "version": 1,
+                            "parameters": {},
+                            "mapper": {
+                                "count": "1",
+                                "retry": true,
+                                "interval": "15"
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 597,
+                                    "y": -238
+                                },
+                                "restore": {
+                                    "expect": {
+                                        "retry": {
+                                            "mode": "chose"
+                                        }
+                                    }
+                                },
+                                "expect": [
+                                    {
+                                        "name": "retry",
+                                        "type": "boolean",
+                                        "label": "Automatically complete execution",
+                                        "required": true
+                                    },
+                                    {
+                                        "name": "count",
+                                        "type": "uinteger",
+                                        "label": "Number of attempts",
+                                        "required": true,
+                                        "validate": {
+                                            "max": 10000,
+                                            "min": 1
+                                        }
+                                    },
+                                    {
+                                        "name": "interval",
+                                        "type": "uinteger",
+                                        "label": "Interval between attempts",
+                                        "required": true,
+                                        "validate": {
+                                            "max": 44640,
+                                            "min": 1
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": 24,
+                    "module": "builtin:BasicRouter",
+                    "version": 1,
+                    "mapper": null,
+                    "metadata": {
+                        "designer": {
+                            "x": 900,
+                            "y": 0
+                        }
+                    },
+                    "routes": [
+                        {
+                            "flow": [
+                                {
+                                    "id": 5,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{28.email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<!DOCTYPE html>\n<html>\n   <head>\n      <style type=\"text/css\">\n         body { font-family: Arial, sans-serif; margin: 0; padding: 0; }\n         .container { width: 100%; max-width: 600px; margin: 20px auto; padding: 20px; }\n         .button { display: inline-block; padding: 10px 20px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px; font-weight: bold; }\n         .footer { background-color: #f8f9fa; color: #6c757d; padding: 10px 20px; text-align: center; }\n         .footer p { margin: 0; }\n      </style>\n   </head>\n   <body>\n      <div class=\"container\" style=\"border: 1px solid #dedede; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);\">\n         <p>Hi {{28.name}},\n         <p/>\n         <p>Thank you for applying for the {{8.Title}} postion. We truly appreciate your interest in joining our team and the time you took to submit your application.\r\n</p>\n         <p>Our recruitment team will carefully review all applications, and we’ll keep you updated on the progress of yours.\r\nYou will be notified whether or not you have been shortlisted for an interview.\r\n\n         <p/>\n         <p>We are grateful for your interest in our practice and are committed to ensuring a fair and transparent hiring process for all candidates.\r\n</p>\n         <p>Warm Regards,</p>\n         <p><strong>Smile Cliniq Hiring Team</strong></p>\n         <div class=\"footer\">\n            <p>Smile Cliniq</p>\n         </div>\n      </div>\n   </body>\n</html>",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "Thank you for your application at Smile Cliniq",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1200,
+                                            "y": 0
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 21,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "15"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1191,
+                                                    "y": -239
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 4,
+                                    "module": "airtable:ActionUpdateRecords",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "mapper": {
+                                        "id": "{{28.id}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tbl4ldFExsS5hWR3L",
+                                        "record": {
+                                            "fld1knOqqBJ0ccQng": "{{8.Interviewers}}",
+                                            "fld7Y8YKmkSUPPrwj": [
+                                                "Application Confirmation"
+                                            ],
+                                            "fldlxrrsC3c8cgAW8": [
+                                                "recPcTYJFeYBAogw1"
+                                            ]
+                                        },
+                                        "typecast": false,
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1560,
+                                            "y": 2
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "label": "Applicants"
+                                                },
+                                                "record": {
+                                                    "nested": {
+                                                        "fld1knOqqBJ0ccQng": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fld1mX6xmjVdFsIPE": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fld2kd9SxfdltFVwW": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fld3uOs8wUN2HiLJ4": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fld6S4Uc19OAmMugJ": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fld71u5PzBNjycYD5": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fld7U5dIgUH3zllb6": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fld7Y8YKmkSUPPrwj": {
+                                                            "mode": "chose",
+                                                            "items": [
+                                                                {
+                                                                    "value": {
+                                                                        "mode": "edit"
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        "fld8FH7dlqHxkWXiZ": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fld9qHbu1kqUZVEBI": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldA4o0rRMLvQljfi": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldMSY73SiyhvXctE": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldPDVmdY51kjAyCP": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldT0HrnrTYg7YyiL": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fldVbh0tMEe6ZtDu5": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldXbXg0hjl0bgRju": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fldYFeaWeMRY3yR3N": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldhIy7YZ8HczEBDL": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldjWCtxhbArginFc": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldlxrrsC3c8cgAW8": {
+                                                            "mode": "chose",
+                                                            "items": [
+                                                                null
+                                                            ]
+                                                        },
+                                                        "fldmq0FBepzHPJ6Z5": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldtCcSeKtYRfQjtG": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldtO7XsTFfMXZqeO": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fldvMZowikCTxNapS": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "fldwJH8pqsvse1QLS": {
+                                                            "mode": "edit"
+                                                        },
+                                                        "fldwKV2cVNazw9wvo": {
+                                                            "mode": "edit"
+                                                        }
+                                                    }
+                                                },
+                                                "typecast": {
+                                                    "mode": "chose"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "typecast",
+                                                "type": "boolean",
+                                                "label": "Smart links",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "record",
+                                                "spec": [
+                                                    {
+                                                        "name": "fldjmvdigpKYyZS63",
+                                                        "type": "text",
+                                                        "label": "Email"
+                                                    },
+                                                    {
+                                                        "name": "fldAQU0XOrRuerhPm",
+                                                        "type": "text",
+                                                        "label": "Name"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fldT0HrnrTYg7YyiL",
+                                                        "type": "select",
+                                                        "label": "Stage"
+                                                    },
+                                                    {
+                                                        "name": "fld2kd9SxfdltFVwW",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Applying For"
+                                                    },
+                                                    {
+                                                        "name": "fld7Y8YKmkSUPPrwj",
+                                                        "spec": {
+                                                            "mode": "edit",
+                                                            "name": "value",
+                                                            "type": "select",
+                                                            "label": "Value",
+                                                            "dynamic": true,
+                                                            "options": [
+                                                                {
+                                                                    "label": "Application Confirmation",
+                                                                    "value": "Application Confirmation"
+                                                                },
+                                                                {
+                                                                    "label": "First Interview Invite",
+                                                                    "value": "First Interview Invite"
+                                                                },
+                                                                {
+                                                                    "label": "Second Interview Invite",
+                                                                    "value": "Second Interview Invite"
+                                                                },
+                                                                {
+                                                                    "label": "Rescheduled",
+                                                                    "value": "Rescheduled"
+                                                                },
+                                                                {
+                                                                    "label": "Cancelled",
+                                                                    "value": "Cancelled"
+                                                                },
+                                                                {
+                                                                    "label": "Rejection",
+                                                                    "value": "Rejection"
+                                                                },
+                                                                {
+                                                                    "label": "Proposal Documents",
+                                                                    "value": "Proposal Documents"
+                                                                },
+                                                                {
+                                                                    "label": "Success",
+                                                                    "value": "Success"
+                                                                }
+                                                            ],
+                                                            "validate": false
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Emails To Send"
+                                                    },
+                                                    {
+                                                        "name": "fld3UMQN6GnbwIWhu",
+                                                        "time": false,
+                                                        "type": "date",
+                                                        "label": "Date of Birth"
+                                                    },
+                                                    {
+                                                        "name": "fld9qHbu1kqUZVEBI",
+                                                        "spec": [
+                                                            {
+                                                                "name": "url",
+                                                                "type": "text",
+                                                                "label": "File URL"
+                                                            },
+                                                            {
+                                                                "name": "filename",
+                                                                "type": "filename",
+                                                                "label": "File name"
+                                                            }
+                                                        ],
+                                                        "type": "array",
+                                                        "label": "CV"
+                                                    },
+                                                    {
+                                                        "name": "fldxRwwtRo1dt7K3o",
+                                                        "type": "text",
+                                                        "label": "Why do you want to work with us?"
+                                                    },
+                                                    {
+                                                        "name": "fldaZjquVQj2rSCBm",
+                                                        "type": "text",
+                                                        "label": "Dentistry - 4 years exp"
+                                                    },
+                                                    {
+                                                        "name": "fldBBnB7ssot4hWkC",
+                                                        "type": "text",
+                                                        "label": "Phone"
+                                                    },
+                                                    {
+                                                        "name": "fldEiY2zPgtaSRLwx",
+                                                        "type": "text",
+                                                        "label": "Address"
+                                                    },
+                                                    {
+                                                        "name": "fldK3wqCann2Y8mGM",
+                                                        "type": "text",
+                                                        "label": "Post Code"
+                                                    },
+                                                    {
+                                                        "name": "fld1knOqqBJ0ccQng",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Interviewers"
+                                                    },
+                                                    {
+                                                        "name": "fldi4dooeTOHZW6sf",
+                                                        "type": "text",
+                                                        "label": "Rejection Reason"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fld71u5PzBNjycYD5",
+                                                        "type": "select",
+                                                        "label": "Interview Location"
+                                                    },
+                                                    {
+                                                        "name": "fldu4CLJHK92zDfbQ",
+                                                        "time": true,
+                                                        "type": "date",
+                                                        "label": "Interview Date"
+                                                    },
+                                                    {
+                                                        "name": "fldIJBFIt4lW8RvSK",
+                                                        "time": true,
+                                                        "type": "date",
+                                                        "label": "Second Interview Date"
+                                                    },
+                                                    {
+                                                        "name": "fldftavzWYjd5YGyL",
+                                                        "type": "number",
+                                                        "label": "Criteria Score"
+                                                    },
+                                                    {
+                                                        "name": "fldMSY73SiyhvXctE",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Feedback"
+                                                    },
+                                                    {
+                                                        "name": "fldmq0FBepzHPJ6Z5",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Documents"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fldtO7XsTFfMXZqeO",
+                                                        "type": "select",
+                                                        "label": "Docs Status"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fldwJH8pqsvse1QLS",
+                                                        "type": "select",
+                                                        "label": "Job Board"
+                                                    },
+                                                    {
+                                                        "name": "fldZ9fjpP92cQMe9I",
+                                                        "time": false,
+                                                        "type": "date",
+                                                        "label": "Job Offer Sent Date"
+                                                    },
+                                                    {
+                                                        "name": "fldtCcSeKtYRfQjtG",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Statistics"
+                                                    },
+                                                    {
+                                                        "name": "fldPDVmdY51kjAyCP",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Tasks"
+                                                    },
+                                                    {
+                                                        "name": "fldYFeaWeMRY3yR3N",
+                                                        "type": "boolean",
+                                                        "label": "Save .1"
+                                                    },
+                                                    {
+                                                        "name": "fldVbh0tMEe6ZtDu5",
+                                                        "type": "boolean",
+                                                        "label": "Save .2"
+                                                    },
+                                                    {
+                                                        "name": "fldA4o0rRMLvQljfi",
+                                                        "type": "boolean",
+                                                        "label": "Save .3"
+                                                    },
+                                                    {
+                                                        "name": "fldZGPJ2JyT1QIEZt",
+                                                        "type": "text",
+                                                        "label": "Slack ID"
+                                                    },
+                                                    {
+                                                        "name": "fldvMZowikCTxNapS",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Onboarding Tasks"
+                                                    },
+                                                    {
+                                                        "name": "fldhIy7YZ8HczEBDL",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Onboarding Feedback"
+                                                    },
+                                                    {
+                                                        "name": "fldjWCtxhbArginFc",
+                                                        "spec": [
+                                                            {
+                                                                "name": "url",
+                                                                "type": "text",
+                                                                "label": "File URL"
+                                                            },
+                                                            {
+                                                                "name": "filename",
+                                                                "type": "filename",
+                                                                "label": "File name"
+                                                            }
+                                                        ],
+                                                        "type": "array",
+                                                        "label": "Portfolio of Cases"
+                                                    },
+                                                    {
+                                                        "name": "fld3uOs8wUN2HiLJ4",
+                                                        "spec": [
+                                                            {
+                                                                "name": "url",
+                                                                "type": "text",
+                                                                "label": "File URL"
+                                                            },
+                                                            {
+                                                                "name": "filename",
+                                                                "type": "filename",
+                                                                "label": "File name"
+                                                            }
+                                                        ],
+                                                        "type": "array",
+                                                        "label": "Testimonials"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fldXbXg0hjl0bgRju",
+                                                        "type": "select",
+                                                        "label": "Immigration Restriction"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fld8FH7dlqHxkWXiZ",
+                                                        "type": "select",
+                                                        "label": "DBS Check"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fldwKV2cVNazw9wvo",
+                                                        "type": "select",
+                                                        "label": "ROA 1974"
+                                                    },
+                                                    {
+                                                        "name": "fldrLHjIxuvdxUJDR",
+                                                        "type": "text",
+                                                        "label": "Dentistry - Special Interest"
+                                                    },
+                                                    {
+                                                        "name": "fld3cVIGeR5H7mRwd",
+                                                        "type": "text",
+                                                        "label": "Dentistry - Reason for choosing this practice"
+                                                    },
+                                                    {
+                                                        "name": "fldnqFLKTjrV4cbiF",
+                                                        "type": "text",
+                                                        "label": "Availability"
+                                                    },
+                                                    {
+                                                        "name": "fldMcWRQyYIerroK7",
+                                                        "type": "text",
+                                                        "label": "Dentist - Examination Cycle"
+                                                    },
+                                                    {
+                                                        "name": "fld7lno99WiXISOp2",
+                                                        "type": "text",
+                                                        "label": "Dentist - Take up rate (%)"
+                                                    },
+                                                    {
+                                                        "name": "fldd9FWamtVnO2Ub4",
+                                                        "type": "text",
+                                                        "label": "Dentist - Treatment Objections"
+                                                    },
+                                                    {
+                                                        "name": "fld7U5dIgUH3zllb6",
+                                                        "spec": [
+                                                            {
+                                                                "name": "url",
+                                                                "type": "text",
+                                                                "label": "File URL"
+                                                            },
+                                                            {
+                                                                "name": "filename",
+                                                                "type": "filename",
+                                                                "label": "File name"
+                                                            }
+                                                        ],
+                                                        "type": "array",
+                                                        "label": "Reference 1"
+                                                    },
+                                                    {
+                                                        "name": "fld6S4Uc19OAmMugJ",
+                                                        "spec": [
+                                                            {
+                                                                "name": "url",
+                                                                "type": "text",
+                                                                "label": "File URL"
+                                                            },
+                                                            {
+                                                                "name": "filename",
+                                                                "type": "filename",
+                                                                "label": "File name"
+                                                            }
+                                                        ],
+                                                        "type": "array",
+                                                        "label": "Reference 2"
+                                                    },
+                                                    {
+                                                        "name": "fld88pNefc7VJy9V4",
+                                                        "type": "text",
+                                                        "label": "Nurse - Registered or Trainee"
+                                                    },
+                                                    {
+                                                        "name": "fldant4V6FqbPQYr3",
+                                                        "type": "text",
+                                                        "label": "Nurse - Teamwork & Collaboration"
+                                                    },
+                                                    {
+                                                        "name": "fldlj3J9uXvArvHwq",
+                                                        "type": "text",
+                                                        "label": "Nurse - Software Experience"
+                                                    },
+                                                    {
+                                                        "name": "fldlodkHU8fK0zMba",
+                                                        "type": "text",
+                                                        "label": "Nurse - Current Role"
+                                                    },
+                                                    {
+                                                        "name": "fldvm0u961SkQUk3I",
+                                                        "type": "text",
+                                                        "label": "Nurse - Reception Experience"
+                                                    },
+                                                    {
+                                                        "name": "fldxmC9Ps3qbCi4uh",
+                                                        "type": "text",
+                                                        "label": "Nurse - Likes"
+                                                    },
+                                                    {
+                                                        "name": "fldfNCI2PpXIoWvsK",
+                                                        "type": "text",
+                                                        "label": "Nurse - Current Role Daily Task"
+                                                    },
+                                                    {
+                                                        "name": "fld7QA9mAd6cwXxWu",
+                                                        "type": "text",
+                                                        "label": "Nurse - Strengths"
+                                                    },
+                                                    {
+                                                        "name": "fld7kMEKxnoaC44BM",
+                                                        "type": "text",
+                                                        "label": "Nurse - Weakness"
+                                                    },
+                                                    {
+                                                        "name": "fldanTdAdpjrxYgRE",
+                                                        "type": "text",
+                                                        "label": "Nurse - Dislikes"
+                                                    },
+                                                    {
+                                                        "name": "fldQmhyauVMkBeN9L",
+                                                        "type": "text",
+                                                        "label": "Nurse - Future Aspiration"
+                                                    },
+                                                    {
+                                                        "name": "fldod9gPM9XgjNiAW",
+                                                        "type": "text",
+                                                        "label": "Nurse - Area of Interest"
+                                                    },
+                                                    {
+                                                        "name": "fldQ7IlbwO2sdY4lS",
+                                                        "type": "text",
+                                                        "label": "Nurse - Courses"
+                                                    },
+                                                    {
+                                                        "name": "fldCjgZtUIK1MOlBq",
+                                                        "type": "text",
+                                                        "label": "Nurse - Important Attribute"
+                                                    },
+                                                    {
+                                                        "name": "fldd7rTmfmYj3cOPx",
+                                                        "time": false,
+                                                        "type": "date",
+                                                        "label": "Start Date"
+                                                    },
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "fld1mX6xmjVdFsIPE",
+                                                        "type": "select",
+                                                        "label": "Onboarding - Send Docs"
+                                                    },
+                                                    {
+                                                        "name": "fldOni48Sn2jokZ9J",
+                                                        "type": "number",
+                                                        "label": "Onboarding - Progress"
+                                                    },
+                                                    {
+                                                        "name": "fldMUFCoRs3pMat5o",
+                                                        "type": "text",
+                                                        "label": "Nurse - Private vs NHS"
+                                                    },
+                                                    {
+                                                        "name": "fldlxrrsC3c8cgAW8",
+                                                        "spec": {
+                                                            "name": "value",
+                                                            "label": "Record ID"
+                                                        },
+                                                        "type": "array",
+                                                        "label": "Interface Output - Rejected Applicants"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Record"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Email",
+                                                "type": "text",
+                                                "label": "Email"
+                                            },
+                                            {
+                                                "name": "Name",
+                                                "type": "text",
+                                                "label": "Name"
+                                            },
+                                            {
+                                                "name": "Stage",
+                                                "type": "text",
+                                                "label": "Stage"
+                                            },
+                                            {
+                                                "name": "Applying For",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Applying For"
+                                            },
+                                            {
+                                                "name": "Emails To Send",
+                                                "type": "array",
+                                                "label": "Emails To Send",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Date of Birth",
+                                                "time": false,
+                                                "type": "date",
+                                                "label": "Date of Birth"
+                                            },
+                                            {
+                                                "name": "CV",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "CV"
+                                            },
+                                            {
+                                                "name": "Why do you want to work with us?",
+                                                "type": "text",
+                                                "label": "Why do you want to work with us?",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Dentistry - 4 years exp",
+                                                "type": "text",
+                                                "label": "Dentistry - 4 years exp",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Phone",
+                                                "type": "text",
+                                                "label": "Phone"
+                                            },
+                                            {
+                                                "name": "Address",
+                                                "type": "text",
+                                                "label": "Address"
+                                            },
+                                            {
+                                                "name": "Post Code",
+                                                "type": "text",
+                                                "label": "Post Code"
+                                            },
+                                            {
+                                                "name": "Interviewers",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Interviewers"
+                                            },
+                                            {
+                                                "name": "Rejection Reason",
+                                                "type": "text",
+                                                "label": "Rejection Reason"
+                                            },
+                                            {
+                                                "name": "Interview Location",
+                                                "type": "text",
+                                                "label": "Interview Location"
+                                            },
+                                            {
+                                                "name": "Interview Date",
+                                                "time": true,
+                                                "type": "date",
+                                                "label": "Interview Date"
+                                            },
+                                            {
+                                                "name": "Second Interview Date",
+                                                "time": true,
+                                                "type": "date",
+                                                "label": "Second Interview Date"
+                                            },
+                                            {
+                                                "name": "Interviewer Notes (from Feeedback)",
+                                                "type": "array",
+                                                "label": "Interviewer Notes (from Feeedback)"
+                                            },
+                                            {
+                                                "name": "Criteria Score",
+                                                "type": "number",
+                                                "label": "Criteria Score"
+                                            },
+                                            {
+                                                "name": "Feedback",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Feedback"
+                                            },
+                                            {
+                                                "name": "Documents",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Documents"
+                                            },
+                                            {
+                                                "name": "Docs Status",
+                                                "type": "text",
+                                                "label": "Docs Status"
+                                            },
+                                            {
+                                                "name": "Job Board",
+                                                "type": "text",
+                                                "label": "Job Board"
+                                            },
+                                            {
+                                                "name": "Last Modified",
+                                                "type": "date",
+                                                "label": "Last Modified"
+                                            },
+                                            {
+                                                "name": "Created Time",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Job Offer Sent Date",
+                                                "time": false,
+                                                "type": "date",
+                                                "label": "Job Offer Sent Date"
+                                            },
+                                            {
+                                                "name": "Statistics",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Statistics"
+                                            },
+                                            {
+                                                "name": "Count (For Automation)",
+                                                "type": "array",
+                                                "label": "Count (For Automation)"
+                                            },
+                                            {
+                                                "name": "Tasks",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks"
+                                            },
+                                            {
+                                                "name": "Interviewers List",
+                                                "type": "array",
+                                                "label": "Interviewers List"
+                                            },
+                                            {
+                                                "name": "Submit Feedback",
+                                                "type": "text",
+                                                "label": "Submit Feedback"
+                                            },
+                                            {
+                                                "name": "Rejection - First Interview ",
+                                                "spec": [
+                                                    {
+                                                        "name": "label",
+                                                        "type": "text",
+                                                        "label": "Label"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Rejection - First Interview "
+                                            },
+                                            {
+                                                "name": "Rejection - Second Interview",
+                                                "spec": [
+                                                    {
+                                                        "name": "label",
+                                                        "type": "text",
+                                                        "label": "Label"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    }
+                                                ],
+                                                "type": "collection",
+                                                "label": "Rejection - Second Interview"
+                                            },
+                                            {
+                                                "name": "Save .1",
+                                                "type": "boolean",
+                                                "label": "Save .1"
+                                            },
+                                            {
+                                                "name": "Save .2",
+                                                "type": "boolean",
+                                                "label": "Save .2"
+                                            },
+                                            {
+                                                "name": "Save .3",
+                                                "type": "boolean",
+                                                "label": "Save .3"
+                                            },
+                                            {
+                                                "name": "Slack ID",
+                                                "type": "text",
+                                                "label": "Slack ID"
+                                            },
+                                            {
+                                                "name": "Onboarding Tasks",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Onboarding Tasks"
+                                            },
+                                            {
+                                                "name": "Onboarding Feedback",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Onboarding Feedback"
+                                            },
+                                            {
+                                                "name": "Status Rollup (from Task Assignment)",
+                                                "type": "array",
+                                                "label": "Status Rollup (from Task Assignment)"
+                                            },
+                                            {
+                                                "name": "Onboarding Week",
+                                                "type": "text",
+                                                "label": "Onboarding Week"
+                                            },
+                                            {
+                                                "name": "Portfolio of Cases",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Portfolio of Cases"
+                                            },
+                                            {
+                                                "name": "Testimonials",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Testimonials"
+                                            },
+                                            {
+                                                "name": "Immigration Restriction",
+                                                "type": "text",
+                                                "label": "Immigration Restriction"
+                                            },
+                                            {
+                                                "name": "DBS Check",
+                                                "type": "text",
+                                                "label": "DBS Check"
+                                            },
+                                            {
+                                                "name": "ROA 1974",
+                                                "type": "text",
+                                                "label": "ROA 1974"
+                                            },
+                                            {
+                                                "name": "Dentistry - Special Interest",
+                                                "type": "text",
+                                                "label": "Dentistry - Special Interest",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Dentistry - Reason for choosing this practice",
+                                                "type": "text",
+                                                "label": "Dentistry - Reason for choosing this practice",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Availability",
+                                                "type": "text",
+                                                "label": "Availability",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Dentist - Examination Cycle",
+                                                "type": "text",
+                                                "label": "Dentist - Examination Cycle",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Dentist - Take up rate (%)",
+                                                "type": "text",
+                                                "label": "Dentist - Take up rate (%)"
+                                            },
+                                            {
+                                                "name": "Dentist - Treatment Objections",
+                                                "type": "text",
+                                                "label": "Dentist - Treatment Objections",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Reference 1",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Reference 1"
+                                            },
+                                            {
+                                                "name": "Reference 2",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Reference 2"
+                                            },
+                                            {
+                                                "name": "Nurse - Registered or Trainee",
+                                                "type": "text",
+                                                "label": "Nurse - Registered or Trainee"
+                                            },
+                                            {
+                                                "name": "Nurse - Teamwork & Collaboration",
+                                                "type": "text",
+                                                "label": "Nurse - Teamwork & Collaboration",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Software Experience",
+                                                "type": "text",
+                                                "label": "Nurse - Software Experience",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Current Role",
+                                                "type": "text",
+                                                "label": "Nurse - Current Role",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Reception Experience",
+                                                "type": "text",
+                                                "label": "Nurse - Reception Experience",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Likes",
+                                                "type": "text",
+                                                "label": "Nurse - Likes",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Current Role Daily Task",
+                                                "type": "text",
+                                                "label": "Nurse - Current Role Daily Task",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Strengths",
+                                                "type": "text",
+                                                "label": "Nurse - Strengths",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Weakness",
+                                                "type": "text",
+                                                "label": "Nurse - Weakness",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Dislikes",
+                                                "type": "text",
+                                                "label": "Nurse - Dislikes",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Future Aspiration",
+                                                "type": "text",
+                                                "label": "Nurse - Future Aspiration",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Area of Interest",
+                                                "type": "text",
+                                                "label": "Nurse - Area of Interest",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Courses",
+                                                "type": "text",
+                                                "label": "Nurse - Courses",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Nurse - Important Attribute",
+                                                "type": "text",
+                                                "label": "Nurse - Important Attribute",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Start Date",
+                                                "time": false,
+                                                "type": "date",
+                                                "label": "Start Date"
+                                            },
+                                            {
+                                                "name": "Onboarding - Send Docs",
+                                                "type": "text",
+                                                "label": "Onboarding - Send Docs"
+                                            },
+                                            {
+                                                "name": "Onboarding - Progress",
+                                                "type": "number",
+                                                "label": "Onboarding - Progress"
+                                            },
+                                            {
+                                                "name": "Open Record Detail",
+                                                "type": "text",
+                                                "label": "Open Record Detail"
+                                            },
+                                            {
+                                                "name": "Nurse - Private vs NHS",
+                                                "type": "text",
+                                                "label": "Nurse - Private vs NHS",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Spacer",
+                                                "type": "text",
+                                                "label": "Spacer"
+                                            },
+                                            {
+                                                "name": "Completed Tasks",
+                                                "type": "array",
+                                                "label": "Completed Tasks"
+                                            },
+                                            {
+                                                "name": "Interface Output - Rejected Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Interface Output - Rejected Applicants"
+                                            },
+                                            {
+                                                "name": "Interface Message (from Interface Output - Rejected Applicants)",
+                                                "type": "array",
+                                                "label": "Interface Message (from Interface Output - Rejected Applicants)"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 22,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "15"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1836,
+                                                    "y": -1
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "flow": [
+                                {
+                                    "id": 23,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "recruitment@smilecliniq.com"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<h2>Applicant Details</h2>\n<p>Name: {{28.name}}</p>\n<p>Email: {{28.email}}</p>\n<p>Stage: {{28.stage}}</p>\n<p>Applying For: {{8.Title}}</p>\n<br/>\n<p>Phone: {{28.phone}}</p>\n<p>Address: {{28.address}}</p>\n<p>Post Code: {{28.postcode}}</p>",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "Application Status Change - {{28.name}}: {{28.stage}}",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1189,
+                                            "y": 343,
+                                            "name": "Send Status Change Email"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 25,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "15"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1489,
+                                                    "y": 343
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}
