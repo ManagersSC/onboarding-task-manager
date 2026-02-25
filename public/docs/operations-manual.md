@@ -131,7 +131,7 @@ The following things happen **automatically** — you do not need to do anything
 
 ### When you need to send a custom email
 
-**What you do:** Go to the email section in the admin panel, compose your message, and click send.
+**What you do:** Go to the new hire tracker section in the admin dashboard, click on an employee, compose your message, and click send.
 
 **What happens automatically:**
 - The email is sent via the Make.com email system

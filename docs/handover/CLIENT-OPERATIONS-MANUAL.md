@@ -413,11 +413,11 @@ A: Yes — go to Audit Logs. Every significant action is recorded with the user'
 
 | Need | Contact |
 |------|---------|
-| Something in the app is broken | Your developer — [add contact details] |
+| Something in the app is broken | Your developer —  |
 | Make.com automation issue | Your developer first, then Make.com support at make.com/help |
 | Airtable data issue | Your developer first, then Airtable support at support.airtable.com |
 | Vercel (hosting) issue | Your developer — they manage the Vercel account |
-| Adding a new feature | Your developer — [add contact details] |
+| Adding a new feature | Your developer —  |
 
 > **Before contacting your developer:** Note the exact steps that caused the issue, what you expected to happen, and what actually happened. A screenshot is extremely helpful.
 
