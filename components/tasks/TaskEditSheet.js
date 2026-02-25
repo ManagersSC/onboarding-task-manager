@@ -409,15 +409,22 @@ export function TaskEditSheet({ taskId, open, onOpenChange, onEditSuccess }) {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update task")
+        let errorMsg = "Failed to update task"
+        try {
+          const body = await response.json()
+          if (body?.error) errorMsg = body.error
+        } catch {}
+        throw new Error(errorMsg)
       }
 
       // Update original data to match current data
       setOriginalData({ ...data, attachments })
       setFormModified(false)
 
-      // Fixed toast calls for sonner
-      toast.success("Task updated successfully!")
+      // Sonner success notification
+      toast.success("Task updated successfully!", {
+        description: "All changes have been saved.",
+      })
 
       // Call onEditSuccess callback to refetch data
       if (typeof onEditSuccess === "function") {

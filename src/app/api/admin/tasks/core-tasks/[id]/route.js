@@ -162,8 +162,49 @@ export async function PATCH(request, { params }) {
 
       let raw = formData.get(formKey)
       // If user cleared it, send null
-      if(raw === ""){
+      if (raw === "") {
         fieldsToUpdate[airtableKey] = null
+        continue
+      }
+
+      // Week and Day are numeric fields in Airtable — must send numbers, not strings
+      if (formKey === "week" || formKey === "day") {
+        const num = parseInt(raw, 10)
+        fieldsToUpdate[airtableKey] = isNaN(num) ? null : num
+        continue
+      }
+
+      // Folder Name is a linked record field — look up the record ID by Name
+      if (formKey === "folderName") {
+        try {
+          const escaped = raw.replace(/"/g, '\\"')
+          const folders = await base("Onboarding Folders")
+            .select({ filterByFormula: `{Name} = "${escaped}"`, maxRecords: 1 })
+            .firstPage()
+          if (folders.length > 0) {
+            fieldsToUpdate["Folder Name"] = [folders[0].id]
+          }
+          // If no match found, skip — don't overwrite with null
+        } catch (e) {
+          logger.error("Error looking up folder record:", e)
+        }
+        continue
+      }
+
+      // Job is a linked record field — look up the record ID by Title
+      if (formKey === "job") {
+        try {
+          const escaped = raw.replace(/"/g, '\\"')
+          const jobs = await base("Jobs")
+            .select({ filterByFormula: `{Title} = "${escaped}"`, maxRecords: 1 })
+            .firstPage()
+          if (jobs.length > 0) {
+            fieldsToUpdate["Job"] = [jobs[0].id]
+          }
+          // If no match found, skip — don't overwrite with null
+        } catch (e) {
+          logger.error("Error looking up job record:", e)
+        }
         continue
       }
 
