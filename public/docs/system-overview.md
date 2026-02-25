@@ -76,7 +76,7 @@ At any point, a candidate can be moved to **Rejected** or **Rejected – Liked**
 
 ### Onboarding Task Manager (Web App)
 - React/Next.js app hosted on Vercel
-- Used by Clinic Managers and Team Members to manage onboarding
+- Used by admins and staff to manage onboarding
 - Tasks, quizzes, document uploads, notifications, audit logs
 - Admin panel for user management and task templates
 

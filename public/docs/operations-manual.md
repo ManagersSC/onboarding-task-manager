@@ -1,6 +1,6 @@
 # Smile Cliniq — Client Operations Manual
 
-> **For:** Clinic Managers and Staff
+> **For:** Admins and Staff
 > **Last updated:** February 2026
 > **Need help?** See [Who to Contact](#who-to-contact) at the bottom of this document
 
@@ -50,10 +50,9 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 | Role | Who | What they can do |
 |------|-----|-----------------|
 | **Admin** | Practice manager, owner | Everything — manage users, create tasks, view all applicants, send emails, access audit logs |
-| **Clinic Manager** | Department leads | Manage tasks and applicants for their clinic |
-| **Team Member** | New hires, staff completing onboarding | See their own tasks, upload documents, take quizzes |
+| **Staff** | New hires and team members completing onboarding | See their own tasks, upload documents, take quizzes |
 
-> **Important:** If you need to give someone access, an Admin must create their account. Team Members and Clinic Managers cannot create accounts for others.
+> **Important:** If you need to give someone access, an Admin must create their account. Staff members cannot create accounts for others.
 
 > 📸 **Screenshot:** _User Management page showing role badges next to each staff member_
 

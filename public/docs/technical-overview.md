@@ -47,7 +47,7 @@ The platform is made up of **two distinct systems** that share the same Airtable
 ┌──────────────────────────────┐    ┌──────────────────────────────────┐
 │  ONBOARDING APP (Next.js)    │    │    MAKE.COM (10 scenarios)       │
 │  Vercel • App Router         │    │  Hiring (Airtable-triggered):    │
-│  onboarding.smilecliniq.com  │    │    H1  New Applicant             │
+│  onboarding-task-manager.vercel.app  │    │    H1  New Applicant        │
 │                              │    │    H2  First Interview Invite    │
 │  Auth / Tasks / Quizzes /    │    │    H3  Changes in Status         │
 │  Notifications / Documents   │    │  Onboarding (app-triggered):     │
@@ -211,7 +211,7 @@ Task templates that can be assigned to any hire.
 ---
 
 #### Staff
-Admin and clinic manager accounts.
+Admin and staff accounts.
 
 | Field | Type | Purpose |
 |-------|------|---------|
@@ -294,7 +294,7 @@ Set these in Vercel → Project Settings → Environment Variables.
 | `AIRTABLE_BASE_ID` | Yes | The Airtable base identifier |
 | `SESSION_SECRET` | Yes | iron-session cookie encryption (32+ characters) |
 | `JWT_SECRET` | Yes | JWT signing key for password reset / invite tokens |
-| `APP_BASE_URL` | Yes (prod) | App URL — used for CORS and invite links (e.g. `https://onboarding.smilecliniq.com`) |
+| `APP_BASE_URL` | Yes (prod) | App URL — used for CORS and invite links (e.g. `https://onboarding-task-manager.vercel.app`) |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | Yes | Google OAuth redirect URI |
@@ -317,7 +317,7 @@ Set these in Vercel → Project Settings → Environment Variables.
 ### Where the app lives
 
 - **Hosting:** Vercel
-- **Production URL:** `https://onboarding.smilecliniq.com`
+- **Production URL:** `https://onboarding-task-manager.vercel.app`
 - **Vercel project:** See credentials guide for project name
 
 ### How deployments work

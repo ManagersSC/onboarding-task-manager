@@ -60,7 +60,8 @@ These 5 automations manage the hiring pipeline.
 Fires the `CHANGES_IN_STATUS` Make.com scenario with the candidate's data. Make.com routes based on the stage:
 - **Hired** → sends a welcome email with Welcome PDF + New Starter form attachments, then emails managers@smilecliniq.com to set the start date
 - **Second Interview Invite Sent** → builds a personalised Cal.com second interview link and sends the invite email
-- **Rejected / Rejected - Liked / other stages** → sends a status change notification email to recruitment@smilecliniq.com
+- **Rejected** → sends a rejection email to the candidate (Subject: "Smile Cliniq Application Update")
+- **Rejected - Liked** → sends a softer rejection email to the candidate (Subject: "Thank You for Your Application") — notes you'd like to keep their info on file for future roles
 
 **Step 2 — Conditional (Hired only):**
 If Stage = **Hired** AND **Onboarding Manual Import** is **unchecked**:

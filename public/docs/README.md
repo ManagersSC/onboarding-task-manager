@@ -44,7 +44,7 @@ The Smile Cliniq platform handles **two connected systems**:
 
 1. **Hiring / ATS** — Track candidates from first application through to being hired. Managed directly in Airtable. Automatic emails fire at each stage (interview invite, welcome email, rejection, etc.).
 
-2. **Onboarding Task Manager** — Once a candidate is hired, the web app manages their onboarding: tasks, document uploads, quizzes, and notifications. Accessible at `onboarding.smilecliniq.com`.
+2. **Onboarding Task Manager** — Once a candidate is hired, the web app manages their onboarding: tasks, document uploads, quizzes, and notifications. Accessible at `onboarding-task-manager.vercel.app`.
 
 Both systems share the same Airtable database. See [Platform Overview](system-overview) for the full picture.
 
@@ -54,7 +54,7 @@ Both systems share the same Airtable database. See [Platform Overview](system-ov
 
 This documentation is written in two layers:
 
-- **Clinic managers and staff** — Start with [Hiring Guide](hiring-guide) and [Operations Manual](operations-manual). These explain what to click, what the system does automatically, and what to do when something goes wrong.
+- **Admins and staff** — Start with [Hiring Guide](hiring-guide) and [Operations Manual](operations-manual). These explain what to click, what the system does automatically, and what to do when something goes wrong.
 
 - **Developers** — Start with [Technical Overview](technical-overview) and [Make.com Scenarios](automations). These document the architecture, automation flows, and reconnection instructions.
 

@@ -178,37 +178,57 @@ A routing scenario that handles multiple hiring stage changes. A Router module d
 ```
 1. Webhook (POST) → receives applicant data + new stage from Airtable
 2. Aggregator + Feeder → prepares and structures the incoming data
-3. Router:
+3. Router (4 routes based on stage value):
    ├── Route A (Stage = "Hired"):
-   │     a. Google Drive: Get File → fetches "Welcome to Smile Cliniq" PDF (Shared Drive)
-   │     b. Google Drive: Get File → fetches "SC New Employee Starter Forms" PDF (My Drive)
-   │     c. Gmail → sends "You're hired!" email to candidate:
-   │           - Attachments: both PDFs above
-   │           - Includes link to New Starter Document Form (Airtable form)
+   │     a. Set Variable "docs_form_link" → builds personalised New Starter Document Form URL
+   │     b. Google Drive: Get File → fetches "Welcome to Smile Cliniq" PDF (Shared Drive)
+   │     c. Google Drive: Get File → fetches "SC New Employee Starter Forms" PDF (My Drive)
+   │     d. Gmail → sends "You're hired!" email to candidate:
+   │           Subject: "You're hired! Welcome to the Smile Cliniq Team"
+   │           Attachments: both PDFs above
+   │           Includes "New Starter Document Form Link" button
    │           From: recruitment@smilecliniq.com
-   │     d. Gmail → sends manager notification to managers@smilecliniq.com:
-   │           - Prompts managers to log in and set the hire's onboarding start date
+   │     e. Airtable: Get Record → looks up job name from Jobs table
+   │     f. Gmail → sends manager notification to managers@smilecliniq.com:
+   │           Subject: "New Employee Hired - Action Required: {name}"
+   │           Prompts managers to log into the platform and set the onboarding start date
    │
    ├── Route B (Stage = "Second Interview Invite Sent"):
-   │     a. Airtable: Get Record → fetches interviewer from Staff table
+   │     a. Airtable: Get Record → fetches interviewer from Staff table (tblfXqkA0Cna59UUk)
    │           → extracts "Cal Link - Second Interview" field
-   │     b. Set Variable "cal_link" → builds second interview booking URL
-   │     c. Gmail → sends second interview invite to candidate
+   │     b. Set Variable "location_name" → strips " Branch" suffix from location
+   │     c. Set Variable "location_name" → lowercases and replaces spaces with "-"
+   │     d. Set Variable "cal_link" → builds full booking URL:
+   │           {cal_link_second_interview}-{location_slug}?name={name}&email={email}
+   │     e. Gmail → sends second interview invite to candidate
+   │           Subject: "Smile Cliniq Application Update"
    │           From: recruitment@smilecliniq.com
    │
-   └── Route C (Other stages — Rejected, Rejected - Liked, etc.):
-         a. Gmail → sends status change notification to recruitment@smilecliniq.com
-            (internal notification only — not sent to candidate)
+   ├── Route C (Stage = "Rejected"):
+   │     a. Airtable: Get Record → looks up job name from Jobs table (for email personalisation)
+   │     b. Gmail → sends rejection email to candidate:
+   │           Subject: "Smile Cliniq Application Update"
+   │           Body: Standard rejection — thanks for applying, unable to proceed, explains
+   │                 that high patient reviews, portfolios, and 4+ years experience are key factors
+   │           From: recruitment@smilecliniq.com
+   │
+   └── Route D (Stage = "Rejected - Liked"):
+         a. Gmail → sends softer rejection email directly to candidate:
+            Subject: "Thank You for Your Application"
+            Body: Notes they were genuinely impressed, would like to retain their
+                  information on file for future opportunities
+            From: recruitment@smilecliniq.com
 ```
 
 ### Email details
 
-| Route | From | To | Notes |
+| Route | From | To | Subject |
 |-------|------|----|----|
-| Hired (candidate) | `recruitment@smilecliniq.com` | Candidate | Welcome email with Welcome PDF + New Starter Forms PDF attached |
-| Hired (manager) | `recruitment@smilecliniq.com` | `managers@smilecliniq.com` | Prompts managers to set onboarding start date |
-| Second Interview Invite | `recruitment@smilecliniq.com` | Candidate | Personalised Cal.com link for second interview |
-| Other stage changes | `recruitment@smilecliniq.com` | `recruitment@smilecliniq.com` | Internal notification of status change |
+| Hired (candidate) | `recruitment@smilecliniq.com` | Candidate | "You're hired! Welcome to the Smile Cliniq Team" — with 2 PDF attachments + form link |
+| Hired (manager) | `recruitment@smilecliniq.com` | `managers@smilecliniq.com` | "New Employee Hired - Action Required: {name}" — prompts to set onboarding start date |
+| Second Interview Invite | `recruitment@smilecliniq.com` | Candidate | "Smile Cliniq Application Update" — Cal.com second interview booking link |
+| Rejected | `recruitment@smilecliniq.com` | Candidate | "Smile Cliniq Application Update" — standard rejection, explains key selection criteria |
+| Rejected - Liked | `recruitment@smilecliniq.com` | Candidate | "Thank You for Your Application" — softer rejection, notes candidate kept on file |
 
 ### Google Drive files (Hired route)
 
@@ -312,7 +332,7 @@ When an existing admin invites a new admin user via the "Invite Admin" form in t
 {
   "email": "newadmin@smilecliniq.com",
   "name": "Jane Smith",
-  "inviteLink": "https://onboarding.smilecliniq.com/set-password?token=..."
+  "inviteLink": "https://onboarding-task-manager.vercel.app/set-password?token=..."
 }
 ```
 
