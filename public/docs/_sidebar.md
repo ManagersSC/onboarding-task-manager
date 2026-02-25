@@ -14,3 +14,4 @@
 
 - **For Developers**
 - [Technical Overview](technical-overview)
+- [Make.com Automations](automations)

@@ -104,103 +104,23 @@ triggerNotification(event, staffId, data)
 
 ## 4. Make.com Automation Inventory
 
-All 7 webhook scenarios are listed below. Blueprint JSON exports are in [automations/](./automations/).
+> **Full automation documentation** — including step-by-step flow, exact payloads, email templates, Slack setup, debugging guide, and reconnection instructions — is in the dedicated **[Make.com Automations](automations)** page.
+>
+> Blueprint JSON exports (for re-import) are in `docs/handover/automations/`.
 
-### Scenario 1 — New Application Form Intake
+Quick reference summary:
 
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_NEW_APPLICATION_FORM` |
-| **Trigger** | External application form submission (form posts directly to Make.com webhook) |
-| **What Make does** | Creates/updates applicant record in Airtable; sends confirmation to applicant; notifies admin |
-| **Triggered from** | External form (not from the Next.js app directly) |
-| **How to test** | Submit the application form — check that a new record appears in Airtable `Applicants` table |
-| **Where in code** | Not called from app code — Make.com receives this directly |
+| # | Scenario | Env Variable | Triggered from |
+|---|----------|-------------|----------------|
+| 1 | Application Form Email | `MAKE_WEBHOOK_URL_NEW_APPLICATION_FORM` | External / admin action |
+| 2 | Admin Invite Email | `MAKE_WEBHOOK_URL_ADMIN_PASSWORD_PAGE` | `api/admin/invite-admin` |
+| 3 | Password Reset Email | `MAKE_WEBHOOK_URL_RESET_PASSWORD` | `api/forgot-password` |
+| 4 | Onboarding Start Notification | `MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION` | `api/admin/start-onboarding` |
+| 5 | Task Assignment Notification | `MAKE_WEBHOOK_URL_TASK_ASSIGNMENT` | Task assignment API |
+| 6 | General Notifications (Email + Slack) | `MAKE_WEBHOOK_URL_NOTIFICATIONS` | `src/lib/notifications.js` |
+| 7 | Custom Email | `MAKE_WEBHOOK_URL_CUSTOM_EMAIL` | `api/admin/send-email` |
 
----
-
-### Scenario 2 — Admin Invite Email
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_ADMIN_PASSWORD_PAGE` |
-| **Trigger** | Admin clicks "Invite Admin" and submits the invite form |
-| **What Make does** | Sends an invitation email with a secure one-time password-setup link |
-| **Triggered from** | `src/app/api/admin/invite-admin/route.js` |
-| **How to test** | Invite a test admin email address — confirm the invitation email arrives with a working link |
-| **Where in code** | `fetch(process.env.MAKE_WEBHOOK_URL_ADMIN_PASSWORD_PAGE, { method: 'POST', body: ... })` |
-
----
-
-### Scenario 3 — Password Reset Email
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_RESET_PASSWORD` |
-| **Trigger** | User submits the "Forgot Password" form |
-| **What Make does** | Sends a password reset email with a secure single-use link (JWT + nonce) |
-| **Triggered from** | `src/app/api/forgot-password/route.js` |
-| **How to test** | Use "Forgot Password" with a real email address — confirm reset email arrives and link works |
-| **Security note** | The reset token is a JWT containing a nonce stored in Airtable. The nonce is cleared after use, making the link single-use |
-
----
-
-### Scenario 4 — Onboarding Start Notification
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_ONBOARDING_NOTIFICATION` |
-| **Trigger** | Admin assigns onboarding tasks to a new hire (onboarding begins) |
-| **What Make does** | Sends notification to relevant staff that a new hire's onboarding has started |
-| **Triggered from** | Task assignment flow |
-| **How to test** | Assign onboarding tasks to a test applicant — relevant staff should receive a notification |
-
----
-
-### Scenario 5 — Task Assignment Notification
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_TASK_ASSIGNMENT` |
-| **Trigger** | A task is assigned to a team member |
-| **What Make does** | Sends email/Slack notification to the person the task was assigned to |
-| **Triggered from** | Task assignment API route |
-| **How to test** | Assign a task to a staff member — they should receive email and/or Slack notification |
-
----
-
-### Scenario 6 — General Notifications (Email + Slack routing)
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_NOTIFICATIONS` |
-| **Trigger** | Any system event that generates a notification (see notification types) |
-| **What Make does** | Routes the notification to email, Slack, or both based on payload |
-| **Triggered from** | `src/lib/notifications.js` — `triggerNotification()` function |
-| **How to test** | Trigger a system event (e.g. task assignment) — check staff notification preferences are respected |
-| **Payload structure** | `{ type, recipientEmail, channel: 'email'|'slack', data: {...} }` |
-
----
-
-### Scenario 7 — Custom Email
-
-| | |
-|--|--|
-| **Env var** | `MAKE_WEBHOOK_URL_CUSTOM_EMAIL` |
-| **Trigger** | Admin uses the "Send Email" feature in the admin panel |
-| **What Make does** | Delivers a custom email with the admin-provided subject and body |
-| **Triggered from** | `src/app/api/admin/send-email/route.js` |
-| **How to test** | Send a test email from the admin panel — confirm it is received |
-
----
-
-### Debugging a broken webhook
-
-1. Check the Make.com scenario is **active** (not turned off)
-2. Open the scenario and check the **execution history** — Make logs every run with input/output
-3. Check the Vercel function logs for the API route that fires the webhook
-4. Verify the environment variable is set correctly in Vercel (no trailing spaces, no missing `https://`)
-5. If the webhook URL has changed in Make.com, update the corresponding env var in Vercel and redeploy
+See the [Make.com Automations](automations) page for the full reference.
 
 ---
 
