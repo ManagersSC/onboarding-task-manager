@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut, FileSearch, ListChecks, ChevronLeft } from "lucide-react"
+import { LayoutDashboard, CheckSquare, FolderKanban, Users, User, LogOut, FileSearch, ListChecks, ChevronLeft, BookOpen } from "lucide-react"
 import { handleLogout } from "@/lib/utils/logout"
 import {
   AlertDialog,
@@ -47,6 +47,12 @@ const navGroups = [
       { title: "Audit Logs", icon: FileSearch, href: "/admin/audit-logs" },
     ],
   },
+  {
+    label: "HELP",
+    items: [
+      { title: "Staff Guide", icon: BookOpen, href: "/docs/", external: true },
+    ],
+  },
 ]
 
 // Flat list for backward compat
@@ -84,17 +90,24 @@ export function AdminSidebar() {
 
   const renderNavItem = (item, collapsed) => {
     const isActive = pathname === item.href
-    const linkContent = (
-      <Link
-        href={item.href}
-        className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} rounded-lg px-2.5 py-2 transition-all duration-base ease-out-expo ${
-          isActive
-            ? "bg-primary/8 text-foreground font-medium"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-        }`}
-      >
+    const commonClass = `flex items-center ${collapsed ? "justify-center" : "gap-3"} rounded-lg px-2.5 py-2 transition-all duration-base ease-out-expo ${
+      isActive
+        ? "bg-primary/8 text-foreground font-medium"
+        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+    }`
+    const innerContent = (
+      <>
         <item.icon className={`h-[18px] w-[18px] shrink-0 transition-colors duration-base ${isActive ? "text-foreground" : ""}`} />
         {!collapsed && <span className="truncate text-body-sm">{item.title}</span>}
+      </>
+    )
+    const linkContent = item.external ? (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" className={commonClass}>
+        {innerContent}
+      </a>
+    ) : (
+      <Link href={item.href} className={commonClass}>
+        {innerContent}
       </Link>
     )
 
