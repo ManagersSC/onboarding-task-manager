@@ -1,8 +1,7 @@
 # Security Implementation — Developer Handover
 
-> **Last updated:** 2026-02-20
-> **Audit report:** [`SECURITY-AUDIT-REPORT.md`](../../SECURITY-AUDIT-REPORT.md) (root)
-> **Fix tracking:** [`TASK-critical-security-fixes.md`](../../TASK-critical-security-fixes.md), [`TASK-quick-security-fixes.md`](../../TASK-quick-security-fixes.md), [`TASK-remaining-security-fixes.md`](../../TASK-remaining-security-fixes.md)
+> **Last updated:** 2026-02-25
+> **Security audit:** A full codebase security audit was conducted in February 2026. All critical and high-priority issues (auth bypass, SSRF, formula injection, role enforcement) were remediated before handover. The full report is available on request from the developer.
 
 This document describes every security mechanism in the application, where the code lives, and what you need to know to maintain it safely.
 
