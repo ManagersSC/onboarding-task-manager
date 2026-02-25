@@ -23,35 +23,53 @@
 
 ## 1. System Architecture
 
+The platform is made up of **two distinct systems** that share the same Airtable database:
+
+1. **ATS / Hiring Pipeline** — lives entirely in Airtable. Managed directly by the team in Airtable. Uses Airtable automations to trigger Make.com scenarios.
+2. **Onboarding Task Manager** — the Next.js web app on Vercel. Used by admins and new hires. Triggers Make.com scenarios via environment variable webhook URLs.
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND / APP                           │
-│               Next.js 15 (App Router) on Vercel                │
-│                   onboarding.smilecliniq.com                    │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ API routes (/api/*)
-                            │ iron-session auth
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         DATABASE                                │
-│                    Airtable (cloud-hosted)                      │
-│         Tables: Applicants, Tasks, Staff, Quizzes, etc.        │
-└────────────────────┬────────────────────────────────────────────┘
-                     │ Webhook HTTP POST
-                     │ (triggered by app events)
-                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       AUTOMATIONS                               │
-│                Make.com (7 active scenarios)                   │
-│         Handles: emails, Slack notifications, intake           │
-└─────────────────────────────────────────────────────────────────┘
-                     │
-                     ▼
-┌──────────────────────────────┐  ┌──────────────────────────────┐
-│       Google Calendar        │  │    Email / Slack delivery    │
-│   (interview scheduling)     │  │ (via Make.com scenarios)     │
-└──────────────────────────────┘  └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         AIRTABLE                                 │
+│           Base ID: appZ4QT8rXFlX6LrZ                            │
+│    Tables: Applicants, Jobs, Staff, Feedback, Documents,        │
+│            Onboarding Tasks, Quizzes, Notifications, etc.       │
+│                                                                  │
+│  ┌───────────────────────────────────────────┐                  │
+│  │  Airtable Automations (Change Stage group)│──── webhook ──┐  │
+│  │  New Applicant, Send Interview Invite,    │               │  │
+│  │  Changes in Stage, Feedback Submission,   │               │  │
+│  │  Document Submission, Week Change, etc.   │               │  │
+│  └───────────────────────────────────────────┘               │  │
+└──────────────────┬───────────────────────────────────────────┘  │
+                   │  Airtable API (read/write)                   │
+                   ▼                                              ▼
+┌──────────────────────────────┐    ┌──────────────────────────────────┐
+│  ONBOARDING APP (Next.js)    │    │    MAKE.COM (10 scenarios)       │
+│  Vercel • App Router         │    │  Hiring (Airtable-triggered):    │
+│  onboarding.smilecliniq.com  │    │    H1  New Applicant             │
+│                              │    │    H2  First Interview Invite    │
+│  Auth / Tasks / Quizzes /    │    │    H3  Changes in Status         │
+│  Notifications / Documents   │    │  Onboarding (app-triggered):     │
+│                              │    │    1-7 via MAKE_WEBHOOK_URL_*    │
+└──────────────┬───────────────┘    │                                  │
+               │  webhook POST      │  → Gmail (recruitment@)          │
+               └──────────────────▶│  → Slack (Recruitment Bot)       │
+                                    └──────────────────────────────────┘
 ```
+
+> 📸 **Screenshot:** _High-level architecture: Airtable interface, web app dashboard, and Make.com scenario list side by side_
+
+---
+
+### Two Airtable contexts to be aware of
+
+| Context | Where it lives | Who uses it |
+|---------|---------------|-------------|
+| **ATS / Hiring** | Airtable — `Applicants`, `Jobs`, `Feedback`, `Documents` tables | Team manages directly in Airtable |
+| **Onboarding App** | Airtable — `Onboarding Tasks Logs`, `Quizzes`, `Notifications` tables + Next.js web app | Admins via web UI, new hires via their dashboard |
+
+Both share the same Airtable base (`appZ4QT8rXFlX6LrZ`). The web app's `AIRTABLE_BASE_ID` env variable points to this base.
 
 ---
 
@@ -67,7 +85,7 @@
 | Forms | react-hook-form + zod | Validation schemas in `src/lib/validation/` |
 | Notifications (UI) | Sonner | Toast library |
 | Hosting | Vercel | Auto-deploys from `main` branch |
-| Automations | Make.com | 7 webhook-driven scenarios |
+| Automations | Make.com | 10 scenarios — 3 triggered by Airtable (hiring), 7 triggered by the web app (onboarding) |
 | Calendar | Google Calendar API | OAuth 2.0 with refresh token |
 
 ---
@@ -108,7 +126,21 @@ triggerNotification(event, staffId, data)
 >
 > Blueprint JSON exports (for re-import) are in `docs/handover/automations/`.
 
-Quick reference summary:
+Quick reference — **10 total scenarios:**
+
+### Hiring Phase Scenarios (Airtable-triggered)
+
+Webhook URLs for these are stored inside the Airtable automation scripts — not in Vercel env vars.
+
+| # | Scenario | Blueprint File | Triggered by |
+|---|----------|---------------|--------------|
+| H1 | New Applicant | `applications/NEW_APPLICANT.json` | Airtable "New Applicant" automation |
+| H2 | Send First Interview Invite | `applications/SEND_FIRST_INTERVIEW_INVITE.json` | Airtable "Send First Interview Invite" automation |
+| H3 | Changes in Status | `applications/CHANGES_IN_STATUS.json` | Airtable "Changes in Stage" automation |
+
+### Onboarding Scenarios (App-triggered)
+
+Webhook URLs are stored as `MAKE_WEBHOOK_URL_*` env variables in Vercel.
 
 | # | Scenario | Env Variable | Triggered from |
 |---|----------|-------------|----------------|
@@ -246,6 +278,10 @@ Every significant user action is logged here.
 
 The app references Airtable field names as strings throughout the codebase. If you rename a field in Airtable, the app will break silently. **Always update the code when renaming Airtable fields.**
 
+> 📸 **Screenshot:** _Airtable base showing the key tables in the left sidebar (Applicants, Jobs, Staff, Onboarding Tasks Logs, Quizzes, Notifications, Website Audit Log)_
+
+> 📸 **Screenshot:** _Airtable Applicants table open in grid view showing the key fields (Name, Email, Stage, Interviewer, Onboarding Manual Import, etc.)_
+
 ---
 
 ## 6. Environment Variables
@@ -296,6 +332,8 @@ Set these in Vercel → Project Settings → Environment Variables.
 2. Select the project
 3. The **Deployments** tab shows all deployments with status (Ready / Error / Building)
 4. Click any deployment to see build logs
+
+> 📸 **Screenshot:** _Vercel dashboard showing the project's Deployments tab with recent deployments and their status (Ready / Building / Error)_
 
 ### Rolling back
 
