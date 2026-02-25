@@ -161,28 +161,97 @@ export async function PATCH(request, { params }) {
       if (!formData.has(formKey)) continue
 
       let raw = formData.get(formKey)
-      // If user cleared it, send null
-      if(raw === ""){
-        fieldsToUpdate[airtableKey] = null
+
+      // Week and Day are single-select fields in Airtable with string values "1"–"5"
+      // Skip entirely when empty (no "None" option in UI), send raw string when set.
+      if (formKey === "week" || formKey === "day") {
+        if (raw === "") continue // no value selected — leave Airtable field untouched
+        fieldsToUpdate[airtableKey] = raw // e.g. "3" — must be a string for single-select
         continue
       }
 
+      // Folder Name is a linked record field — look up the record ID by Name.
+      // Airtable requires [] (not null) to clear a linked record field.
+      if (formKey === "folderName") {
+        if (raw === "") {
+          fieldsToUpdate["Folder Name"] = [] // clear the linked record
+        } else {
+          try {
+            const escaped = raw.replace(/"/g, '\\"')
+            const folders = await base("Onboarding Folders")
+              .select({ filterByFormula: `{Name} = "${escaped}"`, maxRecords: 1 })
+              .firstPage()
+            if (folders.length > 0) {
+              fieldsToUpdate["Folder Name"] = [folders[0].id]
+            }
+            // If no match found, skip — don't wipe with empty array
+          } catch (e) {
+            logger.error("Error looking up folder record:", e)
+          }
+        }
+        continue
+      }
+
+      // Job is a linked record field — look up the record ID by Title.
+      if (formKey === "job") {
+        if (raw === "") {
+          fieldsToUpdate["Job"] = [] // clear the linked record
+        } else {
+          try {
+            const escaped = raw.replace(/"/g, '\\"')
+            const jobs = await base("Jobs")
+              .select({ filterByFormula: `{Title} = "${escaped}"`, maxRecords: 1 })
+              .firstPage()
+            if (jobs.length > 0) {
+              fieldsToUpdate["Job"] = [jobs[0].id]
+            }
+            // If no match found, skip — don't wipe with empty array
+          } catch (e) {
+            logger.error("Error looking up job record:", e)
+          }
+        }
+        continue
+      }
+
+      // Text / single-select fields — null clears the field, string sets it
+      if (raw === "") {
+        fieldsToUpdate[airtableKey] = null
+        continue
+      }
       fieldsToUpdate[airtableKey] = raw
     }
 
-    // 5. Update record metadata & strip attachments if you support removal
+    // 5. Update record in Airtable
     if (Object.keys(fieldsToUpdate).length) {
       await base("Onboarding Tasks").update([{ id: recordId, fields: fieldsToUpdate }])
+    }
 
-      // Send notification to affected user (replace 'AFFECTED_USER_ID' with actual logic)
-      await createNotification({
-        title: "Task Updated",
-        body: `A task you were assigned ("${formData.get("title")}") has been updated.`,
-        type: "Task",
-        severity: "Info",
-        recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
-        source: "System"
-      });
+    // 6. Notify all applicants who have this task assigned
+    try {
+      const taskTitle = formData.get("title") || "a task"
+      const logs = await base("Onboarding Tasks Logs")
+        .select({
+          filterByFormula: `FIND("${recordId}", ARRAYJOIN({Task}))`,
+          fields: ["Assigned"],
+        })
+        .all()
+
+      for (const log of logs) {
+        const assignedIds = log.fields["Assigned"] || []
+        for (const assignedId of assignedIds) {
+          await createNotification({
+            title: "Task Updated",
+            body: `A task you were assigned ("${taskTitle}") has been updated.`,
+            type: "Task",
+            severity: "Info",
+            recipientId: assignedId,
+            source: "System",
+          })
+        }
+      }
+    } catch (notifErr) {
+      // Notification failure must not break the save
+      logger.error("Error sending task update notifications:", notifErr)
     }
 
     // 6. Upload new files
