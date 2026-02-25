@@ -1,6 +1,6 @@
 # Smile Cliniq — Client Operations Manual
 
-> **For:** Clinic Managers and Staff
+> **For:** Admins and Staff
 > **Last updated:** February 2026
 > **Need help?** See [Who to Contact](#who-to-contact) at the bottom of this document
 
@@ -41,6 +41,8 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 
 **What it is NOT:** This is not a payroll system, a scheduling rota, or an HR system. It handles the *onboarding process only* — getting a new hire from application to being ready to work.
 
+> 📸 **Screenshot:** _Onboarding Task Manager homepage / login screen_
+
 ---
 
 ## 2. Who Uses What (Roles)
@@ -48,10 +50,11 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 | Role | Who | What they can do |
 |------|-----|-----------------|
 | **Admin** | Practice manager, owner | Everything — manage users, create tasks, view all applicants, send emails, access audit logs |
-| **Clinic Manager** | Department leads | Manage tasks and applicants for their clinic |
-| **Team Member** | New hires, staff completing onboarding | See their own tasks, upload documents, take quizzes |
+| **Staff** | New hires and team members completing onboarding | See their own tasks, upload documents, take quizzes |
 
-> **Important:** If you need to give someone access, an Admin must create their account. Team Members and Clinic Managers cannot create accounts for others.
+> **Important:** If you need to give someone access, an Admin must create their account. Staff members cannot create accounts for others.
+
+> 📸 **Screenshot:** _User Management page showing role badges next to each staff member_
 
 ---
 
@@ -128,7 +131,7 @@ The following things happen **automatically** — you do not need to do anything
 
 ### When you need to send a custom email
 
-**What you do:** Go to the email section in the admin panel, compose your message, and click send.
+**What you do:** Go to the new hire tracker section in the admin dashboard, click on an employee, compose your message, and click send.
 
 **What happens automatically:**
 - The email is sent via the Make.com email system
@@ -169,6 +172,10 @@ The navigation on the left gives you access to:
 - **Audit Logs** — complete activity history
 - **Resources** — shared document/link hub
 
+> 📸 **Screenshot:** _Admin dashboard showing Active Onboardings and Tasks Due This Week metrics_
+
+> 📸 **Screenshot:** _Left sidebar navigation with all sections visible_
+
 ---
 
 ## 5. Daily Operations
@@ -183,6 +190,10 @@ The navigation on the left gives you access to:
 
 > **Tip:** If the applicant submitted the form themselves, their record is already there — just search for their name.
 
+> 📸 **Screenshot:** _Applicants list page showing all new hires with their status_
+
+> 📸 **Screenshot:** _Add Applicant form with fields filled in_
+
 ---
 
 ### Assigning Onboarding Tasks
@@ -195,6 +206,10 @@ The navigation on the left gives you access to:
 6. The team member will receive an email notification automatically
 
 > **Note:** Task templates are pre-created. If you need a new type of task, an Admin can create it under the **Tasks** section.
+
+> 📸 **Screenshot:** _Assign Tasks modal showing task template list with due date fields_
+
+> 📸 **Screenshot:** _Hire's profile page showing their assigned task list_
 
 ---
 
@@ -211,6 +226,10 @@ The navigation on the left gives you access to:
 **Maximum file size:** 10 MB per file
 
 > **If an upload fails:** Check that the file is not larger than 10 MB and is one of the accepted types.
+
+> 📸 **Screenshot:** _Document upload modal with file type selector and drag-and-drop zone_
+
+> 📸 **Screenshot:** _Hire's profile showing the Documents section with uploaded files listed_
 
 ---
 
@@ -229,6 +248,12 @@ Quizzes are assessments new hires take as part of their onboarding.
 3. Add questions (multiple choice, checkboxes, or info blocks)
 4. Save — the quiz is now available to assign as a task
 
+> 📸 **Screenshot:** _Quizzes page showing list of quizzes with question count_
+
+> 📸 **Screenshot:** _Quiz builder showing question types (multiple choice, checkboxes, info block)_
+
+> 📸 **Screenshot:** _Hire's quiz submission view showing their answers and score_
+
 ---
 
 ### Sending a Custom Email
@@ -237,6 +262,8 @@ Quizzes are assessments new hires take as part of their onboarding.
 2. Look for the **"Send Email"** option
 3. Compose your message
 4. Click **Send** — the email is delivered automatically via the email system
+
+> 📸 **Screenshot:** _Custom email compose screen with recipient, subject, and body fields_
 
 ---
 
@@ -251,6 +278,8 @@ Quizzes are assessments new hires take as part of their onboarding.
 5. Hire works through tasks: uploads documents, completes quizzes, reads materials
 6. Admin reviews submitted documents and marks each task complete
 7. Once all tasks are complete, the hire's onboarding is marked as finished
+
+> 📸 **Screenshot:** _Hire's profile page showing completed tasks with green checkmarks_
 
 ---
 
@@ -285,6 +314,8 @@ The audit log records every significant action in the system — who did what an
 2. Filter by date range, user, or action type
 3. To export: click **"Export CSV"** — this downloads a spreadsheet of all logged actions
 
+> 📸 **Screenshot:** _Audit Logs page showing action history with date, user, and action columns_
+
 ---
 
 ### Walkthrough: Managing Notification Preferences
@@ -297,6 +328,8 @@ Each staff member can control which notifications they receive:
 4. Set their preferred channel: **Email**, **Slack**, or both
 5. Save — changes take effect immediately
 
+> 📸 **Screenshot:** _Notification preferences panel showing toggles for Email, Slack, and In-app per notification type_
+
 ---
 
 ### Walkthrough: Adding a Resource to the Resource Hub
@@ -307,6 +340,8 @@ The Resource Hub is a shared library of links and documents for staff.
 2. Click **"Add Resource"**
 3. Enter the title, link or upload file, and category
 4. Save — it appears in the hub immediately for all staff
+
+> 📸 **Screenshot:** _Resource Hub page showing resources listed by category_
 
 ---
 
@@ -321,6 +356,8 @@ Staff can receive notifications in two places:
 | **Slack** | Posted to a Slack channel, if enabled in preferences and Slack is connected |
 
 > **To change notification preferences:** Go to Users → select the staff member → Notification Preferences section.
+
+> 📸 **Screenshot:** _In-app notification bell open showing unread notifications_
 
 ---
 
@@ -381,7 +418,7 @@ Staff can receive notifications in two places:
 ## 9. FAQ
 
 **Q: Can I delete a task that was assigned by mistake?**
-A: Yes, but only Admins can delete tasks. Go to the hire's profile → find the task → click the delete option.
+A: Admins can manage assigned tasks from the **Assigned Tasks** page (`/admin/assigned-tasks`). Note: the delete functionality for individual tasks is not yet implemented — contact us if you need a task removed and we can handle it directly.
 
 **Q: Can two people have the same email address?**
 A: No. Each email address must be unique in the system.
@@ -395,14 +432,11 @@ A: Yes — go to the Tasks section and edit any task template. Changes affect ne
 **Q: How long are documents stored?**
 A: Documents are stored in Airtable indefinitely. There is no automatic deletion.
 
-**Q: Can I undo a "task completed" action?**
-A: No. Once a task is marked complete, it cannot be undone in the system. Contact your developer if this needs to be changed in Airtable directly.
-
 **Q: Is there a mobile app?**
 A: No — the system is a web app that works in any browser on mobile, tablet, or desktop. No separate app needs to be installed.
 
 **Q: What if Make.com (the automation service) is down?**
-A: The web app will still work — staff can still log in, tasks will still show up, and documents can still be uploaded. The only thing that won't work is automatic email notifications. You would need to notify people manually until Make.com is restored.
+A: The web app will still work — staff can still log in and documents can still be uploaded. However, two things will stop working: automatic email notifications and task assignment (since task assignment emails are delivered through Make.com). You would need to notify people manually and defer any task assignments until Make.com is restored.
 
 **Q: Can I see who made a change in the system?**
 A: Yes — go to Audit Logs. Every significant action is recorded with the user's name and timestamp.
@@ -411,16 +445,18 @@ A: Yes — go to Audit Logs. Every significant action is recorded with the user'
 
 ## 10. Who to Contact
 
-| Need | Contact |
-|------|---------|
-| Something in the app is broken | Your developer —  |
-| Make.com automation issue | Your developer first, then Make.com support at make.com/help |
-| Airtable data issue | Your developer first, then Airtable support at support.airtable.com |
-| Vercel (hosting) issue | Your developer — they manage the Vercel account |
-| Adding a new feature | Your developer —  |
+This platform was built and is maintained by **FlowFusion AI**. For any technical issues, changes, or questions, please reach out to us directly.
 
-> **Before contacting your developer:** Note the exact steps that caused the issue, what you expected to happen, and what actually happened. A screenshot is extremely helpful.
+| Issue | Who to contact |
+|-------|----------------|
+| Something in the app is broken | **FlowFusion AI** — reach out via email or WhatsApp |
+| Make.com automation not working (emails not sending, etc.) | **FlowFusion AI** — we monitor and manage all Make.com scenarios |
+| Airtable data issue (record incorrect, automation not firing) | **FlowFusion AI** — we manage the Airtable base and automations |
+| Hosting issue (site down or not loading) | **FlowFusion AI** — we manage the Vercel deployment |
+| Requesting a new feature or change | **FlowFusion AI** — get in touch and we'll scope it out |
+
+> **When reporting an issue:** Please describe the exact steps that led to the problem, what you expected to happen, and what actually happened. A screenshot is extremely helpful and speeds up resolution significantly.
 
 ---
 
-*For technical details about how this system is built, see the [Technical Overview](./TECHNICAL-OVERVIEW.md).*
+*For technical details about how this system is built, see the [Technical Overview](technical-overview).*

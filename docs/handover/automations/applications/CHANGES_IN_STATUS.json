@@ -1,0 +1,3110 @@
+{
+    "subflows": [
+        {
+            "flow": [
+                {
+                    "id": 112,
+                    "module": "airtable:webhook",
+                    "version": 3,
+                    "parameters": {
+                        "__IMTHOOK__": 1081823
+                    },
+                    "mapper": {},
+                    "metadata": {
+                        "designer": {
+                            "x": -118,
+                            "y": 2100
+                        },
+                        "restore": {
+                            "parameters": {
+                                "__IMTHOOK__": {
+                                    "data": {
+                                        "editable": "false"
+                                    },
+                                    "label": "Applicant Status Change"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "__IMTHOOK__",
+                                "type": "hook:airtable",
+                                "label": "Webhook",
+                                "required": true
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 113,
+                    "module": "builtin:BasicAggregator",
+                    "version": 1,
+                    "parameters": {
+                        "feeder": 112
+                    },
+                    "mapper": {
+                        "job": "{{112.job}}",
+                        "name": "{{112.name}}",
+                        "email": "{{112.email}}",
+                        "stage": "{{112.stage}}",
+                        "location": "{{112.location}}",
+                        "interviewer": "{{112.interviewer}}"
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 182,
+                            "y": 2098
+                        },
+                        "restore": {
+                            "extra": {
+                                "feeder": {
+                                    "label": "Airtable - Watch Responses [112]"
+                                },
+                                "target": {
+                                    "label": "Custom"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": 114,
+                    "module": "builtin:BasicFeeder",
+                    "version": 1,
+                    "parameters": {},
+                    "mapper": {
+                        "array": "{{113.array}}"
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 536,
+                            "y": 2095
+                        },
+                        "restore": {
+                            "expect": {
+                                "array": {
+                                    "mode": "edit"
+                                }
+                            }
+                        },
+                        "expect": [
+                            {
+                                "mode": "edit",
+                                "name": "array",
+                                "spec": [],
+                                "type": "array",
+                                "label": "Array"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 2,
+                    "module": "builtin:BasicRouter",
+                    "version": 1,
+                    "mapper": null,
+                    "metadata": {
+                        "designer": {
+                            "x": 900,
+                            "y": 2100
+                        }
+                    },
+                    "routes": [
+                        {
+                            "flow": [
+                                {
+                                    "id": 95,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "filter": {
+                                        "name": "Hired",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{114.stage}}",
+                                                    "b": "Hired",
+                                                    "o": "text:equal"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "name": "docs_form_link",
+                                        "scope": "roundtrip",
+                                        "value": "https://airtable.com/appZ4QT8rXFlX6LrZ/pagZKLh1DVXc2EjVo/form?prefill_Email={{encodeURL(114.email)}}&prefill_Applying+For={{114.job}}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1246,
+                                            "y": 1696,
+                                            "name": "Documents Form Link"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "roundtrip",
+                                                        "execution"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 102,
+                                    "module": "google-drive:getAFile",
+                                    "version": 4,
+                                    "parameters": {
+                                        "__IMTCONN__": 1500211
+                                    },
+                                    "mapper": {
+                                        "file": "/1GUpl_YNQbqRw5sHz8hlH74XKhbrtFN6V/1yWTG6_KBunkZQdVpLYF1IUJ3229K_Bfn/1JcoHVTwG199cAJbqVA5Wazco1Okv5kwM/1cihTJDzTRNGTHaGJlu-a3-GAGrFg4p02/1zG9MYZvxK9JG6EgSKz-65Oy-F1IXueQ6",
+                                        "select": "value",
+                                        "destination": "share",
+                                        "formatDrawings": "image/jpeg",
+                                        "formatDocuments": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        "formatSpreadsheets": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        "formatPresentations": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1532,
+                                            "y": 1695,
+                                            "name": "Welcome to Smile Cliniq"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "file": {
+                                                    "path": [
+                                                        "Smile Cliniq",
+                                                        "10. Smile Cliniq Systems",
+                                                        "Customer Service Systems",
+                                                        "About Smile Cliniq",
+                                                        "Welcome to Smile Cliniq.pdf"
+                                                    ]
+                                                },
+                                                "select": {
+                                                    "label": "Select from the list"
+                                                },
+                                                "destination": {
+                                                    "label": "Shared With Me"
+                                                },
+                                                "formatDrawings": {
+                                                    "label": "JPEG"
+                                                },
+                                                "formatDocuments": {
+                                                    "label": "MS Word Document"
+                                                },
+                                                "formatSpreadsheets": {
+                                                    "label": "MS Excel"
+                                                },
+                                                "formatPresentations": {
+                                                    "label": "MS PowerPoint"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Benji-email (benji@smilecliniq.com)"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:google-restricted",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "type": "hidden"
+                                            },
+                                            {
+                                                "name": "select",
+                                                "type": "select",
+                                                "label": "Enter a File ID",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "map",
+                                                        "value"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDocuments",
+                                                "type": "select",
+                                                "label": "Convert Google Documents Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                                        "application/pdf",
+                                                        "application/vnd.oasis.opendocument.text",
+                                                        "text/html",
+                                                        "text/plain",
+                                                        "application/rtf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatSpreadsheets",
+                                                "type": "select",
+                                                "label": "Convert Google Spreadsheets Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                        "application/x-vnd.oasis.opendocument.spreadsheet",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatPresentations",
+                                                "type": "select",
+                                                "label": "Convert Google Slides Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDrawings",
+                                                "type": "select",
+                                                "label": "Convert Google Drawings Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "image/jpeg",
+                                                        "image/png",
+                                                        "image/svg+xml",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "destination",
+                                                "type": "select",
+                                                "label": "Choose a Drive",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "drive",
+                                                        "share",
+                                                        "team"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "file",
+                                                "type": "file",
+                                                "label": "File ID",
+                                                "required": true
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 118,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "30"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1704,
+                                                    "y": 1374
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 106,
+                                    "module": "google-drive:getAFile",
+                                    "version": 4,
+                                    "parameters": {
+                                        "__IMTCONN__": 6982853
+                                    },
+                                    "mapper": {
+                                        "file": "/1516Bz4jtQIjuzpPv49uD-FMOG3mPp7Ru/1_GK4oN1m1bMPGxB4DmeClto9TIqBP2o7/1LEP116JSbOlKnZjHpzwxi-lnslyJBM4uN2x_QW9TGnE",
+                                        "select": "value",
+                                        "destination": "drive",
+                                        "formatDrawings": "application/pdf",
+                                        "formatDocuments": "application/pdf",
+                                        "formatSpreadsheets": "application/pdf",
+                                        "formatPresentations": "application/pdf"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1834,
+                                            "y": 1699,
+                                            "name": "New Starter Document"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "file": {
+                                                    "path": [
+                                                        "Smile Cliniq Folder",
+                                                        "Original recruitment documents",
+                                                        "SC New Employee Starter Forms"
+                                                    ]
+                                                },
+                                                "select": {
+                                                    "label": "Select from the list"
+                                                },
+                                                "destination": {
+                                                    "label": "My Drive"
+                                                },
+                                                "formatDrawings": {
+                                                    "label": "PDF"
+                                                },
+                                                "formatDocuments": {
+                                                    "label": "PDF"
+                                                },
+                                                "formatSpreadsheets": {
+                                                    "label": "PDF"
+                                                },
+                                                "formatPresentations": {
+                                                    "label": "PDF"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "My Google Restricted connection (managers@smilecliniq.com)"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:google-restricted",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "type": "hidden"
+                                            },
+                                            {
+                                                "name": "select",
+                                                "type": "select",
+                                                "label": "Enter a File ID",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "map",
+                                                        "value"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDocuments",
+                                                "type": "select",
+                                                "label": "Convert Google Documents Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                                        "application/pdf",
+                                                        "application/vnd.oasis.opendocument.text",
+                                                        "text/html",
+                                                        "text/plain",
+                                                        "application/rtf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatSpreadsheets",
+                                                "type": "select",
+                                                "label": "Convert Google Spreadsheets Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                        "application/x-vnd.oasis.opendocument.spreadsheet",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatPresentations",
+                                                "type": "select",
+                                                "label": "Convert Google Slides Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDrawings",
+                                                "type": "select",
+                                                "label": "Convert Google Drawings Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "image/jpeg",
+                                                        "image/png",
+                                                        "image/svg+xml",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "destination",
+                                                "type": "select",
+                                                "label": "Choose a Drive",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "drive",
+                                                        "share",
+                                                        "team"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "file",
+                                                "type": "file",
+                                                "label": "File ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            },
+                                            {
+                                                "name": "select",
+                                                "type": "select",
+                                                "label": "Enter a File ID",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "map",
+                                                        "value"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDocuments",
+                                                "type": "select",
+                                                "label": "Convert Google Documents Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                                        "application/pdf",
+                                                        "application/vnd.oasis.opendocument.text",
+                                                        "text/html",
+                                                        "text/plain",
+                                                        "application/rtf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatSpreadsheets",
+                                                "type": "select",
+                                                "label": "Convert Google Spreadsheets Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                        "application/x-vnd.oasis.opendocument.spreadsheet",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatPresentations",
+                                                "type": "select",
+                                                "label": "Convert Google Slides Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "formatDrawings",
+                                                "type": "select",
+                                                "label": "Convert Google Drawings Files to Format",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "image/jpeg",
+                                                        "image/png",
+                                                        "image/svg+xml",
+                                                        "application/pdf"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "destination",
+                                                "type": "select",
+                                                "label": "Choose a Drive",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "drive",
+                                                        "share",
+                                                        "team"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "file",
+                                                "type": "file",
+                                                "label": "File ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "advanced": true
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 119,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "30"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2007,
+                                                    "y": 1372
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 22,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{114.email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n  <style type=\"text/css\">\r\n    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }\r\n    .container { width: 100%; max-width: 600px; margin: 20px auto; padding: 20px; }\r\n    .button {\r\n      display: inline-block;\r\n      padding: 10px 20px;\r\n      color: #ffffff !important;\r\n      background-color: #ed2424;\r\n      text-decoration: none;\r\n      border-radius: 5px;\r\n      font-weight: bold;\r\n    }\r\n    .footer {\r\n      background-color: #f8f9fa;\r\n      color: #6c757d;\r\n      padding: 10px 20px;\r\n      text-align: center;\r\n    }\r\n    .footer p { margin: 0; }\r\n  </style>\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <p>Hi <strong>{{114.name}}</strong>,</p>\r\n    <p>We are pleased to inform you that you have been selected to join our team!</p> \r\n    <p>Your skills and experience will be a valuable addition, and we are eager to see your contributions and having you on our team.</p>\r\n    <p>Please await further details regarding your onboarding process, which will be communicated shortly.</p>\r\n    <p style=\"text-align: center;\">\r\n      <a href=\"{{95.docs_form_link}}\" class=\"button\">New Starter Document Form Link</a>\r\n    </p>\r\n    <p>We look forward to working together.</p>\r\n    <p><strong>Smile Cliniq Hiring Team</strong></p>\r\n    <div class=\"footer\">\r\n      <p>Smile Cliniq</p>\r\n    </div>\r\n  </div>\r\n</body>\r\n</html>\r\n",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "You’re hired! Welcome to the Smile Cliniq Team",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [
+                                            {
+                                                "cid": "",
+                                                "data": "{{102.data}}",
+                                                "fileName": "{{102.name}}"
+                                            },
+                                            {
+                                                "cid": "",
+                                                "data": "{{106.data}}",
+                                                "fileName": "{{106.name}}"
+                                            }
+                                        ],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 2120,
+                                            "y": 1697,
+                                            "name": "Hired Email"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null,
+                                                        null
+                                                    ]
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 41,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "30"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2317,
+                                                    "y": 1373
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 142,
+                                    "module": "airtable:ActionGetRecord",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "mapper": {
+                                        "id": "{{114.job}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tblSrLl0u8iWBmTRX",
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 2501,
+                                            "y": 1702,
+                                            "name": "Get Job Name"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "mode": "chose",
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "mode": "chose",
+                                                    "label": "Jobs"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Title",
+                                                "type": "text",
+                                                "label": "Title"
+                                            },
+                                            {
+                                                "name": "Ad Doc",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Ad Doc"
+                                            },
+                                            {
+                                                "name": "Job Status",
+                                                "type": "text",
+                                                "label": "Job Status"
+                                            },
+                                            {
+                                                "name": "Relevant Channel IDs",
+                                                "type": "text",
+                                                "label": "Relevant Channel IDs"
+                                            },
+                                            {
+                                                "name": "Description",
+                                                "type": "text",
+                                                "label": "Description",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Required Experience",
+                                                "type": "text",
+                                                "label": "Required Experience"
+                                            },
+                                            {
+                                                "name": "Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Applicants"
+                                            },
+                                            {
+                                                "name": "Interviewers",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Interviewers"
+                                            },
+                                            {
+                                                "name": "Required Documents",
+                                                "type": "array",
+                                                "label": "Required Documents",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Documents",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Documents"
+                                            },
+                                            {
+                                                "name": "Total Applicants",
+                                                "type": "array",
+                                                "label": "Total Applicants"
+                                            },
+                                            {
+                                                "name": "Hired",
+                                                "type": "array",
+                                                "label": "Hired"
+                                            },
+                                            {
+                                                "name": "Offer Rate",
+                                                "type": "text",
+                                                "label": "Offer Rate"
+                                            },
+                                            {
+                                                "name": "Onboarding - Quizzes",
+                                                "type": "text",
+                                                "label": "Onboarding - Quizzes"
+                                            },
+                                            {
+                                                "name": "Onboarding - Quizzes copy",
+                                                "type": "text",
+                                                "label": "Onboarding - Quizzes copy"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 141,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "managers@smilecliniq.com"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "    <p>Dear Managers,</p>\n    \n    <p>We are pleased to inform you that a new employee has been successfully hired and added to our team.</p>\n    \n    <h3 style=\"margin-top: 20px;\">New Employee Details:</h3>\n    <ul style=\"margin-left: 20px;\">\n        <li><strong>Date Hired:</strong> {{formatDate(now; \"DD-MM-YYYY\")}}</li>\n        <li><strong>Name:</strong> {{114.name}}</li>\n        <li><strong>Email:</strong> {{114.email}}</li>\n        <li><strong>Position:</strong> {{142.Title}}</li>\n    </ul>\n    \n    <h3 style=\"margin-top: 20px;\">Required Action:</h3>\n    <p>Please log into the onboarding platform and select the starting date for <strong>{{114.name}}'s</strong> induction process. This step is essential to ensure a smooth onboarding experience and proper scheduling of all necessary orientation activities.</p>\n    \n    <h3 style=\"margin-top: 20px;\">Next Steps:</h3>\n    <ul style=\"margin-left: 20px;\">\n        <li>Access the onboarding platform at this <a href=\"airtable.com/appZ4QT8rXFlX6LrZ/pagP9SdWI0lOMvRhb\">link</a></li>\n        <li>Navigate to {{114.name}}'s profile</li>\n        <li>Set the induction start date</li>\n        <li>Click the Start Onboarding button</li>\n        <li>Confirm all onboarding materials are prepared</li>\n    </ul>\n    \n    <p style=\"margin-top: 20px;\"><strong>Please complete this action in timely manner to ensure all preparations are in place for {{114.name}}'s first day.</strong></p>\n    \n    <p>Thank you for your prompt attention to this matter.</p>\n",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "New Employee Hired - Action Required: {{114.name}}",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 2801,
+                                            "y": 1702,
+                                            "name": "Send Manager Tasks"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "flow": [
+                                {
+                                    "id": 21,
+                                    "module": "airtable:ActionGetRecord",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "filter": {
+                                        "name": "Second Interview Invite Sent",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{114.stage}}",
+                                                    "b": "Second Interview Invite Sent",
+                                                    "o": "text:equal"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "id": "{{114.interviewer}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tblfXqkA0Cna59UUk",
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1252,
+                                            "y": 2107,
+                                            "name": "Get Interview Link"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "mode": "chose",
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "mode": "chose",
+                                                    "label": "Interviewers"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Name",
+                                                "type": "text",
+                                                "label": "Name"
+                                            },
+                                            {
+                                                "name": "Email",
+                                                "type": "text",
+                                                "label": "Email"
+                                            },
+                                            {
+                                                "name": "Slack ID",
+                                                "type": "text",
+                                                "label": "Slack ID"
+                                            },
+                                            {
+                                                "name": "Cal Link - First Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - First Interview"
+                                            },
+                                            {
+                                                "name": "Cal Link - Second Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - Second Interview"
+                                            },
+                                            {
+                                                "name": "Record Id",
+                                                "type": "text",
+                                                "label": "Record Id"
+                                            },
+                                            {
+                                                "name": "Hiring For",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Hiring For"
+                                            },
+                                            {
+                                                "name": "Assigned Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Assigned Applicants"
+                                            },
+                                            {
+                                                "name": "Total Interviewed",
+                                                "type": "array",
+                                                "label": "Total Interviewed"
+                                            },
+                                            {
+                                                "name": "Feeedback",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Feeedback"
+                                            },
+                                            {
+                                                "name": "Tasks",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 49,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "3",
+                                                "retry": true,
+                                                "interval": "15"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1408,
+                                                    "y": 1931
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 57,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "mapper": {
+                                        "name": "location_name",
+                                        "scope": "roundtrip",
+                                        "value": "{{replace(114.location; \" Branch\"; emptystring)}}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1572,
+                                            "y": 2108,
+                                            "name": "Format Location Name"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "roundtrip",
+                                                        "execution"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "location_name",
+                                                "type": "any",
+                                                "label": "location_name"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 58,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "mapper": {
+                                        "name": "location_name",
+                                        "scope": "roundtrip",
+                                        "value": "{{lower(replace(57.location_name; space; \"-\"))}}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1872,
+                                            "y": 2108,
+                                            "name": "Format Location Name"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "default": "roundtrip",
+                                                "options": [
+                                                    {
+                                                        "label": "One cycle",
+                                                        "value": "roundtrip"
+                                                    },
+                                                    {
+                                                        "label": "One execution",
+                                                        "value": "execution"
+                                                    }
+                                                ],
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "location_name",
+                                                "type": "any",
+                                                "label": "location_name"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 25,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "mapper": {
+                                        "name": "cal_link",
+                                        "scope": "roundtrip",
+                                        "value": "{{21.`Cal Link - Second Interview`}}-{{58.location_name}}?name={{114.name}}&email={{114.email}}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 2172,
+                                            "y": 2108,
+                                            "name": "Create Full Interview Link"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "roundtrip",
+                                                        "execution"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "cal_link",
+                                                "type": "any",
+                                                "label": "cal_link"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 23,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{114.email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<!DOCTYPE html>\n<html>\n<head>\n  <style type=\"text/css\">\n    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }\n    .container { width: 100%; max-width: 600px; margin: 20px auto; padding: 20px; }\n    .button { display: inline-block; padding: 10px 20px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px; font-weight: bold; }\n    .footer { background-color: #f8f9fa; color: #6c757d; padding: 10px 20px; text-align: center; }\n    .footer p { margin: 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\" style=\"border: 1px solid #dedede; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);\">\n    <p>Hi <strong>{{114.name}}</strong>,</p>\n    <p>Thank you for your recent application.</p>\n    <p>We are pleased to invite you to an second interview with us at one of our branches below. <br> Location: <b>{{114.location}}</b>. <br>\n<p>This interview will be face to face, and you will spend some time shadowing with us.</p>\n<h4>Please Ensure All Information is Correct in the Booking Page.</h4>\n</p>\n    <p style=\"text-align: center;\"><a href=\"{{25.cal_link}}\" class=\"button\">Schedule Interview</a></p>\n   \n<p>We look forward to seeing you!</p>\n<p>Yours Sincerely,</p>\n<p><strong>Smile Cliniq Hiring Team</strong></p>\n<div class=\"footer\">\n  <p>Smile Cliniq</p>\n</div>\n  </div>\n</body>\n</html>",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "Smile Cliniq Application Update",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 2472,
+                                            "y": 2108,
+                                            "name": "Send Interview Invite"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 44,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "1",
+                                                "retry": true,
+                                                "interval": "30"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2791,
+                                                    "y": 2107
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "flow": [
+                                {
+                                    "id": 89,
+                                    "module": "airtable:ActionGetRecord",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "filter": {
+                                        "name": "Rejected",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{114.stage}}",
+                                                    "b": "Rejected",
+                                                    "o": "text:equal"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "id": "{{114.job}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tblSrLl0u8iWBmTRX",
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1278,
+                                            "y": 2442
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "mode": "chose",
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "mode": "chose",
+                                                    "label": "Jobs"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Title",
+                                                "type": "text",
+                                                "label": "Title"
+                                            },
+                                            {
+                                                "name": "Ad Doc",
+                                                "spec": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": "text",
+                                                        "label": "ID"
+                                                    },
+                                                    {
+                                                        "name": "width",
+                                                        "type": "uinteger",
+                                                        "label": "Width"
+                                                    },
+                                                    {
+                                                        "name": "height",
+                                                        "type": "uinteger",
+                                                        "label": "Height"
+                                                    },
+                                                    {
+                                                        "name": "url",
+                                                        "type": "url",
+                                                        "label": "URL"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "filename",
+                                                        "label": "File name"
+                                                    },
+                                                    {
+                                                        "name": "size",
+                                                        "type": "uinteger",
+                                                        "label": "Size"
+                                                    },
+                                                    {
+                                                        "name": "type",
+                                                        "type": "text",
+                                                        "label": "MIME type"
+                                                    },
+                                                    {
+                                                        "name": "thumbnails",
+                                                        "spec": [
+                                                            {
+                                                                "name": "small",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Small"
+                                                            },
+                                                            {
+                                                                "name": "large",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Large"
+                                                            },
+                                                            {
+                                                                "name": "full",
+                                                                "spec": [
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": "url",
+                                                                        "label": "URL"
+                                                                    },
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": "uinteger",
+                                                                        "label": "Width"
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": "uinteger",
+                                                                        "label": "Height"
+                                                                    }
+                                                                ],
+                                                                "type": "collection",
+                                                                "label": "Full"
+                                                            }
+                                                        ],
+                                                        "type": "collection",
+                                                        "label": "Thumbnails"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Ad Doc"
+                                            },
+                                            {
+                                                "name": "Job Status",
+                                                "type": "text",
+                                                "label": "Job Status"
+                                            },
+                                            {
+                                                "name": "Relevant Channel IDs",
+                                                "type": "text",
+                                                "label": "Relevant Channel IDs"
+                                            },
+                                            {
+                                                "name": "Description",
+                                                "type": "text",
+                                                "label": "Description",
+                                                "multiline": true
+                                            },
+                                            {
+                                                "name": "Required Experience",
+                                                "type": "text",
+                                                "label": "Required Experience"
+                                            },
+                                            {
+                                                "name": "Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Applicants"
+                                            },
+                                            {
+                                                "name": "Interviewers",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Interviewers"
+                                            },
+                                            {
+                                                "name": "Required Documents",
+                                                "type": "array",
+                                                "label": "Required Documents",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Documents",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Documents"
+                                            },
+                                            {
+                                                "name": "Total Applicants",
+                                                "type": "array",
+                                                "label": "Total Applicants"
+                                            },
+                                            {
+                                                "name": "Job Offered",
+                                                "type": "array",
+                                                "label": "Job Offered"
+                                            },
+                                            {
+                                                "name": "Offer Rate",
+                                                "type": "text",
+                                                "label": "Offer Rate"
+                                            },
+                                            {
+                                                "name": "Application Form",
+                                                "type": "text",
+                                                "label": "Application Form"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 88,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1282,
+                                                    "y": 2743
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 10,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{114.email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<!DOCTYPE html>\n<html>\n   <head>\n      <style type=\"text/css\">\n         body { font-family: Arial, sans-serif; margin: 0; padding: 0; }\n         .container { width: 100%; max-width: 600px; margin: 20px auto; padding: 20px; }\n         .button { display: inline-block; padding: 10px 20px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px; font-weight: bold; }\n         .footer { background-color: #f8f9fa; color: #6c757d; padding: 10px 20px; text-align: center; }\n         .footer p { margin: 0; }\n      </style>\n   </head>\n   <body>\n      <div class=\"container\" style=\"border: 1px solid #dedede; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);\">\n         <p>Dear <strong>{{114.name}}</strong>,</p>\n         <p>Thank you for your application to Smile Cliniq. We appreciate your interest and the time you have invested in applying for the {{89.Title}} position.</p>\n         <p>We received a large number of applications, and after carefully reviewing all of them, we regret to inform you that you have not progressed to the next stage. Due to the volume of applications, we are unable to provide individual feedback at this time.</p>\n         <p>At Smile Cliniq, we highly value patient reviews, comprehensive patient portfolios (including before-and-after cases), significant dental experience (a minimum of 4 years), and postgraduate education. Most of the time, applicants do not advance to the next stage because of one or more of these factors. We hope to see these aspects improved and would appreciate your application again in the future.</p>\n         <p>Thank you once again for your time and interest in Smile Cliniq.</p>\n         <p>Best Regards,</p>\n         <p><strong>Smile Cliniq Hiring Team</strong></p>\n         <div class=\"footer\">\n            <p>Smile Cliniq</p>\n         </div>\n      </div>\n   </body>\n</html>",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "Smile Cliniq Application Update",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1572,
+                                            "y": 2442,
+                                            "name": "Rejected Email"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    },
+                                    "onerror": [
+                                        {
+                                            "id": 51,
+                                            "module": "builtin:Break",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "count": "2",
+                                                "retry": true,
+                                                "interval": "30"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 1870,
+                                                    "y": 2440
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "retry": {
+                                                            "mode": "chose"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "retry",
+                                                        "type": "boolean",
+                                                        "label": "Automatically complete execution",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "count",
+                                                        "type": "uinteger",
+                                                        "label": "Number of attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 10000,
+                                                            "min": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "interval",
+                                                        "type": "uinteger",
+                                                        "label": "Interval between attempts",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "max": 44640,
+                                                            "min": 1
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "flow": [
+                                {
+                                    "id": 104,
+                                    "module": "email:ActionSendEmail",
+                                    "version": 7,
+                                    "parameters": {
+                                        "account": 1545323,
+                                        "saveAfterSent": false
+                                    },
+                                    "filter": {
+                                        "name": "Rejected But Liked",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{114.stage}}",
+                                                    "b": "Rejected - Liked",
+                                                    "o": "text:equal"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{114.email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "<p>Dear {{114.name}},</p>\n<p>Thank you for your interest in joining our team. While we regret to inform you that we are unable to proceed together this time, we were genuinely impressed by your application.</p>\n<p>We would love to retain your information on file and reach out should future opportunities arise.</p>\n<p>Wishing you all the best in your career journey.</p>\n<p>Kindest Regards,</p>\n<p>The Smile Cliniq Hiring Team</p>",
+                                        "sender": "",
+                                        "headers": [],
+                                        "replyTo": "",
+                                        "subject": "Thank You for Your Application",
+                                        "priority": "normal",
+                                        "inReplyTo": "",
+                                        "references": [],
+                                        "attachments": [],
+                                        "contentType": "html"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 911,
+                                            "y": 2753,
+                                            "name": "Rejected But Liked"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "priority": {
+                                                    "label": "Normal"
+                                                },
+                                                "references": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                },
+                                                "contentType": {
+                                                    "label": "HTML"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                },
+                                                "saveAfterSent": {
+                                                    "label": "No"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:smtp,google-restricted,microsoft-smtp-imap",
+                                                "label": "Connection",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "saveAfterSent",
+                                                "type": "select",
+                                                "label": "Save message after sending",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        true,
+                                                        false
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "hidden"
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "contentType",
+                                                "type": "select",
+                                                "label": "Content Type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "html",
+                                                        "text"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            },
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "sender",
+                                                "type": "text",
+                                                "label": "Sender"
+                                            },
+                                            {
+                                                "name": "replyTo",
+                                                "type": "text",
+                                                "label": "Reply-To"
+                                            },
+                                            {
+                                                "name": "inReplyTo",
+                                                "type": "text",
+                                                "label": "In-Reply-To"
+                                            },
+                                            {
+                                                "name": "references",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "text",
+                                                    "label": "Reference",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "References"
+                                            },
+                                            {
+                                                "name": "priority",
+                                                "type": "select",
+                                                "label": "Priority",
+                                                "validate": {
+                                                    "enum": [
+                                                        "high",
+                                                        "normal",
+                                                        "low"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "headers",
+                                                "spec": [
+                                                    {
+                                                        "name": "key",
+                                                        "type": "text",
+                                                        "label": "Key",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Value",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Headers"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}
