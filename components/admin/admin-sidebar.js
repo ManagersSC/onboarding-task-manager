@@ -50,7 +50,7 @@ const navGroups = [
   {
     label: "HELP",
     items: [
-      { title: "Staff Guide", icon: BookOpen, href: "/docs/", external: true },
+      { title: "Staff Guide", icon: BookOpen, href: "/docs/index.html", external: true },
     ],
   },
 ]
