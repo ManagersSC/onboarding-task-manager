@@ -2,15 +2,22 @@
 
 > **Audience:** Developer maintaining or inheriting this project
 > **Last updated:** February 2026
-> **Blueprint files:** `docs/handover/automations/` (JSON exports for all 7 scenarios)
+> **Blueprint files:** `docs/handover/automations/` (JSON exports for all 10 scenarios — 3 hiring + 7 onboarding)
 
-This page documents every Make.com automation used by the Smile Cliniq Onboarding Task Manager — what triggers each one, exactly what it does step-by-step, what payload it expects, which email account sends the message, and how to test and debug it.
+This page documents every Make.com automation used by the Smile Cliniq platform — covering both the **hiring/ATS phase** (3 scenarios triggered by Airtable) and the **onboarding phase** (7 scenarios triggered by the web app). Each entry covers what triggers the scenario, exactly what it does step-by-step, what payload it expects, which email account sends the message, and how to test and debug it.
 
 ---
 
 ## Table of Contents
 
-1. [Overview — All 7 Scenarios](#1-overview--all-7-scenarios)
+1. [Overview — All 10 Scenarios](#1-overview--all-10-scenarios)
+
+**Hiring Phase Scenarios (triggered by Airtable)**
+- [H1 — New Applicant](#h1--new-applicant)
+- [H2 — Send First Interview Invite](#h2--send-first-interview-invite)
+- [H3 — Changes in Status (Stage Router)](#h3--changes-in-status-stage-router)
+
+**Onboarding Scenarios (triggered by the web app)**
 2. [Scenario 1 — Application Form Email](#2-scenario-1--application-form-email)
 3. [Scenario 2 — Admin Invite Email](#3-scenario-2--admin-invite-email)
 4. [Scenario 3 — Password Reset Email](#4-scenario-3--password-reset-email)
@@ -18,12 +25,30 @@ This page documents every Make.com automation used by the Smile Cliniq Onboardin
 6. [Scenario 5 — Task Assignment Notification](#6-scenario-5--task-assignment-notification)
 7. [Scenario 6 — General Notifications (Email + Slack)](#7-scenario-6--general-notifications-email--slack)
 8. [Scenario 7 — Custom Email](#8-scenario-7--custom-email)
+
+**Reference**
 9. [Reconnecting After Account Migration](#9-reconnecting-after-account-migration)
 10. [Debugging a Broken Webhook](#10-debugging-a-broken-webhook)
 
 ---
 
-## 1. Overview — All 7 Scenarios
+## 1. Overview — All 10 Scenarios
+
+### Hiring Phase Scenarios
+
+These 3 scenarios are triggered by **Airtable automations** (not by the web app). They have no `MAKE_WEBHOOK_URL` environment variable — their webhook URLs are stored directly inside the Airtable automation scripts.
+
+| # | Scenario Name | Blueprint File | Trigger Source | Sends |
+|---|--------------|---------------|----------------|-------|
+| H1 | New Applicant | `NEW_APPLICANT.json` | Airtable: "New Applicant" automation | Gmail (recruitment@smilecliniq.com) |
+| H2 | Send First Interview Invite | `SEND_FIRST_INTERVIEW_INVITE.json` | Airtable: "Send First Interview Invite" automation | Gmail (recruitment@smilecliniq.com) |
+| H3 | Changes in Status | `CHANGES_IN_STATUS.json` | Airtable: "Changes in Stage" automation | Gmail (recruitment@smilecliniq.com) |
+
+> **Blueprint location:** `docs/handover/automations/applications/`
+
+### Onboarding Scenarios
+
+These 7 scenarios are triggered by the **Next.js web app** via environment variable webhook URLs.
 
 | # | Scenario Name | Env Variable | Trigger Source | Sends |
 |---|--------------|-------------|----------------|-------|
@@ -35,7 +60,172 @@ This page documents every Make.com automation used by the Smile Cliniq Onboardin
 | 6 | General Notifications | `MAKE_WEBHOOK_URL_NOTIFICATIONS` | `src/lib/notifications.js` | Email + Slack DM (per preferences) |
 | 7 | Custom Email | `MAKE_WEBHOOK_URL_CUSTOM_EMAIL` | `api/admin/send-email` | Gmail (recruitment@smilecliniq.com) |
 
-> **Email senders:** Two Google accounts are used across the scenarios. Scenarios 1–2 use a FlowFusion Gmail account (developer account, should be migrated). Scenarios 3, 5, 6, 7 use `recruitment@smilecliniq.com` — the correct Smile Cliniq address.
+> **Email senders:** Two Google accounts are used across the onboarding scenarios. Scenarios 1–2 use a FlowFusion Gmail account (developer account, should be migrated). Scenarios 3, 5, 6, 7 and all hiring scenarios use `recruitment@smilecliniq.com` — the correct Smile Cliniq address.
+
+---
+
+---
+
+## Hiring Phase Scenarios
+
+These scenarios are triggered by Airtable automations, not by the web app. They handle the candidate journey from application through to being hired. Their webhook URLs are stored inside the Airtable automation scripts — see [Airtable Automations](airtable-automations) for the trigger side of each.
+
+---
+
+## H1 — New Applicant
+
+> **Blueprint file:** `docs/handover/automations/applications/NEW_APPLICANT.json`
+> **Triggered by:** Airtable "New Applicant" automation (fires when a new record is created in the Applicants table and "Onboarding Manual Import" is unchecked)
+
+### What it does
+
+When a candidate submits the application form, Airtable creates a new record and fires this scenario. Make.com looks up the job being applied for, sends a confirmation email to the candidate, and updates the applicant record in Airtable with the assigned interviewers and email status.
+
+### Step-by-step flow
+
+```
+1. Webhook (POST) → receives applicant data from Airtable:
+   { name, email, jobId, recordId }
+2. Airtable: Search Records → finds the Job record in Jobs table (tblSrLl0u8iWBmTRX)
+   using the job ID from the payload
+3. Router (by job type) → retrieves job title and assigned interviewers for that role
+4. Gmail → sends "Thank you for your application" confirmation email to candidate
+   From: recruitment@smilecliniq.com
+5. Airtable: Update Record → updates the applicant record:
+   - Sets "Interviewers" field (linked records)
+   - Sets "Emails To Send" = "Application Confirmation"
+6. Webhook responds 200
+```
+
+### Email details
+
+| Field | Value |
+|-------|-------|
+| **From** | `recruitment@smilecliniq.com` |
+| **To** | Candidate's email |
+| **Subject** | `Thank you for your application at Smile Cliniq` |
+| **Body** | Confirmation email acknowledging their application and setting expectations for next steps |
+
+> **Note:** This scenario only fires for genuine new applications (Onboarding Manual Import unchecked). If a staff member is manually added to Airtable with the checkbox ticked, Airtable skips its "New Applicant" automation, so this Make.com scenario is never called.
+
+> 📸 **Screenshot:** _Make.com scenario editor showing the flow: Webhook → Airtable Search → Router → Gmail → Airtable Update_
+
+---
+
+## H2 — Send First Interview Invite
+
+> **Blueprint file:** `docs/handover/automations/applications/SEND_FIRST_INTERVIEW_INVITE.json`
+> **Triggered by:** Airtable "Send First Interview Invite" automation (fires when Stage changes to "First Interview Invite Sent")
+
+### What it does
+
+Builds a personalised first interview invitation email. Fetches the interviewer's Cal.com booking link from the Staff table, fetches the candidate's personalised DISC PDF upload form link from the Applicants table, constructs a complete Cal.com booking URL with the branch location slug, and sends a 3-step invitation email to the candidate.
+
+### Step-by-step flow
+
+```
+1. Webhook (POST) → receives from Airtable:
+   { name, email, location, interviewerRecordId }
+2. Airtable: Get Record → fetches interviewer from Staff table (tblfXqkA0Cna59UUk)
+   → extracts "Cal Link - First Interview" field
+3. Airtable: Get Record → fetches applicant from Applicants table
+   → extracts "Personalised DISC Form Link" field
+4. Set Variable "cal_link" → builds personalised booking URL:
+   {interviewer_cal_link}/{location_slug}
+   + query params: ?name={candidate_name}&email={candidate_email}
+5. Gmail → sends 3-step interview invite email to candidate:
+   Step 1: Complete DISC assessment at tonyrobbins.com/disc
+   Step 2: Upload DISC PDF results via personalised Airtable form link
+   Step 3: Book interview slot via Cal.com booking link
+   From: recruitment@smilecliniq.com
+6. Webhook responds 200
+```
+
+### Email details
+
+| Field | Value |
+|-------|-------|
+| **From** | `recruitment@smilecliniq.com` |
+| **To** | Candidate's email |
+| **Subject** | First interview invitation (personalised with candidate name) |
+| **Body** | Styled HTML email with 3 numbered steps: DISC assessment → PDF upload → Cal.com booking |
+
+### Key data sources
+
+| Data | Source |
+|------|--------|
+| Interviewer's Cal.com link | Staff table → "Cal Link - First Interview" field |
+| Candidate's DISC upload form | Applicants table → "Personalised DISC Form Link" field |
+| Branch location slug | Payload from Airtable ("Interview Location" field on applicant record) |
+
+> **Prerequisite:** The **Interviewer** and **Interview Location** fields must be set on the Airtable applicant record before changing stage to "First Interview Invite Sent". If the interviewer has no Cal.com link in the Staff table, Make.com falls back to a generic booking URL.
+
+> 📸 **Screenshot:** _Make.com scenario editor showing: Webhook → 2x Airtable Get Record → Set Variable (cal_link) → Gmail_
+
+---
+
+## H3 — Changes in Status (Stage Router)
+
+> **Blueprint file:** `docs/handover/automations/applications/CHANGES_IN_STATUS.json`
+> **Triggered by:** Airtable "Changes in Stage" automation (fires when Stage = Hired, Rejected, Second Interview Invite Sent, or Rejected - Liked)
+
+### What it does
+
+A routing scenario that handles multiple hiring stage changes. A Router module directs the flow into three branches based on the applicant's new stage: hired, second interview, or other (rejected/flagged).
+
+### Step-by-step flow
+
+```
+1. Webhook (POST) → receives applicant data + new stage from Airtable
+2. Aggregator + Feeder → prepares and structures the incoming data
+3. Router:
+   ├── Route A (Stage = "Hired"):
+   │     a. Google Drive: Get File → fetches "Welcome to Smile Cliniq" PDF (Shared Drive)
+   │     b. Google Drive: Get File → fetches "SC New Employee Starter Forms" PDF (My Drive)
+   │     c. Gmail → sends "You're hired!" email to candidate:
+   │           - Attachments: both PDFs above
+   │           - Includes link to New Starter Document Form (Airtable form)
+   │           From: recruitment@smilecliniq.com
+   │     d. Gmail → sends manager notification to managers@smilecliniq.com:
+   │           - Prompts managers to log in and set the hire's onboarding start date
+   │
+   ├── Route B (Stage = "Second Interview Invite Sent"):
+   │     a. Airtable: Get Record → fetches interviewer from Staff table
+   │           → extracts "Cal Link - Second Interview" field
+   │     b. Set Variable "cal_link" → builds second interview booking URL
+   │     c. Gmail → sends second interview invite to candidate
+   │           From: recruitment@smilecliniq.com
+   │
+   └── Route C (Other stages — Rejected, Rejected - Liked, etc.):
+         a. Gmail → sends status change notification to recruitment@smilecliniq.com
+            (internal notification only — not sent to candidate)
+```
+
+### Email details
+
+| Route | From | To | Notes |
+|-------|------|----|----|
+| Hired (candidate) | `recruitment@smilecliniq.com` | Candidate | Welcome email with Welcome PDF + New Starter Forms PDF attached |
+| Hired (manager) | `recruitment@smilecliniq.com` | `managers@smilecliniq.com` | Prompts managers to set onboarding start date |
+| Second Interview Invite | `recruitment@smilecliniq.com` | Candidate | Personalised Cal.com link for second interview |
+| Other stage changes | `recruitment@smilecliniq.com` | `recruitment@smilecliniq.com` | Internal notification of status change |
+
+### Google Drive files (Hired route)
+
+| File | Location |
+|------|----------|
+| "Welcome to Smile Cliniq" PDF | Google Shared Drive |
+| "SC New Employee Starter Forms" PDF | Google My Drive |
+
+> ⚠️ **Important:** If these Drive files are moved or renamed, the Google Drive module will break. Keep file names and locations consistent. If you need to replace a file, update the file ID in the Make.com scenario's Google Drive module.
+
+> 📸 **Screenshot:** _Make.com scenario editor showing the Router with 3 branches — Hired (with Drive + 2x Gmail), Second Interview (Airtable → Gmail), and Other (Gmail)_
+
+---
+
+## Onboarding Scenarios
+
+These scenarios are triggered by the Next.js web app via environment variable webhook URLs stored in Vercel.
 
 ---
 
@@ -439,11 +629,11 @@ Each scenario that sends email uses a Google account connection. After migration
 
 **Which account to use:**
 - Scenarios 1, 2: Any Gmail (currently uses developer account — consider migrating to `recruitment@smilecliniq.com`)
-- Scenarios 3, 5, 6, 7: `recruitment@smilecliniq.com`
+- Scenarios 3, 5, 6, 7 and all Hiring scenarios (H1, H2, H3): `recruitment@smilecliniq.com`
 
 ### Reconnecting Airtable
 
-Scenarios 4, 5, 6 query Airtable directly:
+Scenarios 4, 5, 6 and all Hiring scenarios (H1, H2, H3) query Airtable directly:
 1. Open any Airtable module
 2. Click **Connection** → authenticate with the Smile Cliniq Airtable account
 3. Verify the **Base** is set to `Application Tracking System` (ID: `appZ4QT8rXFlX6LrZ`)
@@ -460,7 +650,7 @@ Scenario 6 uses the Slack "Recruitment Bot":
 ### Verifying all scenarios are active
 
 1. Log in to Make.com → Scenarios
-2. Confirm all 7 scenarios are listed and **active** (green toggle)
+2. Confirm all 10 scenarios are listed and **active** (green toggle)
 3. Check **Last run** — all should have run recently if the app is in use
 4. Any scenario showing **"Error"** needs investigation — click through to see the error detail
 
