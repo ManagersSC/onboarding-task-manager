@@ -5,8 +5,8 @@
 
 ## Sub-tasks
 
-- [ ] Add `DELETE` handler to `/api/admin/tasks/assigned-tasks/[id]/route.js`
-- [ ] Create `/api/admin/tasks/assigned-tasks/bulk-delete/route.js`
-- [ ] Update `DynamicTaskEditSheet.js` — add optional `onDelete` prop + delete button
-- [ ] Update `AssignedTasksLogsTable.js` — checkbox column, selection state, bulk-delete bar, wire sheet delete
-- [ ] Update `AssignedTasksLogsPage.js` — lift selection state
+- [x] Add `DELETE` handler to `/api/admin/tasks/assigned-tasks/[id]/route.js`
+- [x] Create `/api/admin/tasks/assigned-tasks/bulk-delete/route.js`
+- [x] Update `DynamicTaskEditSheet.js` — add optional `onDelete` prop + delete button
+- [x] Update `AssignedTasksLogsTable.js` — checkbox column, selection state, bulk-delete bar, wire sheet delete
+- [x] Update `AssignedTasksLogsPage.js` — lift selection state
