@@ -1,87 +1,116 @@
-## Task Management UI updates
+# Task Management
 
-### Overview
-This update streamlines actions across Unclaimed and My Queue, adds bulk actions, and improves search and status handling in `components/dashboard/TaskManagement.js`.
+## Overview
 
-### Key changes
-- **Consistent overflow menu**: All tasks now have a three-dots menu. Unclaimed tasks include View details, Claim, and Delete (permission-gated). Claimed tasks retain existing actions.
-- **Delete on Unclaimed**: Admins or the creator can delete unclaimed tasks directly from the Unclaimed tab (no need to claim first). Uses the existing delete confirmation dialog.
-- **Bulk actions**: You can multi-select tasks via row checkboxes. A compact bar appears to perform Claim and Delete on the selected items. Use Clear to reset selection.
-- **Status normalization**: Internal comparisons use a normalized value so statuses are handled consistently regardless of spacing/case.
-- **Enhanced search**: Search now matches title, description, assignee name, applicant name, flagged reason, and due date string.
-- **Accessibility**: Icon buttons have `aria-label`/`title` attributes.
-- **Hire Completions History (new)**: Inside the Hire Completions modal, a History toggle shows recent verification actions with the manager’s name and timestamp. This uses `Completed By` and `Completed At` stored on the `Tasks` table.
+The dashboard `TaskManagement` component (`components/dashboard/TaskManagement.js`) provides task viewing, claiming, completing, bulk operations, and search across task tabs (Unclaimed, My Queue, Overdue, Completed).
 
-### Permissions
-- Delete is allowed for:
-  - Admins (component is used in admin dashboard context)
-  - Task creator (`task.createdBy` equals the current user)
+## Features
 
-### How to use
-- Select tasks with the checkbox at the start of each row.
-- Use the top bulk bar for Claim/Delete, or the per-row overflow menu for item-level actions.
-- You can still use the inline primary action buttons (Claim/Complete) and the Flag button.
+- **Per-task overflow menu**: View details, Claim, Unclaim, Edit, Delete, Flag — actions gated by permissions
+- **Bulk actions**: Select multiple tasks via row checkboxes; bulk bar offers Claim (unclaimed), Unclaim (claimed), Delete, Flag (single reason applied to all)
+- **Delete with undo**: Single-task delete shows a 4-second "Undo" toast before dispatching the DELETE request
+- **Enhanced search**: Matches title, description, assignee name, applicant name, flagged reason, and due date
+- **Status normalization**: Internal comparisons are case/whitespace-insensitive
+- **Hire Completions History**: Inside the Hire Completions modal, a History toggle shows recent verification actions (manager name, timestamp) sourced from `Completed By` and `Completed At` on the `Tasks` table
 
-### Implementation notes
-- Selection state is tracked in-component (`selectedTaskIds: Set<string>`).
-- The bulk bar appears only when the current tab has selected items.
-- The existing delete API (`DELETE /api/dashboard/tasks/:id`) is reused.
-- Verification attribution is written by PATCH complete/resolve-and-complete. Reporting is exposed at `/api/admin/reports/hire-completions` (optional params: `applicantId`, `from`, `to`, `limit`). 
+## Permissions
 
-### File touched
-- `components/dashboard/TaskManagement.js`
-- `src/lib/utils/dashboard/tasks.js` (completion attribution fields)
-- `src/app/api/dashboard/tasks/[id]/route.js` (passes actor to completion)
-- `src/app/api/admin/reports/hire-completions/route.js` (history endpoint)
+| Action | Who can perform |
+|--------|----------------|
+| Delete unclaimed tasks | Admins; task creators (`task.createdBy === currentUser`) |
+| Claim tasks | Any authenticated staff member |
+| Complete tasks | Assigned staff or admin |
 
-If you need confirmations for bulk delete, consider integrating `components/tasks/BulkDeleteTasksModal.jsx` in a follow-up. 
-## Task Management – streamlined UX
+The `canDeleteTask(task)` helper encapsulates delete permission logic.
 
-This document summarizes the recent UX and logic improvements to the dashboard `TaskManagement` component (`components/dashboard/TaskManagement.js`).
+## API Endpoints
 
-### What changed
+### Get tasks
+```
+GET /api/dashboard/tasks
+```
 
-- Consistent overflow menu on every task row
-  - Unclaimed (global) tasks now show a three-dots menu with: View details, Claim, and Delete (when permitted).
-  - Claimed tasks keep the existing menu: View details, Edit, Unclaim, Delete.
-- Delete for unclaimed tasks
-  - Allowed for admins and task creators. Confirmation dialog includes a 4s “Undo” grace window before the delete request is sent.
-- Bulk actions
-  - Added row selection checkboxes and a sticky bulk actions bar when 1+ tasks are selected.
-  - Actions: Claim (unclaimed only), Unclaim (claimed only), Delete (via existing `BulkDeleteTasksModal`), Flag (prompts for a single reason and applies to all selected).
-- Search and status quality
-  - Search now matches title, description, assignee name, applicant name, flagged reason, and raw due date.
-  - Status handling is normalized to avoid brittle string checks.
-- Performance and accessibility
-  - `TaskItem` is memoized; tab lists are derived via `useMemo`.
-  - Added `aria-label` and `title` to key icon buttons/menus.
+Returns tasks grouped by status for dashboard tabs.
 
-### Permissions
+```json
+{
+  "tasks": {
+    "upcoming": [
+      {
+        "id": "ID-12345",
+        "title": "Schedule welcome meeting",
+        "description": "...",
+        "dueDate": "2024-06-10",
+        "priority": "high",
+        "status": "today",
+        "createdBy": "Jane Doe",
+        "for": "Sarah Chen",
+        "taskType": "Standard",
+        "blockedReason": ""
+      }
+    ],
+    "overdue": [],
+    "blocked": [],
+    "completed": []
+  }
+}
+```
 
-- Deleting unclaimed tasks:
-  - Admins can delete all tasks.
-  - Task creators can delete their own tasks.
-  - The helper `canDeleteTask(task)` encapsulates this logic (temporary until full roles are wired).
+Tab groupings:
+- `upcoming` — includes "Today" and "In-progress" statuses
+- `overdue`, `blocked`, `completed`
 
-### Bulk actions details
+Field `taskType` is `Standard` or `Monthly Reviews`. See [monthly-reviews.md](./monthly-reviews.md) for special behaviour.
 
-- Selection state is tracked in-memory; clearing the selection dismisses the bulk bar.
-- Bulk delete uses `components/tasks/BulkDeleteTasksModal.jsx` and refreshes after completion.
-- Bulk claim/unclaim dispatches parallel requests to `/api/dashboard/tasks/:id` with `PATCH` actions.
+### Claim / Complete / Delete
 
-### Key code touchpoints
+```
+PATCH /api/dashboard/tasks/:id
+Body: { "action": "claim" | "complete" }
+```
 
-- Row actions and menus are implemented in `TaskItem`.
-- Bulk bar and selection state live in `TaskManagement` along with helpers:
-  - `canDeleteTask`, `normalizeStatus`, `filteredTasks` (expanded).
-  - `bulkClaim`, `bulkUnclaim`, `bulkFlag`.
+```
+DELETE /api/dashboard/tasks/:id
+```
 
-### Rollback
+### Claim all
 
-- Deleting from the single-item dialog presents an “Undo” toast for 4 seconds prior to dispatching the DELETE request.
+```
+POST /api/dashboard/tasks/claim-all
+Body: { "applicantId"?: "...", "taskIds"?: ["..."] }
+Response: { "claimed": [...], "alreadyClaimed": [...], "errors": [...] }
+```
 
-### Follow-ups (optional)
+### Current user (for task creation)
 
-- Replace the internal tab value `"upcoming"` with `"unclaimed"` to reduce confusion.
-- Wire a proper role provider so `isAdminUser` can be sourced from session/auth.
+```
+GET /api/admin/dashboard/current-user
+Response: { "id": "recXXX", "name": "John Doe" }
+```
 
+Returns the session user's Staff record ID and name. Use to pre-fill the "Created By" field when creating a task in Airtable. Returns `401` if unauthenticated.
+
+### Hire completions history
+
+```
+GET /api/admin/reports/hire-completions
+Params: applicantId?, from?, to?, limit?
+```
+
+Returns recent task completion attribution records.
+
+## Implementation Notes
+
+- Selection state is tracked in-memory (`selectedTaskIds: Set<string>`)
+- Bulk bar appears only when the active tab has selected items
+- `TaskItem` is memoized; tab lists derived via `useMemo`
+- Bulk claim/unclaim dispatches parallel PATCH requests
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `components/dashboard/TaskManagement.js` | Main component, selection state, bulk actions |
+| `src/lib/utils/dashboard/tasks.js` | Completion attribution fields |
+| `src/app/api/dashboard/tasks/[id]/route.js` | Claim/complete/delete handler |
+| `src/app/api/admin/reports/hire-completions/route.js` | History endpoint |
