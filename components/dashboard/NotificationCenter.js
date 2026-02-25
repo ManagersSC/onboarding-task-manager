@@ -212,7 +212,7 @@ export function NotificationCenter() {
                           backgroundColor: { duration: 1.5, delay: 0.3 },
                         }}
                         className={`
-                          flex items-start gap-3 py-3 border-b border-border/20 last:border-0
+                          group flex items-start gap-3 py-3 border-b border-border/20 last:border-0
                           hover:bg-muted/20 rounded-lg -mx-2 px-2 transition-colors
                           ${notification.actionUrl ? "cursor-pointer" : ""}
                           ${isNew ? "ring-2 ring-info/20 ring-offset-2 ring-offset-background" : ""}

@@ -3,8 +3,7 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
-
-// Removed fallback notification types to ensure UI reflects only configured types
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 function toBooleanChannels(channelsArr) {
   const set = new Set(Array.isArray(channelsArr) ? channelsArr : [])
@@ -100,11 +99,10 @@ export async function GET(request) {
       .firstPage()
 
     if (!staff || staff.length === 0) {
-      // No staff row yet: return defaults without fallback types
       return Response.json({
         channels: [],
         enabledTypes: [],
-        allTypes: [],
+        allTypes: Object.values(NOTIFICATION_TYPES),
       })
     }
 
@@ -112,8 +110,8 @@ export async function GET(request) {
     const enabledTypes = record.fields["Notification Preferences"] || []
     const channelsArr = record.fields["Notification Channels"] || []
 
-    // Return only the types currently enabled/configured for the user
-    const allTypes = Array.isArray(enabledTypes) ? enabledTypes.slice() : []
+    // Full master list — drives the toggles shown in the preferences UI
+    const allTypes = Object.values(NOTIFICATION_TYPES)
 
     return Response.json({
       channels: channelsArr,

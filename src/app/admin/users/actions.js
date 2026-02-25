@@ -8,6 +8,7 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 function allowedNextTransition(current, requested) {
   return (
@@ -481,7 +482,7 @@ export async function createHiredApplicant({ name = "", email = "", jobId = "", 
           await createNotification({
             title: "New hire created",
             body: `${name} <${normalisedEmail}> has been added as Hired`,
-            type: "New Hire Added",
+            type: NOTIFICATION_TYPES.NEW_HIRE_ADDED,
             severity: "Success",
             recipientId: staff.id,
             actionUrl: "/admin/users",

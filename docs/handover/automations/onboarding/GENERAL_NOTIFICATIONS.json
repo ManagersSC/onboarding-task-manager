@@ -1,0 +1,908 @@
+{
+    "subflows": [
+        {
+            "flow": [
+                {
+                    "id": 1,
+                    "module": "gateway:CustomWebHook",
+                    "version": 1,
+                    "parameters": {
+                        "hook": 2460582,
+                        "maxResults": 1
+                    },
+                    "mapper": {},
+                    "metadata": {
+                        "designer": {
+                            "x": 0,
+                            "y": 0
+                        },
+                        "restore": {
+                            "parameters": {
+                                "hook": {
+                                    "data": {
+                                        "editable": "true"
+                                    },
+                                    "label": "Onboarding Notifications"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "hook",
+                                "type": "hook:gateway-webhook",
+                                "label": "Webhook",
+                                "required": true
+                            },
+                            {
+                                "name": "maxResults",
+                                "type": "number",
+                                "label": "Maximum number of results"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 2,
+                    "module": "builtin:BasicRouter",
+                    "version": 1,
+                    "mapper": null,
+                    "metadata": {
+                        "designer": {
+                            "x": 300,
+                            "y": 0
+                        }
+                    },
+                    "routes": [
+                        {
+                            "flow": [
+                                {
+                                    "id": 3,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "filter": {
+                                        "name": "Email",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{1.channels}}",
+                                                    "b": "Email",
+                                                    "o": "array:contain"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "name": "body",
+                                        "scope": "roundtrip",
+                                        "value": "Type: {{1.type}} <br>\nSeverity: {{1.severity}} <br>\nDetail: {{1.body}}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 600,
+                                            "y": -150,
+                                            "name": "Set body"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "roundtrip",
+                                                        "execution"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "body",
+                                                "type": "any",
+                                                "label": "body"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 5,
+                                    "module": "airtable:ActionGetRecord",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "mapper": {
+                                        "id": "{{1.recipientId}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tblfXqkA0Cna59UUk",
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 900,
+                                            "y": -150,
+                                            "name": "Get Recipient Email"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "mode": "chose",
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "mode": "chose",
+                                                    "label": "Staff"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Name",
+                                                "type": "text",
+                                                "label": "Name"
+                                            },
+                                            {
+                                                "name": "Email",
+                                                "type": "text",
+                                                "label": "Email"
+                                            },
+                                            {
+                                                "name": "Password",
+                                                "type": "text",
+                                                "label": "Password"
+                                            },
+                                            {
+                                                "name": "IsAdmin",
+                                                "type": "boolean",
+                                                "label": "IsAdmin"
+                                            },
+                                            {
+                                                "name": "Notification Preferences",
+                                                "type": "array",
+                                                "label": "Notification Preferences",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Notification Channels",
+                                                "type": "array",
+                                                "label": "Notification Channels",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Slack ID",
+                                                "type": "text",
+                                                "label": "Slack ID"
+                                            },
+                                            {
+                                                "name": "Cal Link - First Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - First Interview"
+                                            },
+                                            {
+                                                "name": "Cal Link - Second Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - Second Interview"
+                                            },
+                                            {
+                                                "name": "Record Id",
+                                                "type": "text",
+                                                "label": "Record Id"
+                                            },
+                                            {
+                                                "name": "Hiring For",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Hiring For"
+                                            },
+                                            {
+                                                "name": "Assigned Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Assigned Applicants"
+                                            },
+                                            {
+                                                "name": "Total Interviewed",
+                                                "type": "array",
+                                                "label": "Total Interviewed"
+                                            },
+                                            {
+                                                "name": "Feeedback",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Feeedback"
+                                            },
+                                            {
+                                                "name": "Tasks",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks"
+                                            },
+                                            {
+                                                "name": "Tasks 2",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks 2"
+                                            },
+                                            {
+                                                "name": "Notifications",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Notifications"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 6,
+                                    "module": "google-email:ActionSendEmail",
+                                    "version": 2,
+                                    "parameters": {
+                                        "account": 1545323
+                                    },
+                                    "mapper": {
+                                        "cc": [],
+                                        "to": [
+                                            "{{5.Email}}"
+                                        ],
+                                        "bcc": [],
+                                        "from": "",
+                                        "html": "{{3.body}}",
+                                        "subject": "{{1.title}}",
+                                        "attachments": []
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1200,
+                                            "y": -150,
+                                            "name": "Send Email"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "cc": {
+                                                    "mode": "chose"
+                                                },
+                                                "to": {
+                                                    "mode": "chose",
+                                                    "items": [
+                                                        null
+                                                    ]
+                                                },
+                                                "bcc": {
+                                                    "mode": "chose"
+                                                },
+                                                "attachments": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "account": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "google-restricted"
+                                                    },
+                                                    "label": "Recruitment (recruitment@smilecliniq.com)"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "account",
+                                                "type": "account:google-restricted",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "from",
+                                                "type": "text",
+                                                "label": "From"
+                                            },
+                                            {
+                                                "name": "to",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address",
+                                                    "required": true
+                                                },
+                                                "type": "array",
+                                                "label": "To",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "subject",
+                                                "type": "text",
+                                                "label": "Subject"
+                                            },
+                                            {
+                                                "name": "html",
+                                                "type": "text",
+                                                "label": "Content"
+                                            },
+                                            {
+                                                "name": "attachments",
+                                                "spec": [
+                                                    {
+                                                        "name": "fileName",
+                                                        "type": "filename",
+                                                        "label": "File name",
+                                                        "required": true,
+                                                        "semantic": "file:name"
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true,
+                                                        "semantic": "file:data"
+                                                    },
+                                                    {
+                                                        "name": "cid",
+                                                        "type": "text",
+                                                        "label": "Content-ID"
+                                                    }
+                                                ],
+                                                "type": "array",
+                                                "label": "Attachments"
+                                            },
+                                            {
+                                                "name": "cc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Copy recipient"
+                                            },
+                                            {
+                                                "name": "bcc",
+                                                "spec": {
+                                                    "name": "value",
+                                                    "type": "email",
+                                                    "label": "Email address"
+                                                },
+                                                "type": "array",
+                                                "label": "Blind copy recipient"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "flow": [
+                                {
+                                    "id": 8,
+                                    "module": "airtable:ActionGetRecord",
+                                    "version": 3,
+                                    "parameters": {
+                                        "__IMTCONN__": 1129955
+                                    },
+                                    "filter": {
+                                        "name": "Slack",
+                                        "conditions": [
+                                            [
+                                                {
+                                                    "a": "{{1.channels}}",
+                                                    "b": "Slack",
+                                                    "o": "array:contain"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    "mapper": {
+                                        "id": "{{1.recipientId}}",
+                                        "base": "appZ4QT8rXFlX6LrZ",
+                                        "table": "tblfXqkA0Cna59UUk",
+                                        "useColumnId": false
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 617,
+                                            "y": 183,
+                                            "name": "Get Recipient Name"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "base": {
+                                                    "mode": "chose",
+                                                    "label": "Application Tracking System"
+                                                },
+                                                "table": {
+                                                    "mode": "chose",
+                                                    "label": "Staff"
+                                                },
+                                                "useColumnId": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "airtable2"
+                                                    },
+                                                    "label": "Smile Cliniq - ATS"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:airtable3,airtable2",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "base",
+                                                "type": "select",
+                                                "label": "Base",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "useColumnId",
+                                                "type": "boolean",
+                                                "label": "Use Column ID",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "table",
+                                                "type": "select",
+                                                "label": "Table",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "Record ID",
+                                                "required": true
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "id",
+                                                "type": "text",
+                                                "label": "ID"
+                                            },
+                                            {
+                                                "name": "createdTime",
+                                                "type": "date",
+                                                "label": "Created Time"
+                                            },
+                                            {
+                                                "name": "Name",
+                                                "type": "text",
+                                                "label": "Name"
+                                            },
+                                            {
+                                                "name": "Email",
+                                                "type": "text",
+                                                "label": "Email"
+                                            },
+                                            {
+                                                "name": "Password",
+                                                "type": "text",
+                                                "label": "Password"
+                                            },
+                                            {
+                                                "name": "IsAdmin",
+                                                "type": "boolean",
+                                                "label": "IsAdmin"
+                                            },
+                                            {
+                                                "name": "Notification Preferences",
+                                                "type": "array",
+                                                "label": "Notification Preferences",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Notification Channels",
+                                                "type": "array",
+                                                "label": "Notification Channels",
+                                                "dynamic": true,
+                                                "editable": true
+                                            },
+                                            {
+                                                "name": "Slack ID",
+                                                "type": "text",
+                                                "label": "Slack ID"
+                                            },
+                                            {
+                                                "name": "Cal Link - First Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - First Interview"
+                                            },
+                                            {
+                                                "name": "Cal Link - Second Interview",
+                                                "type": "text",
+                                                "label": "Cal Link - Second Interview"
+                                            },
+                                            {
+                                                "name": "Record Id",
+                                                "type": "text",
+                                                "label": "Record Id"
+                                            },
+                                            {
+                                                "name": "Hiring For",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Hiring For"
+                                            },
+                                            {
+                                                "name": "Assigned Applicants",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Assigned Applicants"
+                                            },
+                                            {
+                                                "name": "Total Interviewed",
+                                                "type": "array",
+                                                "label": "Total Interviewed"
+                                            },
+                                            {
+                                                "name": "Feeedback",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Feeedback"
+                                            },
+                                            {
+                                                "name": "Tasks",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks"
+                                            },
+                                            {
+                                                "name": "Tasks 2",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Tasks 2"
+                                            },
+                                            {
+                                                "name": "Notifications",
+                                                "spec": {
+                                                    "label": "Record ID"
+                                                },
+                                                "type": "array",
+                                                "label": "Notifications"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 9,
+                                    "module": "util:SetVariable2",
+                                    "version": 1,
+                                    "parameters": {},
+                                    "mapper": {
+                                        "name": "slack_message",
+                                        "scope": "roundtrip",
+                                        "value": "{\r\n  \"blocks\": [\r\n    {\r\n      \"type\": \"header\",\r\n      \"text\": {\r\n        \"type\": \"plain_text\",\r\n        \"text\": \"🔔 Notification for {{8.Name}}\",\r\n        \"emoji\": true\r\n      }\r\n    },\r\n    {\r\n      \"type\": \"section\",\r\n      \"fields\": [\r\n        {\r\n          \"type\": \"mrkdwn\",\r\n          \"text\": \"*Type:*\\n{{1.type}}\"\r\n        },\r\n        {\r\n          \"type\": \"mrkdwn\",\r\n          \"text\": \"*Level:*\\n{{1.severity}}\"\r\n        },\r\n        {\r\n          \"type\": \"mrkdwn\",\r\n          \"text\": \"*Title:*\\n{{1.title}}\"\r\n        },\r\n        {\r\n          \"type\": \"mrkdwn\",\r\n          \"text\": \"*Detail:*\\n{{1.body}}\"\r\n        }\r\n      ]\r\n    }\r\n  ]\r\n}"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 917,
+                                            "y": 183,
+                                            "name": "Create Slack Message"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "scope": {
+                                                    "label": "One cycle"
+                                                }
+                                            }
+                                        },
+                                        "expect": [
+                                            {
+                                                "name": "name",
+                                                "type": "text",
+                                                "label": "Variable name",
+                                                "required": true
+                                            },
+                                            {
+                                                "name": "scope",
+                                                "type": "select",
+                                                "label": "Variable lifetime",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "roundtrip",
+                                                        "execution"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Variable value"
+                                            }
+                                        ],
+                                        "interface": [
+                                            {
+                                                "name": "slack_message",
+                                                "type": "any",
+                                                "label": "slack_message"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "id": 14,
+                                    "module": "slack:CreateMessage",
+                                    "version": 4,
+                                    "parameters": {
+                                        "__IMTCONN__": 9017702
+                                    },
+                                    "mapper": {
+                                        "parse": false,
+                                        "blocks": "{{9.slack_message}}",
+                                        "mrkdwn": true,
+                                        "channel": "{{8.`Slack ID`}}",
+                                        "channelType": "im",
+                                        "channelWType": "list"
+                                    },
+                                    "metadata": {
+                                        "designer": {
+                                            "x": 1224,
+                                            "y": 180,
+                                            "name": "DM"
+                                        },
+                                        "restore": {
+                                            "expect": {
+                                                "parse": {
+                                                    "mode": "chose"
+                                                },
+                                                "mrkdwn": {
+                                                    "mode": "chose"
+                                                },
+                                                "channel": {
+                                                    "mode": "edit"
+                                                },
+                                                "link_names": {
+                                                    "mode": "chose"
+                                                },
+                                                "channelType": {
+                                                    "label": "Direct message"
+                                                },
+                                                "channelWType": {
+                                                    "label": "Select from the list"
+                                                },
+                                                "unfurl_links": {
+                                                    "mode": "chose"
+                                                },
+                                                "unfurl_media": {
+                                                    "mode": "chose"
+                                                },
+                                                "reply_broadcast": {
+                                                    "mode": "chose"
+                                                }
+                                            },
+                                            "parameters": {
+                                                "__IMTCONN__": {
+                                                    "data": {
+                                                        "scoped": "true",
+                                                        "connection": "slack3"
+                                                    },
+                                                    "label": "Recruitment Bot (smilecliniq.slack.com - recruitment_bot)"
+                                                }
+                                            }
+                                        },
+                                        "parameters": [
+                                            {
+                                                "name": "__IMTCONN__",
+                                                "type": "account:slack2,slack3",
+                                                "label": "Connection",
+                                                "required": true
+                                            }
+                                        ],
+                                        "expect": [
+                                            {
+                                                "name": "channelWType",
+                                                "type": "select",
+                                                "label": "Enter a channel ID or name",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "manualy",
+                                                        "list"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "text",
+                                                "type": "text",
+                                                "label": "Text"
+                                            },
+                                            {
+                                                "name": "blocks",
+                                                "type": "text",
+                                                "label": "Blocks"
+                                            },
+                                            {
+                                                "name": "thread_ts",
+                                                "type": "text",
+                                                "label": "Thread message ID (time stamp)"
+                                            },
+                                            {
+                                                "name": "reply_broadcast",
+                                                "type": "boolean",
+                                                "label": "Reply broadcast"
+                                            },
+                                            {
+                                                "name": "link_names",
+                                                "type": "boolean",
+                                                "label": "Link names"
+                                            },
+                                            {
+                                                "name": "parse",
+                                                "type": "boolean",
+                                                "label": "Parse message text"
+                                            },
+                                            {
+                                                "name": "mrkdwn",
+                                                "type": "boolean",
+                                                "label": "Use markdown"
+                                            },
+                                            {
+                                                "name": "unfurl_links",
+                                                "type": "boolean",
+                                                "label": "Unfurl primarily text-based content"
+                                            },
+                                            {
+                                                "name": "unfurl_media",
+                                                "type": "boolean",
+                                                "label": "Unfurl media content"
+                                            },
+                                            {
+                                                "name": "icon_emoji",
+                                                "type": "text",
+                                                "label": "Icon emoji"
+                                            },
+                                            {
+                                                "name": "icon_url",
+                                                "type": "url",
+                                                "label": "Icon url"
+                                            },
+                                            {
+                                                "name": "username",
+                                                "type": "text",
+                                                "label": "User name"
+                                            },
+                                            {
+                                                "name": "channelType",
+                                                "type": "select",
+                                                "label": "Channel type",
+                                                "required": true,
+                                                "validate": {
+                                                    "enum": [
+                                                        "public",
+                                                        "private",
+                                                        "im",
+                                                        "mpim"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "channel",
+                                                "type": "select",
+                                                "label": "User",
+                                                "required": true
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}

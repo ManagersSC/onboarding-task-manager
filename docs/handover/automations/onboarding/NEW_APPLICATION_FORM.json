@@ -1,0 +1,412 @@
+{
+    "subflows": [
+        {
+            "flow": [
+                {
+                    "id": 1,
+                    "module": "gateway:CustomWebHook",
+                    "version": 1,
+                    "parameters": {
+                        "hook": 3116118,
+                        "maxResults": 1
+                    },
+                    "mapper": {},
+                    "metadata": {
+                        "designer": {
+                            "x": 0,
+                            "y": 150
+                        },
+                        "restore": {
+                            "parameters": {
+                                "hook": {
+                                    "data": {
+                                        "editable": "true"
+                                    },
+                                    "label": "Send New Application Form"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "hook",
+                                "type": "hook:gateway-webhook",
+                                "label": "Webhook",
+                                "required": true
+                            },
+                            {
+                                "name": "maxResults",
+                                "type": "number",
+                                "label": "Maximum number of results"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 4,
+                    "module": "util:SetVariable2",
+                    "version": 1,
+                    "parameters": {},
+                    "mapper": {
+                        "name": "job",
+                        "scope": "roundtrip",
+                        "value": "{{if(1.jobType = \"Nurse\"; \"recHkcTWJeDUpXkUD\"; if(1.jobType = \"Receptionist\"; \"recDnw49CqyQviakA\"; if(1.jobType = \"Dentist\"; \"recVNjrfAFDmx2UvZ\"; if(1.jobType = \"Manager\"; \"recRCDWzRRIud8NfV\"))))}}"
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 300,
+                            "y": 150,
+                            "name": "Job Name"
+                        },
+                        "restore": {
+                            "expect": {
+                                "scope": {
+                                    "label": "One cycle"
+                                }
+                            }
+                        },
+                        "expect": [
+                            {
+                                "name": "name",
+                                "type": "text",
+                                "label": "Variable name",
+                                "required": true
+                            },
+                            {
+                                "name": "scope",
+                                "type": "select",
+                                "label": "Variable lifetime",
+                                "required": true,
+                                "validate": {
+                                    "enum": [
+                                        "roundtrip",
+                                        "execution"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "value",
+                                "type": "any",
+                                "label": "Variable value"
+                            }
+                        ],
+                        "interface": [
+                            {
+                                "name": "job",
+                                "type": "any",
+                                "label": "job"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 2,
+                    "module": "builtin:BasicFeeder",
+                    "version": 1,
+                    "parameters": {},
+                    "mapper": {
+                        "array": "{{1.emails}}"
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 600,
+                            "y": 150
+                        },
+                        "restore": {
+                            "expect": {
+                                "array": {
+                                    "mode": "edit"
+                                }
+                            }
+                        },
+                        "expect": [
+                            {
+                                "mode": "edit",
+                                "name": "array",
+                                "spec": [],
+                                "type": "array",
+                                "label": "Array"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "id": 3,
+                    "module": "google-email:ActionSendEmail",
+                    "version": 2,
+                    "parameters": {
+                        "account": 1130782
+                    },
+                    "mapper": {
+                        "cc": [],
+                        "to": [
+                            "{{2.value}}"
+                        ],
+                        "bcc": [],
+                        "from": "",
+                        "html": "<p>Hi there,</p>\r\n\r\n  <p>Thank you for your interest in joining Smile Cliniq. To apply for the positions of nurse, receptionist, dentist, or manager, please complete the short application form at the link below:</p>\r\n\r\n  <p>\r\n    <a href=\"https://airtable.com/appZ4QT8rXFlX6LrZ/pagVXLJWkx39hTvHF/form?prefill_Applying+For={{4.job}}&prefill_Email={{2.value}}\">\r\n      Submit your application\r\n    </a>\r\n  </p>\r\n\r\n  <p>Please select the role you are applying for and provide the requested details. Applications submitted outside the form will not be reviewed.</p>\r\n\r\n  <p>If you have any questions, reply to this email.</p>\r\n\r\n  <p>Kind regards,<br>\r\n  Smile Cliniq<br></p>",
+                        "subject": "Application Form for {{1.jobType}} – Smile Cliniq",
+                        "attachments": []
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 900,
+                            "y": 150
+                        },
+                        "restore": {
+                            "expect": {
+                                "cc": {
+                                    "mode": "chose"
+                                },
+                                "to": {
+                                    "mode": "chose",
+                                    "items": [
+                                        null
+                                    ]
+                                },
+                                "bcc": {
+                                    "mode": "chose"
+                                },
+                                "attachments": {
+                                    "mode": "chose"
+                                }
+                            },
+                            "parameters": {
+                                "account": {
+                                    "data": {
+                                        "scoped": "true",
+                                        "connection": "google-restricted"
+                                    },
+                                    "label": "Flow Fusion Gmail (sauravkc@flowfusionai.com)"
+                                }
+                            }
+                        },
+                        "parameters": [
+                            {
+                                "name": "account",
+                                "type": "account:google-restricted",
+                                "label": "Connection",
+                                "required": true
+                            }
+                        ],
+                        "expect": [
+                            {
+                                "name": "from",
+                                "type": "text",
+                                "label": "From"
+                            },
+                            {
+                                "name": "to",
+                                "spec": {
+                                    "name": "value",
+                                    "type": "email",
+                                    "label": "Email address",
+                                    "required": true
+                                },
+                                "type": "array",
+                                "label": "To",
+                                "required": true
+                            },
+                            {
+                                "name": "subject",
+                                "type": "text",
+                                "label": "Subject"
+                            },
+                            {
+                                "name": "html",
+                                "type": "text",
+                                "label": "Content"
+                            },
+                            {
+                                "name": "attachments",
+                                "spec": [
+                                    {
+                                        "name": "fileName",
+                                        "type": "filename",
+                                        "label": "File name",
+                                        "required": true,
+                                        "semantic": "file:name"
+                                    },
+                                    {
+                                        "name": "data",
+                                        "type": "buffer",
+                                        "label": "Data",
+                                        "required": true,
+                                        "semantic": "file:data"
+                                    },
+                                    {
+                                        "name": "cid",
+                                        "type": "text",
+                                        "label": "Content-ID"
+                                    }
+                                ],
+                                "type": "array",
+                                "label": "Attachments"
+                            },
+                            {
+                                "name": "cc",
+                                "spec": {
+                                    "name": "value",
+                                    "type": "email",
+                                    "label": "Email address"
+                                },
+                                "type": "array",
+                                "label": "Copy recipient"
+                            },
+                            {
+                                "name": "bcc",
+                                "spec": {
+                                    "name": "value",
+                                    "type": "email",
+                                    "label": "Email address"
+                                },
+                                "type": "array",
+                                "label": "Blind copy recipient"
+                            }
+                        ]
+                    },
+                    "onerror": [
+                        {
+                            "id": 6,
+                            "module": "gateway:WebhookRespond",
+                            "version": 1,
+                            "parameters": {},
+                            "mapper": {
+                                "body": "",
+                                "status": "500",
+                                "headers": []
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1200,
+                                    "y": 300
+                                },
+                                "restore": {
+                                    "expect": {
+                                        "headers": {
+                                            "mode": "chose"
+                                        }
+                                    }
+                                },
+                                "expect": [
+                                    {
+                                        "name": "status",
+                                        "type": "uinteger",
+                                        "label": "Status",
+                                        "required": true,
+                                        "validate": {
+                                            "min": 100
+                                        }
+                                    },
+                                    {
+                                        "name": "body",
+                                        "type": "any",
+                                        "label": "Body"
+                                    },
+                                    {
+                                        "name": "headers",
+                                        "spec": [
+                                            {
+                                                "name": "key",
+                                                "type": "text",
+                                                "label": "Key",
+                                                "required": true,
+                                                "validate": {
+                                                    "max": 256
+                                                }
+                                            },
+                                            {
+                                                "name": "value",
+                                                "type": "text",
+                                                "label": "Value",
+                                                "required": true,
+                                                "validate": {
+                                                    "max": 4096
+                                                }
+                                            }
+                                        ],
+                                        "type": "array",
+                                        "label": "Custom headers",
+                                        "validate": {
+                                            "maxItems": 16
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": 5,
+                    "module": "gateway:WebhookRespond",
+                    "version": 1,
+                    "parameters": {},
+                    "mapper": {
+                        "body": "",
+                        "status": "200",
+                        "headers": []
+                    },
+                    "metadata": {
+                        "designer": {
+                            "x": 1200,
+                            "y": 0
+                        },
+                        "restore": {
+                            "expect": {
+                                "headers": {
+                                    "mode": "chose"
+                                }
+                            }
+                        },
+                        "expect": [
+                            {
+                                "name": "status",
+                                "type": "uinteger",
+                                "label": "Status",
+                                "required": true,
+                                "validate": {
+                                    "min": 100
+                                }
+                            },
+                            {
+                                "name": "body",
+                                "type": "any",
+                                "label": "Body"
+                            },
+                            {
+                                "name": "headers",
+                                "spec": [
+                                    {
+                                        "name": "key",
+                                        "type": "text",
+                                        "label": "Key",
+                                        "required": true,
+                                        "validate": {
+                                            "max": 256
+                                        }
+                                    },
+                                    {
+                                        "name": "value",
+                                        "type": "text",
+                                        "label": "Value",
+                                        "required": true,
+                                        "validate": {
+                                            "max": 4096
+                                        }
+                                    }
+                                ],
+                                "type": "array",
+                                "label": "Custom headers",
+                                "validate": {
+                                    "maxItems": 16
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}
