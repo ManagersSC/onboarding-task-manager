@@ -22,6 +22,6 @@ Fix two silent bugs that stopped notifications from being created/displayed sinc
   - [x] `src/app/api/admin/users/[id]/monthly-review/route.js`
   - [x] `src/app/admin/users/actions.js`
   - [x] `src/app/api/quizzes/[quizId]/route.js`
-- [ ] Create `src/app/api/admin/notifications/test/route.js` — diagnostic test endpoint
+- [x] Create `src/app/api/admin/notifications/test/route.js` — diagnostic test endpoint
 
 **Manual step (Airtable):** Change `Notifications.Type` field from `singleSelect` → `singleLineText`
