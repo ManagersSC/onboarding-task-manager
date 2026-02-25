@@ -4,6 +4,7 @@ import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 // Core Tasks Route
 export async function GET(request) {
@@ -360,7 +361,7 @@ export async function DELETE(request) {
         await createNotification({
           title: "Task Deleted",
           body: `A task you were assigned (ID: ${id}) has been deleted.`,
-          type: "Task",
+          type: NOTIFICATION_TYPES.TASK_DELETION,
           severity: "Warning",
           recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
           source: "System"

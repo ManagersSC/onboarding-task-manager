@@ -4,6 +4,7 @@ import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 // For Task Edit Sheet 
 export async function GET(request, { params }) {
@@ -178,7 +179,7 @@ export async function PATCH(request, { params }) {
       await createNotification({
         title: "Task Updated",
         body: `A task you were assigned ("${formData.get("title")}") has been updated.`,
-        type: "Task",
+        type: NOTIFICATION_TYPES.TASK_UPDATE,
         severity: "Info",
         recipientId: 'AFFECTED_USER_ID', // TODO: Replace with actual affected user record id
         source: "System"

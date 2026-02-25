@@ -4,6 +4,7 @@ import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import { logAuditEvent } from "@/lib/auditLogger"
 import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 export async function POST(request) {
   let userEmail
@@ -216,7 +217,7 @@ export async function POST(request) {
           await createNotification({
             title: "New Task Assigned",
             body: `You have been assigned the task: "${taskName}".`,
-            type: "Task",
+            type: NOTIFICATION_TYPES.TASK_ASSIGNMENT,
             severity: "Info",
             recipientId: applicantRecord.id,
             actionUrl: `https://yourapp.com/tasks/${logRecord.id}`,

@@ -4,6 +4,7 @@ import Airtable from "airtable";
 import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { createNotification } from "@/lib/notifications";
+import { NOTIFICATION_TYPES } from "@/lib/notification-types";
 
 // GET: Fetch attachments for a log record
 export async function GET(request, { params }) {
@@ -120,7 +121,7 @@ export async function PATCH(request, { params }) {
           title: "Document Uploaded",
           body: `New document(s) uploaded: ${fileNames}.
 `,
-          type: "Document",
+          type: NOTIFICATION_TYPES.DOCUMENT_UPLOAD,
           severity: "Info",
           recipientId: admin.id,
           actionUrl: `https://yourapp.com/onboarding-tasks-logs/${id}`,
