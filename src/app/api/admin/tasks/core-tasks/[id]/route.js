@@ -162,12 +162,11 @@ export async function PATCH(request, { params }) {
 
       let raw = formData.get(formKey)
 
-      // Week and Day are numeric fields — Airtable rejects null and strings.
-      // Skip entirely when empty (no "None" option in UI), parse as int when set.
+      // Week and Day are single-select fields in Airtable with string values "1"–"5"
+      // Skip entirely when empty (no "None" option in UI), send raw string when set.
       if (formKey === "week" || formKey === "day") {
         if (raw === "") continue // no value selected — leave Airtable field untouched
-        const num = parseInt(raw, 10)
-        if (!isNaN(num)) fieldsToUpdate[airtableKey] = num
+        fieldsToUpdate[airtableKey] = raw // e.g. "3" — must be a string for single-select
         continue
       }
 
