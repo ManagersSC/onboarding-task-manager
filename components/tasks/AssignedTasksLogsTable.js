@@ -26,7 +26,7 @@ import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 
 // ── Group logs by status ──────────────────────────────────────────────────────
-const STATUS_ORDER = ["Not Started", "In Progress", "Completed"]
+const STATUS_ORDER = ["Assigned", "In Progress", "Overdue", "Completed", "Scheduled"]
 
 function groupLogsByStatus(logs) {
   const groups = {}
@@ -52,9 +52,11 @@ function groupLogsByStatus(logs) {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const STATUS_STYLES = {
-  "Completed":   "bg-success/15 text-success border-success/25",
+  "Completed":  "bg-success/15 text-success border-success/25",
+  "Assigned":   "bg-info/15 text-info border-info/25",
+  "Overdue":    "bg-destructive/15 text-destructive border-destructive/25",
+  "Scheduled":  "bg-warning/15 text-warning border-warning/25",
   "In Progress": "bg-info/15 text-info border-info/25",
-  "Not Started": "bg-muted text-muted-foreground border-border",
 }
 
 function StatusBadge({ status }) {
@@ -282,9 +284,10 @@ function TableFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Not Started">Not Started</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Assigned">Assigned</SelectItem>
+              <SelectItem value="Overdue">Overdue</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Scheduled">Scheduled</SelectItem>
             </SelectContent>
           </Select>
 
