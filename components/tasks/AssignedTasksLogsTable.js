@@ -5,7 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
-import { ExternalLink, ChevronLeft, ChevronRight, Paperclip, Trash2, Loader2 } from "lucide-react"
+import { Badge } from "@components/ui/badge"
+import {
+  ExternalLink, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
+  Paperclip, Trash2, Loader2, Pencil, RefreshCw, X,
+} from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -19,104 +23,46 @@ import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
 import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
 import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
 import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
+import { FileViewerModal } from "./files/FileViewerModal"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 
-// All table filters
-function TableFilters({
-  onSearch,
-  onSubmit,
-  isLoading,
-  name,
-  folder,
-  assignedDate,
-  onNameChange,
-  onFolderChange,
-  onAssignedDateChange,
-  taskCount,
-}) {
-  const [term, setTerm] = useState("")
-  const debouncedTerm = useDebounce(term, 300)
+// ── Sort indicator ────────────────────────────────────────────────────────────
+function SortIndicator({ column, sortColumn, sortDirection }) {
+  if (sortColumn !== column) return null
+  return sortDirection === "asc"
+    ? <ChevronUp className="ml-1 h-3 w-3 inline shrink-0" />
+    : <ChevronDown className="ml-1 h-3 w-3 inline shrink-0" />
+}
 
-  // Emit debounced value when it changes
-  useEffect(() => {
-    onSearch(debouncedTerm)
-  }, [debouncedTerm, onSearch])
+// ── Status badge ──────────────────────────────────────────────────────────────
+const STATUS_STYLES = {
+  "Completed":   "bg-success/15 text-success border-success/25",
+  "In Progress": "bg-info/15 text-info border-info/25",
+  "Not Started": "bg-muted text-muted-foreground border-border",
+}
 
-  const handleChange = (e) => {
-    setTerm(e.target.value)
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      onSubmit(term)
-    }
-  }
-
-  const handleClear = () => {
-    setTerm("")
-    onSearch("")
-  }
-
+function StatusBadge({ status }) {
+  if (!status) return <span className="text-muted-foreground">—</span>
+  const cls = STATUS_STYLES[status] ?? "bg-muted text-muted-foreground border-border"
   return (
-    <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center w-full">
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-        {/* Search Bar */}
-        <AnimatedSearchBar
-          value={term}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onClear={handleClear}
-          isLoading={isLoading}
-        />
-
-        {/* Filter Dropdowns */}
-        <div className="flex gap-2">
-          {/* Name Filter */}
-          <Select value={name} onValueChange={onNameChange}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Name" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Names</SelectItem>
-              {/* Add dynamic name options here if available */}
-            </SelectContent>
-          </Select>
-
-          {/* Folder Filter */}
-          <Select value={folder} onValueChange={onFolderChange}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Folder" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Folders</SelectItem>
-              {/* Add dynamic folder options here if available */}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Task Count */}
-      <div className="text-sm text-muted-foreground">
-        {taskCount > 0 && !isLoading ? <span>Showing {taskCount} tasks</span> : null}
-      </div>
-    </div>
+    <Badge variant="outline" className={cn("text-xs whitespace-nowrap", cls)}>
+      {status}
+    </Badge>
   )
 }
 
-// Custom header component with sorting and resizing
-const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onSort, onResizeStart, isHovered }) => {
-  const isSorted = sortColumn === column
-  const direction = isSorted ? (sortDirection === "asc" ? "up" : "down") : null
-
+// ── Resizable + sortable column header ───────────────────────────────────────
+function ResizableColHeader({ children, column, sortColumn, sortDirection, onSort, onResizeStart, isHovered }) {
   return (
-    <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70 w-full h-full">
+    <div className="group relative cursor-pointer select-none text-left w-full h-full">
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50 text-left"
-        style={{ paddingRight: "24px" }} // Space for the sort icon and resizer
+        className="w-full h-full p-2 font-normal flex items-center hover:bg-muted/50 text-left"
+        style={{ paddingRight: "24px" }}
       >
         {children}
-        {isSorted && <span className="ml-2">{direction === "up" ? "▲" : "▼"}</span>}
+        <SortIndicator column={column} sortColumn={sortColumn} sortDirection={sortDirection} />
       </button>
       <div
         className={cn(
@@ -129,6 +75,169 @@ const AnimatedColumnHeader = ({ children, column, sortColumn, sortDirection, onS
   )
 }
 
+// ── Column to API field map ───────────────────────────────────────────────────
+const COLUMN_FIELD_MAP = {
+  name:         "Applicant Name",
+  email:        "Applicant Email",
+  title:        "Display Title",
+  description:  "Display Desc",
+  folder:       "Folder Name",
+  status:       "Status",
+  assignedDate: "Created Date",
+}
+
+// ── Filters bar ───────────────────────────────────────────────────────────────
+function TableFilters({
+  onSearch, onSubmit, isLoading,
+  folder, status, hasDocuments,
+  onFolderChange, onStatusChange, onHasDocumentsChange,
+  taskCount, onRefresh,
+  searchTerm, onClearSearch,
+}) {
+  const [term, setTerm] = useState(searchTerm ?? "")
+
+  // Keep internal term in sync if parent clears it
+  useEffect(() => { setTerm(searchTerm ?? "") }, [searchTerm])
+
+  const debouncedTerm = useDebounce(term, 300)
+  useEffect(() => { onSearch(debouncedTerm) }, [debouncedTerm, onSearch])
+
+  const handleClear = () => { setTerm(""); onSearch("") }
+
+  // Lazy folder loading
+  const [folderOptions, setFolderOptions] = useState([])
+  const [foldersLoading, setFoldersLoading] = useState(false)
+  const [foldersFetched, setFoldersFetched] = useState(false)
+
+  const fetchFolders = async () => {
+    if (foldersFetched || foldersLoading) return
+    setFoldersLoading(true)
+    try {
+      const res = await fetch("/api/admin/folders?includeInactive=true")
+      if (!res.ok) throw new Error("Failed to load folders")
+      const data = await res.json()
+      setFolderOptions((data.folders || []).map((f) => f.name).filter(Boolean).sort())
+      setFoldersFetched(true)
+    } catch {
+      toast.error("Could not load folder list")
+    } finally {
+      setFoldersLoading(false)
+    }
+  }
+
+  const activeFilterCount = [folder !== "all", status !== "all", hasDocuments !== "all"].filter(Boolean).length
+  const clearAllFilters = () => { onFolderChange("all"); onStatusChange("all"); onHasDocumentsChange("all") }
+
+  return (
+    <div className="space-y-3">
+      {/* Row 1 — search + dropdowns + refresh */}
+      <div className="flex flex-col sm:flex-row justify-between gap-3 items-start sm:items-center w-full">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto flex-wrap">
+          <AnimatedSearchBar
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSubmit(term) }}
+            onClear={handleClear}
+            isLoading={isLoading}
+          />
+
+          {/* Folder — lazy loads on first open */}
+          <Select value={folder} onValueChange={onFolderChange} onOpenChange={(open) => { if (open) fetchFolders() }}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Folder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Folders</SelectItem>
+              {foldersLoading && (
+                <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                </div>
+              )}
+              {folderOptions.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status */}
+          <Select value={status} onValueChange={onStatusChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Not Started">Not Started</SelectItem>
+              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Has Documents */}
+          <Select value={hasDocuments} onValueChange={onHasDocumentsChange}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Documents" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Resources</SelectItem>
+              <SelectItem value="yes">Has Documents</SelectItem>
+              <SelectItem value="no">No Documents</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Task count + refresh */}
+        <div className="flex items-center gap-2 shrink-0">
+          {taskCount > 0 && !isLoading && (
+            <span className="text-sm text-muted-foreground">
+              Showing {taskCount} task{taskCount !== 1 ? "s" : ""}
+            </span>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={onRefresh} disabled={isLoading} className="h-9 w-9">
+                  <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      {/* Row 2 — active filter pills */}
+      <AnimatePresence>
+        {(activeFilterCount > 0 || searchTerm) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex flex-wrap items-center gap-2"
+          >
+            {searchTerm && <AnimatedFilterPill label="Search" value={searchTerm} onRemove={onClearSearch} />}
+            {folder !== "all" && <AnimatedFilterPill label="Folder" value={folder} onRemove={() => onFolderChange("all")} />}
+            {status !== "all" && <AnimatedFilterPill label="Status" value={status} onRemove={() => onStatusChange("all")} />}
+            {hasDocuments !== "all" && (
+              <AnimatedFilterPill
+                label="Documents"
+                value={hasDocuments === "yes" ? "Has Documents" : "No Documents"}
+                onRemove={() => onHasDocumentsChange("all")}
+              />
+            )}
+            {activeFilterCount > 1 && (
+              <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs text-muted-foreground" onClick={clearAllFilters}>
+                <X className="h-3 w-3" /> Clear all
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -137,176 +246,113 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("")
-  const [nameFilter, setNameFilter] = useState("all")
   const [folderFilter, setFolderFilter] = useState("all")
-  const [assignedDateFilter, setAssignedDateFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [hasDocumentsFilter, setHasDocumentsFilter] = useState("all")
 
   // Row selection
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
 
-  // Task Editing
+  // Task editing
   const [selectedLogId, setSelectedLogId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-  // Column resizing - using refs instead of state to avoid stale closures
+  // Attachment viewer
+  const [viewerLogId, setViewerLogId] = useState(null)
+  const [isViewerOpen, setIsViewerOpen] = useState(false)
+
+  // Column widths
   const [columnWidths, setColumnWidths] = useState({
-    checkbox: 48,
-    name: 160,
-    email: 200,
-    title: 200,
-    description: 220,
-    folder: 140,
-    attachments: 140,
-    resource: 120,
-    assignedDate: 160,
-    edit: 100,
+    checkbox:     48,
+    name:         160,
+    email:        190,
+    title:        190,
+    description:  200,
+    folder:       140,
+    status:       130,
+    attachments:  130,
+    resource:     100,
+    assignedDate: 150,
+    edit:          80,
   })
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
   const resizingColumnRef = useRef(null)
   const tableRef = useRef(null)
 
-  // Page size with controlled input
+  // Pagination
   const [pagination, setPagination] = useState({
-    pageSize: 10,
-    hasNextPage: false,
-    nextCursor: null,
-    cursorHistory: [],
-    currentCursor: null,
+    pageSize: 10, hasNextPage: false, nextCursor: null, cursorHistory: [], currentCursor: null,
   })
-  const [pageSizeInput, setPageSizeInput] = useState(pagination.pageSize.toString())
+  const [pageSizeInput, setPageSizeInput] = useState("10")
   const debouncedPageSize = useDebounce(pageSizeInput, 500)
 
   // Sorting
   const [sortColumn, setSortColumn] = useState("assignedDate")
   const [sortDirection, setSortDirection] = useState("desc")
 
-  // Sync input when pageSize changes
+  // Sync page size input
+  useEffect(() => { setPageSizeInput(pagination.pageSize.toString()) }, [pagination.pageSize])
   useEffect(() => {
-    setPageSizeInput(pagination.pageSize.toString())
-  }, [pagination.pageSize])
-
-  // Commit debounced page size
-  useEffect(() => {
-    const newSize = Number.parseInt(debouncedPageSize, 10)
-    if (
-      debouncedPageSize !== "" &&
-      !isNaN(newSize) &&
-      newSize > 0 &&
-      newSize <= 100 &&
-      newSize !== pagination.pageSize
-    ) {
-      setPagination((prev) => ({
-        ...prev,
-        pageSize: newSize,
-        currentCursor: null,
-        nextCursor: null,
-        cursorHistory: [],
-      }))
+    const newSize = parseInt(debouncedPageSize, 10)
+    if (debouncedPageSize !== "" && !isNaN(newSize) && newSize > 0 && newSize <= 100 && newSize !== pagination.pageSize) {
+      setPagination((prev) => ({ ...prev, pageSize: newSize, currentCursor: null, nextCursor: null, cursorHistory: [] }))
     }
   }, [debouncedPageSize, pagination.pageSize])
 
-  // Add this function to handle sorting
-  const handleSort = useCallback(
-    (column) => {
-      // Map the column names to the field names expected by the API
-      const columnToFieldMap = {
-        name: "Applicant Name",
-        email: "Applicant Email",
-        title: "Display Title",
-        description: "Display Desc",
-        folder: "Folder Name",
-        assignedDate: "Created Date",
-        // Add other mappings as needed
+  // Sort
+  const handleSort = useCallback((column) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }, [sortColumn])
+
+  // Fetch
+  const fetchLogs = useCallback(async (cursor = null) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ pageSize: pagination.pageSize.toString() })
+      if (cursor)                       params.append("cursor", cursor)
+      if (searchTerm)                   params.append("search", searchTerm)
+      if (folderFilter !== "all")       params.append("folder", folderFilter)
+      if (statusFilter !== "all")       params.append("status", statusFilter)
+      if (hasDocumentsFilter !== "all") params.append("hasDocuments", hasDocumentsFilter)
+      if (sortColumn) {
+        params.append("sortBy", COLUMN_FIELD_MAP[sortColumn] || sortColumn)
+        params.append("sortDirection", sortDirection)
       }
+      const res = await fetch(`/api/admin/tasks/assigned-tasks?${params.toString()}`)
+      if (!res.ok) throw new Error(`Error fetching logs: ${res.statusText}`)
+      const data = await res.json()
+      setLogs(data.logs || [])
+      setPagination((prev) => ({
+        ...prev,
+        hasNextPage: data.pagination?.hasNextPage || false,
+        nextCursor: data.pagination?.nextCursor || null,
+        currentCursor: cursor,
+      }))
+    } catch (err) {
+      setError(err.message)
+      toast.error("Error loading tasks", { description: err.message })
+    } finally {
+      setLoading(false)
+    }
+  }, [pagination.pageSize, searchTerm, folderFilter, statusFilter, hasDocumentsFilter, sortColumn, sortDirection])
 
-      const apiFieldName = columnToFieldMap[column] || column
-
-      if (sortColumn === column) {
-        // Toggle direction if clicking the same column
-        const newDirection = sortDirection === "asc" ? "desc" : "asc"
-        setSortDirection(newDirection)
-      } else {
-        // Set new column and default to ascending
-        setSortColumn(column)
-        setSortDirection("asc")
-      }
-    },
-    [sortColumn, sortDirection],
-  )
-
-  // Fetch logs
-  const fetchLogs = useCallback(
-    async (cursor = null) => {
-      setLoading(true)
-      setError(null)
-      try {
-        const params = new URLSearchParams({ pageSize: pagination.pageSize.toString() })
-        if (cursor) params.append("cursor", cursor)
-        if (searchTerm) params.append("search", searchTerm)
-        if (nameFilter !== "all") params.append("name", nameFilter)
-        if (folderFilter !== "all") params.append("folder", folderFilter)
-        if (assignedDateFilter) params.append("assignedDate", assignedDateFilter)
-
-        // Add sorting parameters if a column is selected
-        if (sortColumn) {
-          // Map the column names to the field names expected by the API
-          const columnToFieldMap = {
-            name: "Applicant Name",
-            email: "Applicant Email",
-            title: "Display Title",
-            description: "Display Desc",
-            folder: "Folder Name",
-            assignedDate: "Created Date",
-            // Add other mappings as needed
-          }
-
-          const apiFieldName = columnToFieldMap[sortColumn] || sortColumn
-          params.append("sortBy", apiFieldName)
-          params.append("sortDirection", sortDirection)
-        }
-
-        const url = `/api/admin/tasks/assigned-tasks?${params.toString()}`
-        console.log("🔍 fetching assigned tasks with:", url)
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`Error fetching logs: ${res.statusText}`)
-        const data = await res.json()
-        setLogs(data.logs || [])
-        setPagination((prev) => ({
-          ...prev,
-          hasNextPage: data.pagination?.hasNextPage || false,
-          nextCursor: data.pagination?.nextCursor || null,
-          currentCursor: cursor,
-        }))
-      } catch (err) {
-        setError(err.message)
-        toast({ title: "Error", description: err.message, variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    },
-    [pagination.pageSize, searchTerm, nameFilter, folderFilter, assignedDateFilter, sortColumn, sortDirection],
-  )
-
-  // Refetch on filters or pageSize change
   useEffect(() => {
-    setPagination((prev) => ({
-      ...prev,
-      currentCursor: null,
-      nextCursor: null,
-      cursorHistory: [],
-    }))
+    setPagination((prev) => ({ ...prev, currentCursor: null, nextCursor: null, cursorHistory: [] }))
     fetchLogs(null)
-  }, [searchTerm, nameFilter, folderFilter, assignedDateFilter, pagination.pageSize, fetchLogs])
+  }, [searchTerm, folderFilter, statusFilter, hasDocumentsFilter, pagination.pageSize, fetchLogs])
 
   // Pagination handlers
   const handleNextPage = useCallback(() => {
     if (pagination.hasNextPage && pagination.nextCursor) {
-      setPagination((prev) => ({
-        ...prev,
-        cursorHistory: [...prev.cursorHistory, prev.currentCursor],
-      }))
+      setPagination((prev) => ({ ...prev, cursorHistory: [...prev.cursorHistory, prev.currentCursor] }))
       fetchLogs(pagination.nextCursor)
     }
   }, [pagination, fetchLogs])
@@ -318,127 +364,73 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     fetchLogs(prevCursor)
   }, [pagination.cursorHistory, fetchLogs])
 
-  // Handlers passed to filters
-  const handleSearch = useCallback((term) => setSearchTerm(term), [])
-  const handleSubmit = useCallback((term) => setSearchTerm(term), [])
-  const handleNameChange = useCallback((value) => setNameFilter(value), [])
-  const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
-  const handleAssignedDateChange = useCallback((value) => setAssignedDateFilter(value), [])
-
-  // Selection helpers
+  // Selection
   const allCurrentIds = logs.map((l) => l.id)
   const allSelected = allCurrentIds.length > 0 && allCurrentIds.every((id) => selectedIds.has(id))
   const someSelected = allCurrentIds.some((id) => selectedIds.has(id)) && !allSelected
 
   const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        allCurrentIds.forEach((id) => next.delete(id))
-        return next
-      })
-    } else {
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        allCurrentIds.forEach((id) => next.add(id))
-        return next
-      })
-    }
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) allCurrentIds.forEach((id) => next.delete(id))
+      else allCurrentIds.forEach((id) => next.add(id))
+      return next
+    })
   }
-
   const toggleSelectRow = (id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
 
-  // Notify parent of selection changes
   useEffect(() => {
-    if (typeof onSelectionChange === "function") {
-      onSelectionChange(logs.filter((l) => selectedIds.has(l.id)))
-    }
+    if (typeof onSelectionChange === "function") onSelectionChange(logs.filter((l) => selectedIds.has(l.id)))
   }, [selectedIds, logs, onSelectionChange])
 
-  // Clear selection when page changes
-  useEffect(() => {
-    setSelectedIds(new Set())
-  }, [logs])
+  useEffect(() => { setSelectedIds(new Set()) }, [logs])
 
-  // Open edit sheet
-  const handleOpenEditSheet = (logId) => {
-    setSelectedLogId(logId)
-    setIsSheetOpen(true)
-  }
-
-  // Column resize handlers - completely rewritten to use refs
+  // Column resize
   const handleMouseMove = useCallback((e) => {
     const column = resizingColumnRef.current
     if (!column) return
-
-    const diff = e.clientX - startXRef.current
-    const newWidth = Math.max(80, startWidthRef.current + diff)
-
-    setColumnWidths((prev) => ({
-      ...prev,
-      [column]: newWidth,
-    }))
-
-    // Prevent text selection
+    setColumnWidths((prev) => ({ ...prev, [column]: Math.max(80, startWidthRef.current + (e.clientX - startXRef.current)) }))
     e.preventDefault()
   }, [])
 
   const handleMouseUp = useCallback(() => {
     resizingColumnRef.current = null
-
     document.removeEventListener("mousemove", handleMouseMove)
     document.removeEventListener("mouseup", handleMouseUp)
-
     document.body.style.removeProperty("cursor")
     document.body.style.removeProperty("user-select")
   }, [handleMouseMove])
 
-  const handleResizeStart = useCallback(
-    (e, column) => {
-      e.preventDefault()
-      e.stopPropagation()
+  const handleResizeStart = useCallback((e, column) => {
+    e.preventDefault(); e.stopPropagation()
+    startXRef.current = e.clientX
+    startWidthRef.current = columnWidths[column]
+    resizingColumnRef.current = column
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }, [columnWidths, handleMouseMove, handleMouseUp])
 
-      // Capture initial values in refs
-      startXRef.current = e.clientX
-      startWidthRef.current = columnWidths[column]
-      resizingColumnRef.current = column
-
-      // Register global listeners
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-
-      // Change cursor & disable selection
-      document.body.style.cursor = "col-resize"
-      document.body.style.userSelect = "none"
-    },
-    [columnWidths, handleMouseMove, handleMouseUp],
-  )
-
-  // Cleanup event listeners on unmount
-  useEffect(() => {
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-      document.body.style.removeProperty("cursor")
-      document.body.style.removeProperty("user-select")
-    }
+  useEffect(() => () => {
+    document.removeEventListener("mousemove", handleMouseMove)
+    document.removeEventListener("mouseup", handleMouseUp)
+    document.body.style.removeProperty("cursor")
+    document.body.style.removeProperty("user-select")
   }, [handleMouseMove, handleMouseUp])
 
   const renderSkeletonRows = () =>
-    Array(Math.min(pagination.pageSize, 5))
-      .fill(0)
-      .map((_, i) => <SkeletonRow key={i} colSpan={10} />)
+    Array(Math.min(pagination.pageSize, 5)).fill(0).map((_, i) => <SkeletonRow key={i} colSpan={11} />)
 
-  // Custom resizable header component
-  const ResizableHeader = ({ children, column }) => (
-    <AnimatedColumnHeader
+  // Shorthand for resizable header
+  const RH = ({ children, column }) => (
+    <ResizableColHeader
       column={column}
       sortColumn={sortColumn}
       sortDirection={sortDirection}
@@ -447,113 +439,75 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
       isHovered={hoveredResizer === column}
     >
       {children}
-    </AnimatedColumnHeader>
+    </ResizableColHeader>
   )
 
-  // Get attachment count text based on count
-  const getAttachmentText = (attachments) => {
-    if (!attachments || attachments.length === 0) return "No Files"
-    const count = attachments.length
-    return `View ${count} ${count === 1 ? "File" : "Files"}`
-  }
-
-  // DynamicTaskEditSheet config
+  // Edit sheet config
   const logFields = [
-    { name: "name", label: "Name", type: "text", required: true },
-    { name: "email", label: "Email", type: "text" },
-    { name: "title", label: "Title", type: "text", required: true },
-    { name: "description", label: "Description", type: "textarea" },
-    { name: "folder", label: "Folder", type: "text" },
-    { name: "resource", label: "Resource", type: "url" },
-    { name: "attachments", label: "Attachment", type: "file" },
+    { name: "name",         label: "Name",         type: "text",     required: true },
+    { name: "email",        label: "Email",         type: "text" },
+    { name: "title",        label: "Title",         type: "text",     required: true },
+    { name: "description",  label: "Description",   type: "textarea" },
+    { name: "folder",       label: "Folder",        type: "text" },
+    { name: "resource",     label: "Resource URL",  type: "url" },
+    { name: "attachments",  label: "Attachments",   type: "file" },
     { name: "assignedDate", label: "Assigned Date", type: "date" },
   ]
   const mapApiToForm = (log) => ({
-    name: log.name,
-    email: log.email,
-    title: log.title,
-    description: log.description,
-    folder: log.folder,
-    resource: log.resource,
-    attachments: log.attachments,
-    assignedDate: log.assignedDate,
+    name: log.name, email: log.email, title: log.title, description: log.description,
+    folder: log.folder, resource: log.resource, attachments: log.attachments, assignedDate: log.assignedDate,
   })
   const mapFormToApi = (formData) => ({
-    "Applicant Name": formData.name,
-    "Applicant Email": formData.email,
-    "Display Title": formData.title,
-    "Display Desc": formData.description,
-    "Folder Name": formData.folder,
-    "Display Resource Link": formData.resource,
-    "File(s)": formData.attachments,
-    "Created Date": formData.assignedDate,
+    "Applicant Name": formData.name, "Applicant Email": formData.email,
+    "Display Title": formData.title, "Display Desc": formData.description,
+    "Folder Name": formData.folder, "Display Resource Link": formData.resource,
+    "File(s)": formData.attachments, "Created Date": formData.assignedDate,
   })
+
+  const minTableWidth = Object.values(columnWidths).reduce((a, b) => a + b, 0)
 
   return (
     <PageTransition>
       <div className="space-y-4">
-        {/* Search Bar & Filters */}
+
+        {/* Filters */}
         <TableFilters
-          onSearch={handleSearch}
-          onSubmit={handleSubmit}
+          onSearch={setSearchTerm}
+          onSubmit={setSearchTerm}
           isLoading={loading}
-          name={nameFilter}
           folder={folderFilter}
-          assignedDate={assignedDateFilter}
-          onNameChange={handleNameChange}
-          onFolderChange={handleFolderChange}
-          onAssignedDateChange={handleAssignedDateChange}
+          status={statusFilter}
+          hasDocuments={hasDocumentsFilter}
+          onFolderChange={setFolderFilter}
+          onStatusChange={setStatusFilter}
+          onHasDocumentsChange={setHasDocumentsFilter}
           taskCount={logs.length}
+          onRefresh={() => fetchLogs(pagination.currentCursor)}
+          searchTerm={searchTerm}
+          onClearSearch={() => setSearchTerm("")}
         />
 
-        {/* Active Filters */}
-        <AnimatePresence>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {nameFilter !== "all" && (
-              <AnimatedFilterPill label="Name" value={nameFilter} onRemove={() => setNameFilter("all")} />
-            )}
-            {folderFilter !== "all" && (
-              <AnimatedFilterPill label="Folder" value={folderFilter} onRemove={() => setFolderFilter("all")} />
-            )}
-            {assignedDateFilter && (
-              <AnimatedFilterPill
-                label="Assigned Date"
-                value={assignedDateFilter}
-                onRemove={() => setAssignedDateFilter("")}
-              />
-            )}
-            {searchTerm && <AnimatedFilterPill label="Search" value={searchTerm} onRemove={() => setSearchTerm("")} />}
-          </div>
-        </AnimatePresence>
-
-        {/* Table - Added table-fixed class to ensure widths are respected */}
         {/* Bulk action bar */}
         <AnimatePresence>
           {selectedIds.size > 0 && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
               className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2"
             >
               <span className="text-sm font-medium text-destructive">
                 {selectedIds.size} row{selectedIds.size !== 1 ? "s" : ""} selected
               </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setIsBulkDeleteOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete selected
+              <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete selected
               </Button>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Table */}
         <div className="overflow-x-auto rounded-md border" ref={tableRef}>
-          <Table className="table-fixed w-full min-w-[1488px]">
+          <Table className="table-fixed w-full" style={{ minWidth: `${minTableWidth}px` }}>
             <TableHeader>
               <TableRow>
                 <TableHead style={{ width: `${columnWidths.checkbox}px` }} className="px-3">
@@ -564,159 +518,16 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
                     aria-label="Select all"
                   />
                 </TableHead>
-                <TableHead style={{ width: `${columnWidths.name}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("name")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Name
-                      {sortColumn === "name" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "name" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "name")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.email}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("email")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Email
-                      {sortColumn === "email" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "email" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "email")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.title}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("title")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Title
-                      {sortColumn === "title" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "title" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "title")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.description}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("description")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Description
-                      {sortColumn === "description" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "description" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "description")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.folder}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("folder")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Folder
-                      {sortColumn === "folder" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "folder" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "folder")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.attachments}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("attachments")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Attachments
-                      {sortColumn === "attachments" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "attachments" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "attachments")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.resource}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("resource")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Resource
-                      {sortColumn === "resource" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "resource" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "resource")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.assignedDate}px` }}>
-                  <div className="group relative cursor-pointer select-none text-left [&:not([data-state=selected])]:data-[state=inactive]:opacity-70">
-                    <div
-                      onClick={() => handleSort("assignedDate")}
-                      className="w-full h-full p-2 font-normal justify-between flex items-center hover:bg-muted/50"
-                      style={{ paddingRight: "24px" }}
-                    >
-                      Assigned Date
-                      {sortColumn === "assignedDate" && <span className="ml-2">{sortDirection === "asc" ? "▲" : "▼"}</span>}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-                        hoveredResizer === "assignedDate" && "opacity-100",
-                      )}
-                      onMouseDown={(e) => handleResizeStart(e, "assignedDate")}
-                    />
-                  </div>
-                </TableHead>
-                <TableHead style={{ width: `${columnWidths.edit}px` }}>Edit</TableHead>
+                <TableHead style={{ width: `${columnWidths.name}px` }}><RH column="name">Name</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.email}px` }}><RH column="email">Email</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.title}px` }}><RH column="title">Title</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.description}px` }}><RH column="description">Description</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.folder}px` }}><RH column="folder">Folder</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.status}px` }}><RH column="status">Status</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.attachments}px` }} className="p-2 font-normal">Attachments</TableHead>
+                <TableHead style={{ width: `${columnWidths.resource}px` }} className="p-2 font-normal">Resource</TableHead>
+                <TableHead style={{ width: `${columnWidths.assignedDate}px` }}><RH column="assignedDate">Assigned Date</RH></TableHead>
+                <TableHead style={{ width: `${columnWidths.edit}px` }} className="p-2 font-normal text-center">Edit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -724,13 +535,11 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
                 renderSkeletonRows()
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center text-error">
-                    Error: {error}
-                  </TableCell>
+                  <TableCell colSpan={11} className="h-24 text-center text-error">Error: {error}</TableCell>
                 </TableRow>
               ) : logs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-auto py-8">
+                  <TableCell colSpan={11} className="h-auto py-8">
                     <AnimatedEmptyState
                       message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No assigned tasks found"}
                       actionLabel={searchTerm ? "Clear Search" : "Create Task"}
@@ -747,14 +556,11 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{
-                        duration: 0.3,
-                        delay: index * 0.05,
-                        ease: "easeOut",
-                      }}
+                      transition={{ duration: 0.3, delay: index * 0.04, ease: "easeOut" }}
                       className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                       data-state={selectedIds.has(log.id) ? "selected" : undefined}
                     >
+                      {/* Checkbox */}
                       <TableCell className="px-3" style={{ width: `${columnWidths.checkbox}px` }}>
                         <Checkbox
                           checked={selectedIds.has(log.id)}
@@ -762,59 +568,94 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
                           aria-label={`Select row for ${log.name}`}
                         />
                       </TableCell>
+
+                      {/* Name */}
                       <TableCell className="font-medium truncate" style={{ width: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }}>
-                        {log.name}
+                        {log.name || "—"}
                       </TableCell>
-                      <TableCell className="truncate" style={{ width: `${columnWidths.email}px`, maxWidth: `${columnWidths.email}px` }}>{log.email}</TableCell>
-                      <TableCell className="truncate" style={{ width: `${columnWidths.title}px`, maxWidth: `${columnWidths.title}px` }}>{log.title}</TableCell>
-                      <TableCell className="max-w-[220px] truncate" style={{ width: `${columnWidths.description}px` }}>
-                        {log.description}
+
+                      {/* Email */}
+                      <TableCell className="truncate" style={{ width: `${columnWidths.email}px`, maxWidth: `${columnWidths.email}px` }}>
+                        {log.email || "—"}
                       </TableCell>
+
+                      {/* Title */}
+                      <TableCell className="truncate" style={{ width: `${columnWidths.title}px`, maxWidth: `${columnWidths.title}px` }}>
+                        {log.title || "—"}
+                      </TableCell>
+
+                      {/* Description */}
+                      <TableCell className="truncate" style={{ width: `${columnWidths.description}px`, maxWidth: `${columnWidths.description}px` }}>
+                        {log.description || "—"}
+                      </TableCell>
+
+                      {/* Folder */}
                       <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                        {log.folder && typeof log.folder === "string" && log.folder.trim() !== "" ? (
-                          <FolderBadge name={log.folder} />
-                        ) : (
-                          "—"
-                        )}
+                        {log.folder ? <FolderBadge name={log.folder} /> : <span className="text-muted-foreground">—</span>}
                       </TableCell>
+
+                      {/* Status */}
+                      <TableCell style={{ width: `${columnWidths.status}px` }}>
+                        <StatusBadge status={log.status} />
+                      </TableCell>
+
+                      {/* Attachments */}
                       <TableCell style={{ width: `${columnWidths.attachments}px` }}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="flex items-center gap-1"
-                          onClick={() => {
-                            // Handle attachment view action
-                            if (log.attachments && log.attachments.length > 0) {
-                              // Open attachment viewer or download
-                            }
-                          }}
-                          disabled={!log.attachments || log.attachments.length === 0}
-                        >
-                          <Paperclip className="h-4 w-4" />
-                          <span>{getAttachmentText(log.attachments)}</span>
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm" variant="ghost"
+                                className="flex items-center gap-1.5 text-xs"
+                                disabled={!log.attachmentCount}
+                                onClick={() => { setViewerLogId(log.id); setIsViewerOpen(true) }}
+                              >
+                                <Paperclip className="h-3.5 w-3.5" />
+                                {log.attachmentCount > 0 ? `${log.attachmentCount} file${log.attachmentCount !== 1 ? "s" : ""}` : "No files"}
+                              </Button>
+                            </TooltipTrigger>
+                            {log.attachmentCount > 0 && <TooltipContent>View attachments</TooltipContent>}
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
+
+                      {/* Resource */}
                       <TableCell style={{ width: `${columnWidths.resource}px` }}>
                         {log.resource ? (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}
-                            title="Open resource"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8"
+                                  onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Open resource</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
-                          "—"
+                          <span className="text-muted-foreground px-2">—</span>
                         )}
                       </TableCell>
+
+                      {/* Assigned Date */}
                       <TableCell style={{ width: `${columnWidths.assignedDate}px` }}>
                         {log.assignedDate ? new Date(log.assignedDate).toLocaleDateString() : "—"}
                       </TableCell>
-                      <TableCell style={{ width: `${columnWidths.edit}px` }}>
-                        <Button variant="outline" size="sm" onClick={() => handleOpenEditSheet(log.id)}>
-                          Open
-                        </Button>
+
+                      {/* Edit */}
+                      <TableCell style={{ width: `${columnWidths.edit}px` }} className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8"
+                                onClick={() => { setSelectedLogId(log.id); setIsSheetOpen(true) }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit record</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </motion.tr>
                   ))}
@@ -824,38 +665,23 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
           </Table>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Items per page:</span>
-            <Input
-              type="text"
-              placeholder={pagination.pageSize.toString()}
-              value={pageSizeInput}
-              onChange={(e) => setPageSizeInput(e.target.value)}
-              className="w-16 h-8"
-              aria-label="Page size"
-            />
+            <Input type="text" value={pageSizeInput} onChange={(e) => setPageSizeInput(e.target.value)} className="w-16 h-8" aria-label="Page size" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={pagination.cursorHistory.length === 0 || loading}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center justify-end space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreviousPage}
-            disabled={pagination.cursorHistory.length === 0 || loading}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
-            Next
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-
-        {/* Dynamic Task Edit Sheet */}
+        {/* Edit sheet */}
         <DynamicTaskEditSheet
           open={isSheetOpen}
           onOpenChange={setIsSheetOpen}
@@ -870,16 +696,22 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
           onDeleteSuccess={() => fetchLogs(pagination.currentCursor)}
         />
 
-        {/* Bulk delete modal */}
+        {/* Bulk delete */}
         <BulkDeleteTasksModal
           open={isBulkDeleteOpen}
           onOpenChange={setIsBulkDeleteOpen}
           selectedTasks={logs.filter((l) => selectedIds.has(l.id))}
           deleteEndpoint="/api/admin/tasks/assigned-tasks/bulk-delete"
-          onDeleteSuccess={() => {
-            setSelectedIds(new Set())
-            fetchLogs(null)
-          }}
+          onDeleteSuccess={() => { setSelectedIds(new Set()); fetchLogs(null) }}
+        />
+
+        {/* Attachment viewer */}
+        <FileViewerModal
+          isOpen={isViewerOpen}
+          onClose={() => setIsViewerOpen(false)}
+          taskId={viewerLogId}
+          attachmentsEndpoint={viewerLogId ? `/api/admin/tasks/assigned-tasks/${viewerLogId}/attachments` : ""}
+          onFilesUpdated={() => fetchLogs(pagination.currentCursor)}
         />
       </div>
     </PageTransition>

@@ -5,12 +5,12 @@
 
 ## Sub-tasks
 
-- [ ] Update assigned-tasks API — add `status` + `hasDocuments` filters, return `status` field
-- [ ] Make FileViewerModal accept optional `attachmentsEndpoint` prop
-- [ ] Overhaul TableFilters — remove broken Name dropdown, add dynamic Folder, Status, Has Documents dropdowns with lazy loading + inline filter pills + Clear all
-- [ ] Upgrade sort indicators — replace ▲/▼ text with ChevronUp/ChevronDown icons, extract reusable SortIndicator
-- [ ] Add refresh button with Tooltip + loading spinner
-- [ ] Wire attachment viewer button → FileViewerModal
-- [ ] Add Status column + badge rendering + sortability
-- [ ] Replace "Open" text button with icon button + Tooltip
-- [ ] Update fetchLogs to pass status + hasDocuments + status sort field
+- [x] Update assigned-tasks API — add `status` + `hasDocuments` filters, return `status` field
+- [x] Make FileViewerModal accept optional `attachmentsEndpoint` prop
+- [x] Overhaul TableFilters — remove broken Name dropdown, add dynamic Folder, Status, Has Documents dropdowns with lazy loading + inline filter pills + Clear all
+- [x] Upgrade sort indicators — replace ▲/▼ text with ChevronUp/ChevronDown icons, extract reusable SortIndicator
+- [x] Add refresh button with Tooltip + loading spinner
+- [x] Wire attachment viewer button → FileViewerModal
+- [x] Add Status column + badge rendering + sortability
+- [x] Replace "Open" text button with icon button + Tooltip
+- [x] Update fetchLogs to pass status + hasDocuments + status sort field
