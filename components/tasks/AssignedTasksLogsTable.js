@@ -1,14 +1,16 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { Input } from "@components/ui/input"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
 import { Badge } from "@components/ui/badge"
+import { Card } from "@components/ui/card"
 import {
   ExternalLink, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Paperclip, Trash2, Loader2, Pencil, RefreshCw, X,
+  Search, X, Loader2, Paperclip, Trash2, RefreshCw, Pencil,
+  Package, LayoutList, Layers, ChevronsUpDown, Mail, FileText, Clock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FolderBadge } from "./FolderBadge"
@@ -17,21 +19,35 @@ import { SkeletonRow } from "./SkeletonRow"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
 import { DynamicTaskEditSheet } from "./DynamicTaskEditSheet"
 import { cn } from "@components/lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
-import { PageTransition } from "./table/PageTransition"
-import { AnimatedSearchBar } from "./table/AnimatedSearchBar"
-import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
-import { AnimatedEmptyState } from "./table/AnimatedEmptyState"
-import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 import { FileViewerModal } from "./files/FileViewerModal"
+import { motion, AnimatePresence } from "framer-motion"
+import { AnimatedFilterPill } from "./table/AnimatedFilterPills"
+import BulkDeleteTasksModal from "./BulkDeleteTasksModal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@components/ui/tooltip"
 
-// ── Sort indicator ────────────────────────────────────────────────────────────
-function SortIndicator({ column, sortColumn, sortDirection }) {
-  if (sortColumn !== column) return null
-  return sortDirection === "asc"
-    ? <ChevronUp className="ml-1 h-3 w-3 inline shrink-0" />
-    : <ChevronDown className="ml-1 h-3 w-3 inline shrink-0" />
+// ── Group logs by status ──────────────────────────────────────────────────────
+const STATUS_ORDER = ["Not Started", "In Progress", "Completed"]
+
+function groupLogsByStatus(logs) {
+  const groups = {}
+  logs.forEach((log) => {
+    const key = log.status || "Unassigned"
+    if (!groups[key]) groups[key] = []
+    groups[key].push(log)
+  })
+
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const ai = STATUS_ORDER.indexOf(a)
+    const bi = STATUS_ORDER.indexOf(b)
+    if (ai !== -1 && bi !== -1) return ai - bi
+    if (ai !== -1) return -1
+    if (bi !== -1) return 1
+    if (a === "Unassigned") return 1
+    if (b === "Unassigned") return -1
+    return a.localeCompare(b)
+  })
+
+  return sortedKeys.map((status) => ({ status, logs: groups[status] }))
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -42,7 +58,7 @@ const STATUS_STYLES = {
 }
 
 function StatusBadge({ status }) {
-  if (!status) return <span className="text-muted-foreground">—</span>
+  if (!status) return <span className="text-body-sm text-muted-foreground">—</span>
   const cls = STATUS_STYLES[status] ?? "bg-muted text-muted-foreground border-border"
   return (
     <Badge variant="outline" className={cn("text-xs whitespace-nowrap", cls)}>
@@ -51,60 +67,135 @@ function StatusBadge({ status }) {
   )
 }
 
-// ── Resizable + sortable column header ───────────────────────────────────────
-function ResizableColHeader({ children, column, sortColumn, sortDirection, onSort, onResizeStart, isHovered }) {
+// ── Sort indicator ────────────────────────────────────────────────────────────
+function SortIndicator({ column, sortColumn, sortDirection }) {
+  const isActive = sortColumn === column
+  if (!isActive) return <ChevronsUpDown className="ml-1.5 h-3.5 w-3.5 text-muted-foreground/30" />
+  return sortDirection === "asc"
+    ? <ChevronUp className="ml-1.5 h-3.5 w-3.5 text-primary" />
+    : <ChevronDown className="ml-1.5 h-3.5 w-3.5 text-primary" />
+}
+
+// ── Expanded log detail row ───────────────────────────────────────────────────
+function ExpandedLogDetail({ log, onOpenFileViewer, onOpenEditSheet }) {
   return (
-    <div className="group relative cursor-pointer select-none text-left w-full h-full">
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className="w-full h-full p-2 font-normal flex items-center hover:bg-muted/50 text-left"
-        style={{ paddingRight: "24px" }}
-      >
-        {children}
-        <SortIndicator column={column} sortColumn={sortColumn} sortDirection={sortDirection} />
-      </button>
-      <div
-        className={cn(
-          "absolute top-0 bottom-0 right-0 w-1 transition-opacity duration-200 bg-border rounded-sm opacity-0 group-hover:opacity-100",
-          isHovered && "opacity-100",
-        )}
-        onMouseDown={onResizeStart}
-      />
-    </div>
+    <motion.tr
+      key={`${log.id}-detail`}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      <TableCell colSpan={6} className="p-0">
+        <div className="border-l-2 border-primary/20 bg-muted/5 px-6 py-4 ml-[40px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Description */}
+            {log.description && (
+              <div className="md:col-span-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-caption text-muted-foreground font-medium uppercase tracking-wide">Description</span>
+                </div>
+                <p className="text-body-sm text-foreground/80 leading-relaxed">{log.description}</p>
+              </div>
+            )}
+
+            {/* Email */}
+            {log.email && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-caption text-muted-foreground font-medium uppercase tracking-wide">Email</span>
+                </div>
+                <span className="text-body-sm">{log.email}</span>
+              </div>
+            )}
+
+            {/* Resource URL */}
+            {log.resource && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-caption text-muted-foreground font-medium uppercase tracking-wide">Resource</span>
+                </div>
+                <a
+                  href={log.resource}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-body-sm text-primary hover:underline truncate block max-w-md"
+                >
+                  {log.resource}
+                </a>
+              </div>
+            )}
+
+            {/* Assigned Date */}
+            {log.assignedDate && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-caption text-muted-foreground font-medium uppercase tracking-wide">Assigned</span>
+                </div>
+                <span className="text-body-sm text-muted-foreground">
+                  {new Date(log.assignedDate).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Action row */}
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/20">
+            <Button variant="outline" size="sm" onClick={() => onOpenEditSheet(log.id)} className="h-8">
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onOpenFileViewer(log.id, log.resource)} className="h-8">
+              <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+              Files {log.attachmentCount > 0 && `(${log.attachmentCount})`}
+            </Button>
+            {log.resource && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}
+                className="h-8"
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Open Link
+              </Button>
+            )}
+          </div>
+        </div>
+      </TableCell>
+    </motion.tr>
   )
 }
 
-// ── Column to API field map ───────────────────────────────────────────────────
-const COLUMN_FIELD_MAP = {
-  name:         "Applicant Name",
-  email:        "Applicant Email",
-  title:        "Display Title",
-  description:  "Display Desc",
-  folder:       "Folder Name",
-  status:       "Status",
-  assignedDate: "Created Date",
-}
-
-// ── Filters bar ───────────────────────────────────────────────────────────────
+// ── Filter toolbar ────────────────────────────────────────────────────────────
 function TableFilters({
-  onSearch, onSubmit, isLoading,
-  folder, status, hasDocuments,
-  onFolderChange, onStatusChange, onHasDocumentsChange,
-  taskCount, onRefresh,
-  searchTerm, onClearSearch,
+  onSearch,
+  onSubmit,
+  isLoading,
+  status,
+  folder,
+  hasDocuments,
+  onStatusChange,
+  onFolderChange,
+  onHasDocumentsChange,
+  taskCount,
+  selectedTasks,
+  onDeleteSelected,
+  onRefresh,
+  viewMode,
+  onViewModeChange,
 }) {
-  const [term, setTerm] = useState(searchTerm ?? "")
-
-  // Keep internal term in sync if parent clears it
-  useEffect(() => { setTerm(searchTerm ?? "") }, [searchTerm])
-
+  const [term, setTerm] = useState("")
   const debouncedTerm = useDebounce(term, 300)
-  useEffect(() => { onSearch(debouncedTerm) }, [debouncedTerm, onSearch])
+  const [isFocused, setIsFocused] = useState(false)
 
-  const handleClear = () => { setTerm(""); onSearch("") }
-
-  // Lazy folder loading
+  // Lazy folder options
   const [folderOptions, setFolderOptions] = useState([])
   const [foldersLoading, setFoldersLoading] = useState(false)
   const [foldersFetched, setFoldersFetched] = useState(false)
@@ -114,54 +205,79 @@ function TableFilters({
     setFoldersLoading(true)
     try {
       const res = await fetch("/api/admin/folders?includeInactive=true")
-      if (!res.ok) throw new Error("Failed to load folders")
+      if (!res.ok) throw new Error("Failed to fetch folders")
       const data = await res.json()
-      setFolderOptions((data.folders || []).map((f) => f.name).filter(Boolean).sort())
+      const names = (data.folders || [])
+        .map((f) => f.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setFolderOptions(Array.from(new Set(names)))
       setFoldersFetched(true)
     } catch {
-      toast.error("Could not load folder list")
+      // swallow
     } finally {
       setFoldersLoading(false)
     }
   }
 
-  const activeFilterCount = [folder !== "all", status !== "all", hasDocuments !== "all"].filter(Boolean).length
-  const clearAllFilters = () => { onFolderChange("all"); onStatusChange("all"); onHasDocumentsChange("all") }
+  useEffect(() => { onSearch(debouncedTerm) }, [debouncedTerm, onSearch])
+
+  const handleChange = (e) => setTerm(e.target.value)
+  const handleKeyDown = (e) => { if (e.key === "Enter") onSubmit(term) }
+  const handleClear = () => { setTerm(""); onSearch("") }
+
+  const hasActiveFilters = status !== "all" || folder !== "all" || hasDocuments !== "all" || term
+  const activeFilterCount = [status !== "all", folder !== "all", hasDocuments !== "all", !!term].filter(Boolean).length
+
+  const clearAllFilters = () => {
+    setTerm("")
+    onSearch("")
+    onStatusChange("all")
+    onFolderChange("all")
+    onHasDocumentsChange("all")
+  }
 
   return (
     <div className="space-y-3">
-      {/* Row 1 — search + dropdowns + refresh */}
-      <div className="flex flex-col sm:flex-row justify-between gap-3 items-start sm:items-center w-full">
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto flex-wrap">
-          <AnimatedSearchBar
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
+        {/* Search */}
+        <div className="relative w-full lg:w-72">
+          <Search className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
+            isFocused ? "text-primary" : "text-muted-foreground"
+          )} />
+          <Input
+            type="text"
+            placeholder="Search assignments..."
             value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") onSubmit(term) }}
-            onClear={handleClear}
-            isLoading={isLoading}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="pl-9 pr-10 h-10 rounded-lg border-border/40 focus-visible:ring-2 focus-visible:ring-primary/20"
+            aria-label="Search assigned tasks"
           />
+          {term && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              onClick={handleClear}
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {isLoading && (
+            <Loader2 className="absolute right-10 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+          )}
+        </div>
 
-          {/* Folder — lazy loads on first open */}
-          <Select value={folder} onValueChange={onFolderChange} onOpenChange={(open) => { if (open) fetchFolders() }}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Folder" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Folders</SelectItem>
-              {foldersLoading && (
-                <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Loading…
-                </div>
-              )}
-              {folderOptions.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+        {/* Filter selects + inline pills */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Status */}
           <Select value={status} onValueChange={onStatusChange}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-9 w-[130px] rounded-lg text-body-sm border-border/40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -172,10 +288,32 @@ function TableFilters({
             </SelectContent>
           </Select>
 
+          {/* Folder — lazy loads on first open */}
+          <Select value={folder} onValueChange={onFolderChange} onOpenChange={(open) => { if (open) fetchFolders() }}>
+            <SelectTrigger className="h-9 w-[140px] rounded-lg text-body-sm border-border/40">
+              <SelectValue placeholder="Folder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Folders</SelectItem>
+              {foldersLoading ? (
+                <div className="px-2 py-1.5 text-body-sm text-muted-foreground">Loading...</div>
+              ) : folderOptions.length === 0 ? (
+                <div className="px-2 py-1.5 text-body-sm text-muted-foreground">No folders</div>
+              ) : (
+                folderOptions.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+
           {/* Has Documents */}
           <Select value={hasDocuments} onValueChange={onHasDocumentsChange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Documents" />
+            <SelectTrigger className="h-9 w-[150px] rounded-lg text-body-sm border-border/40">
+              <div className="flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Documents" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Resources</SelectItem>
@@ -183,98 +321,171 @@ function TableFilters({
               <SelectItem value="no">No Documents</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Active filter pills — inline */}
+          <AnimatePresence>
+            {hasActiveFilters && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex flex-wrap items-center gap-1.5"
+              >
+                {term && (
+                  <AnimatedFilterPill label="Search" value={term} onRemove={handleClear} />
+                )}
+                {status !== "all" && (
+                  <AnimatedFilterPill label="Status" value={status} onRemove={() => onStatusChange("all")} />
+                )}
+                {folder !== "all" && (
+                  <AnimatedFilterPill label="Folder" value={folder} onRemove={() => onFolderChange("all")} />
+                )}
+                {hasDocuments !== "all" && (
+                  <AnimatedFilterPill
+                    label="Docs"
+                    value={hasDocuments === "yes" ? "Has Documents" : "No Documents"}
+                    onRemove={() => onHasDocumentsChange("all")}
+                  />
+                )}
+                {activeFilterCount > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="h-6 px-2 text-caption text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Task count + refresh */}
-        <div className="flex items-center gap-2 shrink-0">
-          {taskCount > 0 && !isLoading && (
-            <span className="text-sm text-muted-foreground">
-              Showing {taskCount} task{taskCount !== 1 ? "s" : ""}
-            </span>
-          )}
-          <TooltipProvider>
+        {/* Right side: view toggle + refresh + delete */}
+        <div className="flex items-center gap-2 ml-auto">
+          {/* View mode toggle */}
+          <div className="inline-flex items-center rounded-lg border border-border/40 p-0.5">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => onViewModeChange("list")}
+                    className={cn("h-7 w-7 p-0 rounded-md", viewMode === "list" && "shadow-sm")}
+                    aria-label="List view"
+                  >
+                    <LayoutList className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p>List view</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === "grouped" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => onViewModeChange("grouped")}
+                    className={cn("h-7 w-7 p-0 rounded-md", viewMode === "grouped" && "shadow-sm")}
+                    aria-label="Grouped view"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p>Grouped by status</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={onRefresh} disabled={isLoading} className="h-9 w-9">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={isLoading}
+                  className="h-8 w-8 p-0"
+                  aria-label="Refresh"
+                >
                   <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Refresh</TooltipContent>
+              <TooltipContent side="bottom"><p>Refresh data</p></TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {selectedTasks.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onDeleteSelected}
+              disabled={isLoading}
+              className="h-8"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete ({selectedTasks.length})
+            </Button>
+          )}
         </div>
       </div>
-
-      {/* Row 2 — active filter pills */}
-      <AnimatePresence>
-        {(activeFilterCount > 0 || searchTerm) && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex flex-wrap items-center gap-2"
-          >
-            {searchTerm && <AnimatedFilterPill label="Search" value={searchTerm} onRemove={onClearSearch} />}
-            {folder !== "all" && <AnimatedFilterPill label="Folder" value={folder} onRemove={() => onFolderChange("all")} />}
-            {status !== "all" && <AnimatedFilterPill label="Status" value={status} onRemove={() => onStatusChange("all")} />}
-            {hasDocuments !== "all" && (
-              <AnimatedFilterPill
-                label="Documents"
-                value={hasDocuments === "yes" ? "Has Documents" : "No Documents"}
-                onRemove={() => onHasDocumentsChange("all")}
-              />
-            )}
-            {activeFilterCount > 1 && (
-              <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs text-muted-foreground" onClick={clearAllFilters}>
-                <X className="h-3 w-3" /> Clear all
-              </Button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
 
+// ── Column → API field map ────────────────────────────────────────────────────
+const COLUMN_FIELD_MAP = {
+  title:      "Display Title",
+  assignedTo: "Applicant Name",
+  folder:     "Folder Name",
+  status:     "Status",
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
-export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) {
+export function AssignedTasksLogsTable({ onSelectionChange }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [hoveredResizer, setHoveredResizer] = useState(null)
+
+  // Selection (object map, same pattern as TasksTable)
+  const [selected, setSelected] = useState({})
+  const selectedLogs = useMemo(() => logs.filter((l) => selected[l.id]), [logs, selected])
+  const allChecked = useMemo(() => logs.length > 0 && logs.every((l) => selected[l.id]), [logs, selected])
+
+  // View
+  const [viewMode, setViewMode] = useState("list")
+  const [collapsedGroups, setCollapsedGroups] = useState({})
+
+  // Row expand
+  const [expandedRows, setExpandedRows] = useState({})
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("")
-  const [folderFilter, setFolderFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [folderFilter, setFolderFilter] = useState("all")
   const [hasDocumentsFilter, setHasDocumentsFilter] = useState("all")
 
-  // Row selection
-  const [selectedIds, setSelectedIds] = useState(new Set())
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
-
-  // Task editing
+  // Edit sheet
   const [selectedLogId, setSelectedLogId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-  // Attachment viewer
+  // File viewer
   const [viewerLogId, setViewerLogId] = useState(null)
-  const [isViewerOpen, setIsViewerOpen] = useState(false)
+  const [viewerResourceUrl, setViewerResourceUrl] = useState(null)
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false)
+
+  // Bulk delete
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
 
   // Column widths
   const [columnWidths, setColumnWidths] = useState({
-    checkbox:     48,
-    name:         160,
-    email:        190,
-    title:        190,
-    description:  200,
-    folder:       140,
-    status:       130,
-    attachments:  130,
-    resource:     100,
-    assignedDate: 150,
-    edit:          80,
+    checkbox:   40,
+    title:      280,
+    assignedTo: 200,
+    folder:     140,
+    status:     100,
+    actions:    100,
   })
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
@@ -283,25 +494,17 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
 
   // Pagination
   const [pagination, setPagination] = useState({
-    pageSize: 10, hasNextPage: false, nextCursor: null, cursorHistory: [], currentCursor: null,
+    pageSize: 25,
+    hasNextPage: false,
+    nextCursor: null,
+    cursorHistory: [],
+    currentCursor: null,
   })
-  const [pageSizeInput, setPageSizeInput] = useState("10")
-  const debouncedPageSize = useDebounce(pageSizeInput, 500)
 
   // Sorting
-  const [sortColumn, setSortColumn] = useState("assignedDate")
-  const [sortDirection, setSortDirection] = useState("desc")
+  const [sortColumn, setSortColumn] = useState("title")
+  const [sortDirection, setSortDirection] = useState("asc")
 
-  // Sync page size input
-  useEffect(() => { setPageSizeInput(pagination.pageSize.toString()) }, [pagination.pageSize])
-  useEffect(() => {
-    const newSize = parseInt(debouncedPageSize, 10)
-    if (debouncedPageSize !== "" && !isNaN(newSize) && newSize > 0 && newSize <= 100 && newSize !== pagination.pageSize) {
-      setPagination((prev) => ({ ...prev, pageSize: newSize, currentCursor: null, nextCursor: null, cursorHistory: [] }))
-    }
-  }, [debouncedPageSize, pagination.pageSize])
-
-  // Sort
   const handleSort = useCallback((column) => {
     if (sortColumn === column) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
@@ -317,11 +520,11 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     setError(null)
     try {
       const params = new URLSearchParams({ pageSize: pagination.pageSize.toString() })
-      if (cursor)                       params.append("cursor", cursor)
-      if (searchTerm)                   params.append("search", searchTerm)
-      if (folderFilter !== "all")       params.append("folder", folderFilter)
-      if (statusFilter !== "all")       params.append("status", statusFilter)
-      if (hasDocumentsFilter !== "all") params.append("hasDocuments", hasDocumentsFilter)
+      if (cursor)                         params.append("cursor", cursor)
+      if (searchTerm)                     params.append("search", searchTerm)
+      if (statusFilter !== "all")         params.append("status", statusFilter)
+      if (folderFilter !== "all")         params.append("folder", folderFilter)
+      if (hasDocumentsFilter !== "all")   params.append("hasDocuments", hasDocumentsFilter)
       if (sortColumn) {
         params.append("sortBy", COLUMN_FIELD_MAP[sortColumn] || sortColumn)
         params.append("sortDirection", sortDirection)
@@ -342,12 +545,12 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     } finally {
       setLoading(false)
     }
-  }, [pagination.pageSize, searchTerm, folderFilter, statusFilter, hasDocumentsFilter, sortColumn, sortDirection])
+  }, [pagination.pageSize, searchTerm, statusFilter, folderFilter, hasDocumentsFilter, sortColumn, sortDirection])
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, currentCursor: null, nextCursor: null, cursorHistory: [] }))
     fetchLogs(null)
-  }, [searchTerm, folderFilter, statusFilter, hasDocumentsFilter, pagination.pageSize, fetchLogs])
+  }, [searchTerm, statusFilter, folderFilter, hasDocumentsFilter, pagination.pageSize, fetchLogs])
 
   // Pagination handlers
   const handleNextPage = useCallback(() => {
@@ -364,38 +567,80 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     fetchLogs(prevCursor)
   }, [pagination.cursorHistory, fetchLogs])
 
-  // Selection
-  const allCurrentIds = logs.map((l) => l.id)
-  const allSelected = allCurrentIds.length > 0 && allCurrentIds.every((id) => selectedIds.has(id))
-  const someSelected = allCurrentIds.some((id) => selectedIds.has(id)) && !allSelected
+  // Filter handlers
+  const handleSearch = useCallback((term) => setSearchTerm(term), [])
+  const handleSubmit = useCallback((term) => setSearchTerm(term), [])
+  const handleStatusChange = useCallback((value) => setStatusFilter(value), [])
+  const handleFolderChange = useCallback((value) => setFolderFilter(value), [])
+  const handleHasDocumentsChange = useCallback((value) => setHasDocumentsFilter(value), [])
 
-  const toggleSelectAll = () => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (allSelected) allCurrentIds.forEach((id) => next.delete(id))
-      else allCurrentIds.forEach((id) => next.add(id))
-      return next
-    })
+  // Edit / file viewer / delete handlers
+  const handleOpenEditSheet = useCallback((logId) => {
+    setSelectedLogId(logId)
+    setIsSheetOpen(true)
+  }, [])
+
+  const handleOpenFileViewer = useCallback((logId, resourceUrl) => {
+    setViewerLogId(logId)
+    setViewerResourceUrl(resourceUrl || null)
+    setIsFileViewerOpen(true)
+  }, [])
+
+  const handleRefresh = () => fetchLogs(pagination.currentCursor)
+  const handleDeleteSelected = () => setIsBulkDeleteOpen(true)
+
+  // Selection handlers
+  const toggleAll = (checked) => {
+    const next = {}
+    if (checked) logs.forEach((l) => (next[l.id] = true))
+    setSelected(next)
   }
-  const toggleSelectRow = (id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  const toggleOne = (id, checked) => {
+    setSelected((prev) => ({ ...prev, [id]: checked }))
   }
 
   useEffect(() => {
-    if (typeof onSelectionChange === "function") onSelectionChange(logs.filter((l) => selectedIds.has(l.id)))
-  }, [selectedIds, logs, onSelectionChange])
+    onSelectionChange?.(logs.filter((l) => selected[l.id]))
+  }, [selected, logs, onSelectionChange])
 
-  useEffect(() => { setSelectedIds(new Set()) }, [logs])
+  // Clear selection when page changes
+  useEffect(() => { setSelected({}) }, [logs])
+
+  // Row expand toggle
+  const toggleRowExpand = useCallback((logId) => {
+    setExpandedRows((prev) => ({ ...prev, [logId]: !prev[logId] }))
+  }, [])
+
+  // Grouped view collapse
+  const toggleGroupCollapse = useCallback((status) => {
+    setCollapsedGroups((prev) => ({ ...prev, [status]: !prev[status] }))
+  }, [])
+
+  const expandAllGroups = useCallback(() => setCollapsedGroups({}), [])
+  const collapseAllGroups = useCallback(() => {
+    const groups = groupLogsByStatus(logs)
+    const collapsed = {}
+    groups.forEach((g) => { collapsed[g.status] = true })
+    setCollapsedGroups(collapsed)
+  }, [logs])
+
+  // Row keyboard handler
+  const handleRowKeyDown = useCallback((e, logId) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      toggleRowExpand(logId)
+    } else if (e.key === " ") {
+      e.preventDefault()
+      toggleOne(logId, !selected[logId])
+    }
+  }, [toggleRowExpand, selected])
 
   // Column resize
   const handleMouseMove = useCallback((e) => {
     const column = resizingColumnRef.current
     if (!column) return
-    setColumnWidths((prev) => ({ ...prev, [column]: Math.max(80, startWidthRef.current + (e.clientX - startXRef.current)) }))
+    const newWidth = Math.max(60, startWidthRef.current + (e.clientX - startXRef.current))
+    setColumnWidths((prev) => ({ ...prev, [column]: newWidth }))
     e.preventDefault()
   }, [])
 
@@ -408,7 +653,8 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
   }, [handleMouseMove])
 
   const handleResizeStart = useCallback((e, column) => {
-    e.preventDefault(); e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
     startXRef.current = e.clientX
     startWidthRef.current = columnWidths[column]
     resizingColumnRef.current = column
@@ -425,24 +671,16 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     document.body.style.removeProperty("user-select")
   }, [handleMouseMove, handleMouseUp])
 
-  const renderSkeletonRows = () =>
-    Array(Math.min(pagination.pageSize, 5)).fill(0).map((_, i) => <SkeletonRow key={i} colSpan={11} />)
+  // Grouped data
+  const groupedData = useMemo(() => groupLogsByStatus(logs), [logs])
 
-  // Shorthand for resizable header
-  const RH = ({ children, column }) => (
-    <ResizableColHeader
-      column={column}
-      sortColumn={sortColumn}
-      sortDirection={sortDirection}
-      onSort={handleSort}
-      onResizeStart={(e) => handleResizeStart(e, column)}
-      isHovered={hoveredResizer === column}
-    >
-      {children}
-    </ResizableColHeader>
-  )
+  // Stats
+  const stats = useMemo(() => {
+    const statuses = new Set(logs.map((l) => l.status).filter(Boolean))
+    return { total: logs.length, statuses: statuses.size }
+  }, [logs])
 
-  // Edit sheet config
+  // Edit sheet field config
   const logFields = [
     { name: "name",         label: "Name",         type: "text",     required: true },
     { name: "email",        label: "Email",         type: "text" },
@@ -464,256 +702,410 @@ export function AssignedTasksLogsTable({ onOpenCreateTask, onSelectionChange }) 
     "File(s)": formData.attachments, "Created Date": formData.assignedDate,
   })
 
-  const minTableWidth = Object.values(columnWidths).reduce((a, b) => a + b, 0)
-
-  return (
-    <PageTransition>
-      <div className="space-y-4">
-
-        {/* Filters */}
-        <TableFilters
-          onSearch={setSearchTerm}
-          onSubmit={setSearchTerm}
-          isLoading={loading}
-          folder={folderFilter}
-          status={statusFilter}
-          hasDocuments={hasDocumentsFilter}
-          onFolderChange={setFolderFilter}
-          onStatusChange={setStatusFilter}
-          onHasDocumentsChange={setHasDocumentsFilter}
-          taskCount={logs.length}
-          onRefresh={() => fetchLogs(pagination.currentCursor)}
-          searchTerm={searchTerm}
-          onClearSearch={() => setSearchTerm("")}
+  // ── Header cell renderer ──────────────────────────────────────────────────
+  const renderHeaderCell = (column, label, width) => (
+    <TableHead
+      style={{ width: `${width}px` }}
+      className="h-11 bg-muted/20 sticky top-0 z-10"
+      aria-sort={sortColumn === column ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <div className="group relative select-none">
+        <div
+          onClick={() => handleSort(column)}
+          className="flex items-center cursor-pointer px-2 py-1 text-overline text-muted-foreground/70 uppercase tracking-wider font-medium hover:text-foreground transition-colors"
+        >
+          {label}
+          <SortIndicator column={column} sortColumn={sortColumn} sortDirection={sortDirection} />
+        </div>
+        <div
+          className="absolute top-0 bottom-0 right-0 w-0.5 bg-transparent hover:bg-primary/30 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
+          onMouseDown={(e) => handleResizeStart(e, column)}
         />
+      </div>
+    </TableHead>
+  )
 
-        {/* Bulk action bar */}
-        <AnimatePresence>
-          {selectedIds.size > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
-              className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2"
-            >
-              <span className="text-sm font-medium text-destructive">
-                {selectedIds.size} row{selectedIds.size !== 1 ? "s" : ""} selected
-              </span>
-              <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteOpen(true)}>
-                <Trash2 className="h-4 w-4 mr-2" /> Delete selected
-              </Button>
-            </motion.div>
+  // ── Log row renderer ──────────────────────────────────────────────────────
+  const renderLogRow = (log, index) => {
+    const isExpanded = expandedRows[log.id]
+    return (
+      <AnimatePresence key={log.id}>
+        <motion.tr
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.2, delay: index * 0.02, ease: "easeOut" }}
+          onClick={() => toggleRowExpand(log.id)}
+          tabIndex={0}
+          role="row"
+          aria-expanded={isExpanded}
+          onKeyDown={(e) => handleRowKeyDown(e, log.id)}
+          className={cn(
+            "border-b border-border/20 transition-colors cursor-pointer group",
+            "hover:bg-muted/20 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none focus-visible:ring-inset",
+            isExpanded && "bg-muted/10",
+            selected[log.id] && "bg-primary/5"
           )}
-        </AnimatePresence>
+        >
+          {/* Checkbox */}
+          <TableCell style={{ width: `${columnWidths.checkbox}px` }} className="h-14">
+            <div onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                aria-label={`Select ${log.name}`}
+                checked={!!selected[log.id]}
+                onCheckedChange={(v) => toggleOne(log.id, !!v)}
+                disabled={loading}
+              />
+            </div>
+          </TableCell>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-md border" ref={tableRef}>
-          <Table className="table-fixed w-full" style={{ minWidth: `${minTableWidth}px` }}>
+          {/* Title */}
+          <TableCell style={{ width: `${columnWidths.title}px` }} className="h-14">
+            <span className="text-body-sm font-medium truncate block">{log.title || "—"}</span>
+          </TableCell>
+
+          {/* Assigned To */}
+          <TableCell style={{ width: `${columnWidths.assignedTo}px` }} className="h-14">
+            <span className="text-body-sm truncate block">{log.name || "—"}</span>
+          </TableCell>
+
+          {/* Folder */}
+          <TableCell style={{ width: `${columnWidths.folder}px` }} className="h-14">
+            {log.folder ? (
+              <FolderBadge name={log.folder} />
+            ) : (
+              <span className="text-body-sm text-muted-foreground">—</span>
+            )}
+          </TableCell>
+
+          {/* Status */}
+          <TableCell style={{ width: `${columnWidths.status}px` }} className="h-14">
+            <StatusBadge status={log.status} />
+          </TableCell>
+
+          {/* Actions */}
+          <TableCell style={{ width: `${columnWidths.actions}px` }} className="h-14">
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleOpenEditSheet(log.id)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom"><p>Edit</p></TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 relative text-muted-foreground hover:text-foreground"
+                      onClick={() => handleOpenFileViewer(log.id, log.resource)}
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {(log.attachmentCount > 0 || log.resource) && (
+                        <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-[14px] rounded-full bg-primary text-primary-foreground text-[9px] font-medium flex items-center justify-center px-0.5">
+                          {log.attachmentCount + (log.resource ? 1 : 0)}
+                        </span>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom"><p>Files</p></TooltipContent>
+                </Tooltip>
+
+                {log.resource && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom"><p>Open resource</p></TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            </div>
+          </TableCell>
+        </motion.tr>
+
+        {/* Expanded detail row */}
+        {isExpanded && (
+          <ExpandedLogDetail
+            log={log}
+            onOpenFileViewer={handleOpenFileViewer}
+            onOpenEditSheet={handleOpenEditSheet}
+          />
+        )}
+      </AnimatePresence>
+    )
+  }
+
+  // ── Empty state ───────────────────────────────────────────────────────────
+  const renderEmptyState = () => (
+    <TableRow>
+      <TableCell colSpan={6} className="h-auto py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col items-center justify-center text-center"
+        >
+          <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center mb-4">
+            <Package className="h-6 w-6 text-muted-foreground/40" />
+          </div>
+          <p className="text-body-sm font-medium mb-1">No assigned tasks found</p>
+          <p className="text-caption text-muted-foreground/60 mb-4">
+            {searchTerm ? "Try adjusting your search or filters" : "No assignments have been created yet"}
+          </p>
+          {searchTerm && (
+            <Button variant="outline" size="sm" onClick={() => setSearchTerm("")} className="h-8">
+              Clear Search
+            </Button>
+          )}
+        </motion.div>
+      </TableCell>
+    </TableRow>
+  )
+
+  // ── Grouped view renderer ─────────────────────────────────────────────────
+  const renderGroupedView = () => {
+    if (groupedData.length === 0) return renderEmptyState()
+
+    let rowIndex = 0
+    return groupedData.map((group) => {
+      const isCollapsed = collapsedGroups[group.status]
+      return (
+        <React.Fragment key={`status-${group.status}`}>
+          {/* Group header row */}
+          <TableRow
+            className="border-b border-border/20 cursor-pointer hover:bg-muted/10 transition-colors"
+            onClick={() => toggleGroupCollapse(group.status)}
+          >
+            <TableCell colSpan={6} className="py-0 px-0">
+              <div className="flex items-center gap-3 py-2.5 px-4 bg-muted/10 rounded-md mx-1 my-1">
+                <motion.div
+                  animate={{ rotate: isCollapsed ? -90 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </motion.div>
+                {group.status === "Unassigned"
+                  ? <span className="text-body-sm font-semibold">Unassigned</span>
+                  : <StatusBadge status={group.status} />
+                }
+                <Badge variant="secondary" className="text-caption px-1.5 py-0">
+                  {group.logs.length}
+                </Badge>
+              </div>
+            </TableCell>
+          </TableRow>
+
+          {/* Log rows */}
+          <AnimatePresence>
+            {!isCollapsed && group.logs.map((log) => {
+              const idx = rowIndex++
+              return renderLogRow(log, idx)
+            })}
+          </AnimatePresence>
+        </React.Fragment>
+      )
+    })
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-4 animate-fade-in-up">
+      {/* Filter toolbar */}
+      <TableFilters
+        onSearch={handleSearch}
+        onSubmit={handleSubmit}
+        isLoading={loading}
+        status={statusFilter}
+        folder={folderFilter}
+        hasDocuments={hasDocumentsFilter}
+        onStatusChange={handleStatusChange}
+        onFolderChange={handleFolderChange}
+        onHasDocumentsChange={handleHasDocumentsChange}
+        taskCount={logs.length}
+        selectedTasks={selectedLogs}
+        onDeleteSelected={handleDeleteSelected}
+        onRefresh={handleRefresh}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+
+      {/* Expand / Collapse all (grouped view only) */}
+      {viewMode === "grouped" && logs.length > 0 && !loading && (
+        <div className="flex items-center justify-between">
+          <span className="text-caption text-muted-foreground">
+            {stats.total} assignments across {stats.statuses} status{stats.statuses !== 1 ? "es" : ""}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={expandAllGroups} className="h-7 text-caption px-2">
+              Expand all
+            </Button>
+            <span className="text-muted-foreground/30">|</span>
+            <Button variant="ghost" size="sm" onClick={collapseAllGroups} className="h-7 text-caption px-2">
+              Collapse all
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table card */}
+      <Card variant="elevated" className="overflow-hidden">
+        <div className="overflow-x-auto" ref={tableRef}>
+          <Table className="w-full">
             <TableHeader>
-              <TableRow>
-                <TableHead style={{ width: `${columnWidths.checkbox}px` }} className="px-3">
+              <TableRow className="border-b border-border/20">
+                <TableHead style={{ width: `${columnWidths.checkbox}px` }} className="h-11 bg-muted/20 sticky top-0 z-10">
                   <Checkbox
-                    checked={allSelected}
-                    data-state={someSelected ? "indeterminate" : allSelected ? "checked" : "unchecked"}
-                    onCheckedChange={toggleSelectAll}
                     aria-label="Select all"
+                    checked={allChecked}
+                    onCheckedChange={(v) => toggleAll(!!v)}
+                    disabled={loading}
                   />
                 </TableHead>
-                <TableHead style={{ width: `${columnWidths.name}px` }}><RH column="name">Name</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.email}px` }}><RH column="email">Email</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.title}px` }}><RH column="title">Title</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.description}px` }}><RH column="description">Description</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.folder}px` }}><RH column="folder">Folder</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.status}px` }}><RH column="status">Status</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.attachments}px` }} className="p-2 font-normal">Attachments</TableHead>
-                <TableHead style={{ width: `${columnWidths.resource}px` }} className="p-2 font-normal">Resource</TableHead>
-                <TableHead style={{ width: `${columnWidths.assignedDate}px` }}><RH column="assignedDate">Assigned Date</RH></TableHead>
-                <TableHead style={{ width: `${columnWidths.edit}px` }} className="p-2 font-normal text-center">Edit</TableHead>
+                {renderHeaderCell("title", "Title", columnWidths.title)}
+                {renderHeaderCell("assignedTo", "Assigned To", columnWidths.assignedTo)}
+                {renderHeaderCell("folder", "Folder", columnWidths.folder)}
+                {renderHeaderCell("status", "Status", columnWidths.status)}
+                <TableHead style={{ width: `${columnWidths.actions}px` }} className="h-11 bg-muted/20 sticky top-0 z-10">
+                  <span className="text-overline text-muted-foreground/70 uppercase tracking-wider font-medium px-2">
+                    Actions
+                  </span>
+                </TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {loading ? (
-                renderSkeletonRows()
+                Array(Math.min(pagination.pageSize, 6)).fill(0).map((_, i) => <SkeletonRow key={i} />)
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center text-error">Error: {error}</TableCell>
-                </TableRow>
-              ) : logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} className="h-auto py-8">
-                    <AnimatedEmptyState
-                      message={searchTerm ? `No tasks found matching "${searchTerm}"` : "No assigned tasks found"}
-                      actionLabel={searchTerm ? "Clear Search" : "Create Task"}
-                      onClearSearch={() => setSearchTerm("")}
-                      onOpenCreateTask={onOpenCreateTask}
-                    />
+                  <TableCell colSpan={6} className="h-24 text-center text-error">
+                    Error: {error}
                   </TableCell>
                 </TableRow>
+              ) : logs.length === 0 ? (
+                renderEmptyState()
+              ) : viewMode === "grouped" ? (
+                renderGroupedView()
               ) : (
                 <AnimatePresence initial={true}>
-                  {logs.map((log, index) => (
-                    <motion.tr
-                      key={log.id}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.04, ease: "easeOut" }}
-                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                      data-state={selectedIds.has(log.id) ? "selected" : undefined}
-                    >
-                      {/* Checkbox */}
-                      <TableCell className="px-3" style={{ width: `${columnWidths.checkbox}px` }}>
-                        <Checkbox
-                          checked={selectedIds.has(log.id)}
-                          onCheckedChange={() => toggleSelectRow(log.id)}
-                          aria-label={`Select row for ${log.name}`}
-                        />
-                      </TableCell>
-
-                      {/* Name */}
-                      <TableCell className="font-medium truncate" style={{ width: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }}>
-                        {log.name || "—"}
-                      </TableCell>
-
-                      {/* Email */}
-                      <TableCell className="truncate" style={{ width: `${columnWidths.email}px`, maxWidth: `${columnWidths.email}px` }}>
-                        {log.email || "—"}
-                      </TableCell>
-
-                      {/* Title */}
-                      <TableCell className="truncate" style={{ width: `${columnWidths.title}px`, maxWidth: `${columnWidths.title}px` }}>
-                        {log.title || "—"}
-                      </TableCell>
-
-                      {/* Description */}
-                      <TableCell className="truncate" style={{ width: `${columnWidths.description}px`, maxWidth: `${columnWidths.description}px` }}>
-                        {log.description || "—"}
-                      </TableCell>
-
-                      {/* Folder */}
-                      <TableCell style={{ width: `${columnWidths.folder}px` }}>
-                        {log.folder ? <FolderBadge name={log.folder} /> : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell style={{ width: `${columnWidths.status}px` }}>
-                        <StatusBadge status={log.status} />
-                      </TableCell>
-
-                      {/* Attachments */}
-                      <TableCell style={{ width: `${columnWidths.attachments}px` }}>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm" variant="ghost"
-                                className="flex items-center gap-1.5 text-xs"
-                                disabled={!log.attachmentCount}
-                                onClick={() => { setViewerLogId(log.id); setIsViewerOpen(true) }}
-                              >
-                                <Paperclip className="h-3.5 w-3.5" />
-                                {log.attachmentCount > 0 ? `${log.attachmentCount} file${log.attachmentCount !== 1 ? "s" : ""}` : "No files"}
-                              </Button>
-                            </TooltipTrigger>
-                            {log.attachmentCount > 0 && <TooltipContent>View attachments</TooltipContent>}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-
-                      {/* Resource */}
-                      <TableCell style={{ width: `${columnWidths.resource}px` }}>
-                        {log.resource ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button size="icon" variant="ghost" className="h-8 w-8"
-                                  onClick={() => window.open(log.resource, "_blank", "noopener,noreferrer")}>
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Open resource</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
-                          <span className="text-muted-foreground px-2">—</span>
-                        )}
-                      </TableCell>
-
-                      {/* Assigned Date */}
-                      <TableCell style={{ width: `${columnWidths.assignedDate}px` }}>
-                        {log.assignedDate ? new Date(log.assignedDate).toLocaleDateString() : "—"}
-                      </TableCell>
-
-                      {/* Edit */}
-                      <TableCell style={{ width: `${columnWidths.edit}px` }} className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8"
-                                onClick={() => { setSelectedLogId(log.id); setIsSheetOpen(true) }}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Edit record</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
+                  {logs.map((log, index) => renderLogRow(log, index))}
                 </AnimatePresence>
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Items per page:</span>
-            <Input type="text" value={pageSizeInput} onChange={(e) => setPageSizeInput(e.target.value)} className="w-16 h-8" aria-label="Page size" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={pagination.cursorHistory.length === 0 || loading}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!pagination.hasNextPage || loading}>
-              Next <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+        {/* Pagination footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border/20">
+          <span className="text-caption text-muted-foreground">
+            {!loading && logs.length > 0 && `Showing ${logs.length} assignment${logs.length !== 1 ? "s" : ""}`}
+          </span>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={pagination.cursorHistory.length === 0 || loading}
+                className="h-8"
+              >
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!pagination.hasNextPage || loading}
+                className="h-8"
+              >
+                Next
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 text-caption text-muted-foreground">
+              <span>Per page</span>
+              <Select
+                value={pagination.pageSize.toString()}
+                onValueChange={(val) => {
+                  const size = parseInt(val, 10)
+                  setPagination((prev) => ({
+                    ...prev,
+                    pageSize: size,
+                    currentCursor: null,
+                    nextCursor: null,
+                    cursorHistory: [],
+                  }))
+                }}
+              >
+                <SelectTrigger className="h-7 w-[70px] rounded-md text-caption border-border/40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((s) => (
+                    <SelectItem key={s} value={`${s}`}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+      </Card>
 
-        {/* Edit sheet */}
-        <DynamicTaskEditSheet
-          open={isSheetOpen}
-          onOpenChange={setIsSheetOpen}
-          taskId={selectedLogId}
-          getEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
-          patchEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
-          deleteEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
-          fields={logFields}
-          mapApiToForm={mapApiToForm}
-          mapFormToApi={mapFormToApi}
-          onEditSuccess={() => fetchLogs(pagination.currentCursor)}
-          onDeleteSuccess={() => fetchLogs(pagination.currentCursor)}
-        />
+      {/* Edit sheet */}
+      <DynamicTaskEditSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        taskId={selectedLogId}
+        getEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+        patchEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+        deleteEndpoint={selectedLogId ? `/api/admin/tasks/assigned-tasks/${selectedLogId}` : ""}
+        fields={logFields}
+        mapApiToForm={mapApiToForm}
+        mapFormToApi={mapFormToApi}
+        onEditSuccess={() => fetchLogs(pagination.currentCursor)}
+        onDeleteSuccess={() => fetchLogs(pagination.currentCursor)}
+      />
 
-        {/* Bulk delete */}
-        <BulkDeleteTasksModal
-          open={isBulkDeleteOpen}
-          onOpenChange={setIsBulkDeleteOpen}
-          selectedTasks={logs.filter((l) => selectedIds.has(l.id))}
-          deleteEndpoint="/api/admin/tasks/assigned-tasks/bulk-delete"
-          onDeleteSuccess={() => { setSelectedIds(new Set()); fetchLogs(null) }}
-        />
+      {/* Bulk delete */}
+      <BulkDeleteTasksModal
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        selectedTasks={selectedLogs}
+        deleteEndpoint="/api/admin/tasks/assigned-tasks/bulk-delete"
+        onDeleteSuccess={() => { setSelected({}); fetchLogs(null) }}
+      />
 
-        {/* Attachment viewer */}
+      {/* Attachment viewer */}
+      {isFileViewerOpen && (
         <FileViewerModal
-          isOpen={isViewerOpen}
-          onClose={() => setIsViewerOpen(false)}
+          isOpen={isFileViewerOpen}
+          onClose={() => setIsFileViewerOpen(false)}
           taskId={viewerLogId}
+          resourceUrl={viewerResourceUrl}
           attachmentsEndpoint={viewerLogId ? `/api/admin/tasks/assigned-tasks/${viewerLogId}/attachments` : ""}
           onFilesUpdated={() => fetchLogs(pagination.currentCursor)}
         />
-      </div>
-    </PageTransition>
+      )}
+    </div>
   )
 }
