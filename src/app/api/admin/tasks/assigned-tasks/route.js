@@ -64,7 +64,7 @@ export async function GET(request) {
     const conditions = []
     if (search) {
       const s = escapeStr(search).replace(/\n/g, ' ')
-      conditions.push(`OR(FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Name})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Email})))>0,FIND(LOWER("${s}"),LOWER({Display Title}))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Folder Name})))>0)`)
+      conditions.push(`OR(FIND(LOWER("${s}"),LOWER({Display Title}))>0,FIND(LOWER("${s}"),LOWER({Applicant Name}))>0,FIND(LOWER("${s}"),LOWER({Applicant Email}))>0)`)
     }
     if (folder) conditions.push(`ARRAYJOIN({Folder Name}) = "${escapeStr(folder)}"`)
     if (name) conditions.push(`ARRAYJOIN({Applicant Name}) = "${escapeStr(name)}"`)
