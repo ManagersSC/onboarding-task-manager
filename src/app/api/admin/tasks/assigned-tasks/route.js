@@ -85,22 +85,23 @@ export async function GET(request) {
     const sortField = sortFieldMap[sortBy] || sortBy
 
     // 6. Fetch via REST API for reliable pagination
-    // Use new URL().searchParams for all params (matches core-tasks pattern) so that
-    // sort[0][field] bracket notation is preserved and the formula is encoded consistently.
-    const airtableUrl = new URL(
-      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
-    )
-    const urlParams = airtableUrl.searchParams
-    urlParams.set('pageSize', String(pageSize))
-    if (clientCursor) urlParams.set('offset', clientCursor)
-    if (filterByFormula) urlParams.set('filterByFormula', filterByFormula)
-    urlParams.set('sort[0][field]', sortField)
-    urlParams.set('sort[0][direction]', sortDirection)
+    // Build the URL manually so we can use encodeURIComponent for filterByFormula.
+    // URLSearchParams / URL.searchParams both encode spaces as '+', but Airtable's formula
+    // parser treats '+' as a literal character — so {Display+Title} is an unknown field.
+    // encodeURIComponent uses '%20' (decoded as a space by Airtable's HTTP layer) which is safe.
+    // sort[0][field] bracket notation is kept literal so Airtable recognises the sort param.
+    const baseUrl = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
+    const queryParts = [`pageSize=${pageSize}`]
+    if (clientCursor) queryParts.push(`offset=${encodeURIComponent(clientCursor)}`)
+    if (filterByFormula) queryParts.push(`filterByFormula=${encodeURIComponent(filterByFormula)}`)
+    queryParts.push(`sort[0][field]=${encodeURIComponent(sortField)}`)
+    queryParts.push(`sort[0][direction]=${sortDirection}`)
+    const airtableUrl = `${baseUrl}?${queryParts.join('&')}`
 
     logger.debug(`Assigned Tasks Logs Filter Formula: ${filterByFormula}`)
-    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl.toString()}`)
+    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl}`)
 
-    const airtableRes = await fetch(airtableUrl.toString(), {
+    const airtableRes = await fetch(airtableUrl, {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
     })
     if (!airtableRes.ok) {
