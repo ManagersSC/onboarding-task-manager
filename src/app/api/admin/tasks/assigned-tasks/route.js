@@ -62,12 +62,7 @@ export async function GET(request) {
     const conditions = []
     if (search) {
       const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
-      conditions.push(`OR(
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Applicant Name})) > 0,
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Applicant Email})) > 0,
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Display Title})) > 0,
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Folder Name})) > 0
-      )`)
+      conditions.push(`OR(FIND(LOWER('${safeSearch}'),LOWER({Applicant Name}))>0,FIND(LOWER('${safeSearch}'),LOWER({Applicant Email}))>0,FIND(LOWER('${safeSearch}'),LOWER({Display Title}))>0,FIND(LOWER('${safeSearch}'),LOWER({Folder Name}))>0)`)
     }
     if (folder) conditions.push(`{Folder Name} = '${folder.replace(/'/g, "\\'")}'`)
     if (name) conditions.push(`{Applicant Name} = '${name.replace(/'/g, "\\'")}'`)
