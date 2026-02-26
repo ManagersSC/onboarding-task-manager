@@ -59,15 +59,17 @@ export async function GET(request) {
     }
 
     // 4. Build filter formula
+    // Note: string values use double-quotes to match Airtable's preferred formula syntax
+    const escapeStr = (v) => (v || "").replace(/"/g, '""')
     const conditions = []
     if (search) {
-      const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
-      conditions.push(`OR(FIND(LOWER('${safeSearch}'),LOWER({Applicant Name}))>0,FIND(LOWER('${safeSearch}'),LOWER({Applicant Email}))>0,FIND(LOWER('${safeSearch}'),LOWER({Display Title}))>0,FIND(LOWER('${safeSearch}'),LOWER({Folder Name}))>0)`)
+      const s = escapeStr(search).replace(/\n/g, ' ')
+      conditions.push(`OR(FIND(LOWER("${s}"),LOWER({Applicant Name}))>0,FIND(LOWER("${s}"),LOWER({Applicant Email}))>0,FIND(LOWER("${s}"),LOWER({Display Title}))>0,FIND(LOWER("${s}"),LOWER({Folder Name}))>0)`)
     }
-    if (folder) conditions.push(`{Folder Name} = '${folder.replace(/'/g, "\\'")}'`)
-    if (name) conditions.push(`{Applicant Name} = '${name.replace(/'/g, "\\'")}'`)
-    if (assignedDate) conditions.push(`IS_SAME({Created Date}, '${assignedDate}', 'day')`)
-    if (status) conditions.push(`{Status} = '${status.replace(/'/g, "\\'")}'`)
+    if (folder) conditions.push(`{Folder Name} = "${escapeStr(folder)}"`)
+    if (name) conditions.push(`{Applicant Name} = "${escapeStr(name)}"`)
+    if (assignedDate) conditions.push(`IS_SAME({Created Date}, "${assignedDate}", "day")`)
+    if (status) conditions.push(`{Status} = "${escapeStr(status)}"`)
     if (hasDocuments === "yes") conditions.push(`OR({File(s)} != BLANK(), {Display Resource Link} != BLANK())`)
     if (hasDocuments === "no") conditions.push(`AND({File(s)} = BLANK(), {Display Resource Link} = BLANK())`)
     const filterByFormula = conditions.length ? `AND(${conditions.join(",")})` : ""
@@ -81,23 +83,28 @@ export async function GET(request) {
     const sortField = sortFieldMap[sortBy] || sortBy
 
     // 6. Fetch via REST API for reliable pagination
-    const apiUrl = new URL(
-      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
-    )
-    const params = apiUrl.searchParams
-    params.set('pageSize', pageSize)
-    if (clientCursor) params.set('offset', clientCursor)
-    if (filterByFormula) params.set('filterByFormula', filterByFormula)
-    params.set('sort[0][field]', sortField)
-    params.set('sort[0][direction]', sortDirection)
+    // IMPORTANT: filterByFormula must be encoded with encodeURIComponent (not URLSearchParams)
+    // because URLSearchParams encodes spaces as '+', but Airtable's formula parser treats '+' as
+    // a literal character — so field names like {Applicant Name} would arrive as {Applicant+Name}.
+    // encodeURIComponent encodes spaces as '%20', which is unambiguously decoded as a space.
+    const baseUrl = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
+    const urlParams = new URLSearchParams()
+    urlParams.set('pageSize', String(pageSize))
+    if (clientCursor) urlParams.set('offset', clientCursor)
+    urlParams.set('sort[0][field]', sortField)
+    urlParams.set('sort[0][direction]', sortDirection)
+    const formulaParam = filterByFormula ? `&filterByFormula=${encodeURIComponent(filterByFormula)}` : ''
+    const airtableUrl = `${baseUrl}?${urlParams.toString()}${formulaParam}`
 
     logger.debug(`Assigned Tasks Logs Filter Formula: ${filterByFormula}`)
+    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl}`)
 
-    const airtableRes = await fetch(apiUrl.toString(), {
+    const airtableRes = await fetch(airtableUrl, {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
     })
     if (!airtableRes.ok) {
-      throw new Error(`Airtable REST error: ${airtableRes.statusText}`)
+      const errBody = await airtableRes.text().catch(() => '')
+      throw new Error(`Airtable REST error: ${airtableRes.status} ${airtableRes.statusText}${errBody ? ` — ${errBody}` : ''}`)
     }
 
     const { records: rawRecords, offset } = await airtableRes.json()
