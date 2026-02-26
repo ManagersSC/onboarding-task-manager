@@ -83,23 +83,22 @@ export async function GET(request) {
     const sortField = sortFieldMap[sortBy] || sortBy
 
     // 6. Fetch via REST API for reliable pagination
-    // IMPORTANT: filterByFormula must be encoded with encodeURIComponent (not URLSearchParams)
-    // because URLSearchParams encodes spaces as '+', but Airtable's formula parser treats '+' as
-    // a literal character — so field names like {Applicant Name} would arrive as {Applicant+Name}.
-    // encodeURIComponent encodes spaces as '%20', which is unambiguously decoded as a space.
-    const baseUrl = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
-    const urlParams = new URLSearchParams()
+    // Use new URL().searchParams for all params (matches core-tasks pattern) so that
+    // sort[0][field] bracket notation is preserved and the formula is encoded consistently.
+    const airtableUrl = new URL(
+      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
+    )
+    const urlParams = airtableUrl.searchParams
     urlParams.set('pageSize', String(pageSize))
     if (clientCursor) urlParams.set('offset', clientCursor)
+    if (filterByFormula) urlParams.set('filterByFormula', filterByFormula)
     urlParams.set('sort[0][field]', sortField)
     urlParams.set('sort[0][direction]', sortDirection)
-    const formulaParam = filterByFormula ? `&filterByFormula=${encodeURIComponent(filterByFormula)}` : ''
-    const airtableUrl = `${baseUrl}?${urlParams.toString()}${formulaParam}`
 
     logger.debug(`Assigned Tasks Logs Filter Formula: ${filterByFormula}`)
-    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl}`)
+    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl.toString()}`)
 
-    const airtableRes = await fetch(airtableUrl, {
+    const airtableRes = await fetch(airtableUrl.toString(), {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
     })
     if (!airtableRes.ok) {
