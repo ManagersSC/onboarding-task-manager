@@ -49,6 +49,8 @@ export async function GET(request) {
     const folder = searchParams.get("folder") || ""
     const name = searchParams.get("name") || ""
     const assignedDate = searchParams.get("assignedDate") || ""
+    const status = searchParams.get("status") || ""
+    const hasDocuments = searchParams.get("hasDocuments") || ""
 
     // 3. Airtable credentials check
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
@@ -66,13 +68,20 @@ export async function GET(request) {
         FIND(LOWER(\"${safeSearch}\"), LOWER({Folder Name})) > 0
       )`)
     }
-    if (folder) conditions.push(`{Folder Name} = '${folder}'`)
-    if (name) conditions.push(`{Applicant Name} = '${name}'`)
+    if (folder) conditions.push(`{Folder Name} = '${folder.replace(/'/g, "\\'")}'`)
+    if (name) conditions.push(`{Applicant Name} = '${name.replace(/'/g, "\\'")}'`)
     if (assignedDate) conditions.push(`IS_SAME({Created Date}, '${assignedDate}', 'day')`)
+    if (status) conditions.push(`{Status} = '${status.replace(/'/g, "\\'")}'`)
+    if (hasDocuments === "yes") conditions.push(`OR({File(s)} != BLANK(), {Display Resource Link} != BLANK())`)
+    if (hasDocuments === "no") conditions.push(`AND({File(s)} = BLANK(), {Display Resource Link} = BLANK())`)
     const filterByFormula = conditions.length ? `AND(${conditions.join(",")})` : ""
 
     // 5. Sort field mapping
-    const sortFieldMap = { assignedDate: 'Created Date', name: 'Applicant Name' }
+    const sortFieldMap = {
+      assignedDate: 'Created Date',
+      name: 'Applicant Name',
+      status: 'Status',
+    }
     const sortField = sortFieldMap[sortBy] || sortBy
 
     // 6. Fetch via REST API for reliable pagination
@@ -99,12 +108,6 @@ export async function GET(request) {
     const records = rawRecords || []
     const nextCursor = offset || null
 
-    // Debug logging for folder data
-    logger.debug('Raw Airtable records:', JSON.stringify(records.map(rec => ({
-      id: rec.id,
-      folder: rec.fields['Folder Name']
-    })), null, 2))
-
     // 7. Format logs for frontend
     const logs = records.map(rec => {
       const rawAttachments = rec.fields['File(s)'] || []
@@ -117,6 +120,7 @@ export async function GET(request) {
         folder: rec.fields['Folder Name'] || '',
         resource: rec.fields['Display Resource Link'] || '',
         assignedDate: rec.fields['Created Date'] || '',
+        status: rec.fields['Status'] || '',
         attachments: rawAttachments,
         attachmentCount: rawAttachments.length,
       }
