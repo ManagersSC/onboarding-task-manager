@@ -64,6 +64,7 @@ export async function GET(request) {
       const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
       conditions.push(`OR(
         FIND(LOWER(\"${safeSearch}\"), LOWER({Applicant Name})) > 0,
+        FIND(LOWER(\"${safeSearch}\"), LOWER({Applicant Email})) > 0,
         FIND(LOWER(\"${safeSearch}\"), LOWER({Display Title})) > 0,
         FIND(LOWER(\"${safeSearch}\"), LOWER({Folder Name})) > 0
       )`)
