@@ -473,6 +473,31 @@ export function AssignedTasksLogsTable({ onSelectionChange }) {
   const [selectedLogId, setSelectedLogId] = useState(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
+  // Folder options for edit sheet dropdown
+  const [editFolderOptions, setEditFolderOptions] = useState([])
+  const [editFoldersFetched, setEditFoldersFetched] = useState(false)
+  const [editFoldersLoading, setEditFoldersLoading] = useState(false)
+
+  const fetchEditFolders = useCallback(async () => {
+    if (editFoldersFetched || editFoldersLoading) return
+    setEditFoldersLoading(true)
+    try {
+      const res = await fetch("/api/admin/folders?includeInactive=true")
+      if (!res.ok) throw new Error("Failed to fetch folders")
+      const data = await res.json()
+      const names = (data.folders || [])
+        .map((f) => f.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setEditFolderOptions(Array.from(new Set(names)))
+      setEditFoldersFetched(true)
+    } catch {
+      // swallow
+    } finally {
+      setEditFoldersLoading(false)
+    }
+  }, [editFoldersFetched, editFoldersLoading])
+
   // File viewer
   const [viewerLogId, setViewerLogId] = useState(null)
   const [viewerResourceUrl, setViewerResourceUrl] = useState(null)
@@ -581,7 +606,8 @@ export function AssignedTasksLogsTable({ onSelectionChange }) {
   const handleOpenEditSheet = useCallback((logId) => {
     setSelectedLogId(logId)
     setIsSheetOpen(true)
-  }, [])
+    fetchEditFolders()
+  }, [fetchEditFolders])
 
   const handleOpenFileViewer = useCallback((logId, resourceUrl) => {
     setViewerLogId(logId)
@@ -683,17 +709,22 @@ export function AssignedTasksLogsTable({ onSelectionChange }) {
     return { total: logs.length, statuses: statuses.size }
   }, [logs])
 
-  // Edit sheet field config
-  const logFields = [
+  // Edit sheet field config — folder uses a dynamic select fed from the folders API
+  const logFields = useMemo(() => [
     { name: "name",         label: "Name",         type: "text",     required: true },
     { name: "email",        label: "Email",         type: "text" },
     { name: "title",        label: "Title",         type: "text",     required: true },
     { name: "description",  label: "Description",   type: "textarea" },
-    { name: "folder",       label: "Folder",        type: "text" },
+    {
+      name: "folder",
+      label: "Folder",
+      type: "select",
+      options: editFolderOptions.map((name) => ({ value: name, label: name })),
+    },
     { name: "resource",     label: "Resource URL",  type: "url" },
     { name: "attachments",  label: "Attachments",   type: "file" },
     { name: "assignedDate", label: "Assigned Date", type: "date" },
-  ]
+  ], [editFolderOptions])
   const mapApiToForm = (log) => ({
     name: log.name, email: log.email, title: log.title, description: log.description,
     folder: log.folder, resource: log.resource, attachments: log.attachments, assignedDate: log.assignedDate,

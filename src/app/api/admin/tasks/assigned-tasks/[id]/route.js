@@ -26,15 +26,19 @@ export async function GET(request, { params }) {
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
   try {
     const record = await base("Onboarding Tasks Logs").find(id)
+    // multipleLookupValues fields return arrays — extract first element.
+    const firstVal = (v) => (Array.isArray(v) ? v[0] : v) || ''
+    // Created Date is a createdTime (ISO-8601). Slice to YYYY-MM-DD for <input type="date">.
+    const rawDate = record.fields['Created Date'] || ''
     const log = {
       id: record.id,
-      name: record.fields['Applicant Name'] || '',
-      email: record.fields['Applicant Email'] || '',
+      name: firstVal(record.fields['Applicant Name']),
+      email: firstVal(record.fields['Applicant Email']),
       title: record.fields['Display Title'] || '',
       description: record.fields['Display Desc'] || '',
-      folder: record.fields['Folder Name'] || '',
+      folder: firstVal(record.fields['Folder Name']),
       resource: record.fields['Display Resource Link'] || '',
-      assignedDate: record.fields['Created Date'] || '',
+      assignedDate: rawDate ? rawDate.slice(0, 10) : '',
       attachments: record.fields['File(s)'] || [],
     }
     return Response.json({ log })
