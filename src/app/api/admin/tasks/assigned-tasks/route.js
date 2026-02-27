@@ -49,6 +49,8 @@ export async function GET(request) {
     const folder = searchParams.get("folder") || ""
     const name = searchParams.get("name") || ""
     const assignedDate = searchParams.get("assignedDate") || ""
+    const status = searchParams.get("status") || ""
+    const hasDocuments = searchParams.get("hasDocuments") || ""
 
     // 3. Airtable credentials check
     if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
@@ -57,66 +59,78 @@ export async function GET(request) {
     }
 
     // 4. Build filter formula
+    // Note: string values use double-quotes to match Airtable's preferred formula syntax
+    const escapeStr = (v) => (v || "").replace(/"/g, '""')
     const conditions = []
     if (search) {
-      const safeSearch = search.replace(/'/g, "\\'").replace(/\n/g, ' ')
-      conditions.push(`OR(
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Applicant Name})) > 0,
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Display Title})) > 0,
-        FIND(LOWER(\"${safeSearch}\"), LOWER({Folder Name})) > 0
-      )`)
+      const s = escapeStr(search).replace(/\n/g, ' ')
+      // Display Title is a formula wrapping multipleLookupValues fields — unreliable in filterByFormula.
+      // Search the underlying fields directly instead:
+      //   Task Title and Quiz Title are multipleLookupValues — ARRAYJOIN required.
+      //   Custom Task Title is singleLineText — no ARRAYJOIN needed.
+      //   Applicant Name and Applicant Email are multipleLookupValues — ARRAYJOIN required.
+      conditions.push(`OR(FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Task Title})))>0,FIND(LOWER("${s}"),LOWER({Custom Task Title}))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Quiz Title})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Name})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Email})))>0)`)
     }
-    if (folder) conditions.push(`{Folder Name} = '${folder}'`)
-    if (name) conditions.push(`{Applicant Name} = '${name}'`)
-    if (assignedDate) conditions.push(`IS_SAME({Created Date}, '${assignedDate}', 'day')`)
+    if (folder) conditions.push(`ARRAYJOIN({Folder Name}) = "${escapeStr(folder)}"`)
+    if (name) conditions.push(`ARRAYJOIN({Applicant Name}) = "${escapeStr(name)}"`)
+    if (assignedDate) conditions.push(`IS_SAME({Created Date}, "${assignedDate}", "day")`)
+    if (status) conditions.push(`{Status} = "${escapeStr(status)}"`)
+    if (hasDocuments === "yes") conditions.push(`OR({File(s)} != BLANK(), {Display Resource Link} != BLANK())`)
+    if (hasDocuments === "no") conditions.push(`AND({File(s)} = BLANK(), {Display Resource Link} = BLANK())`)
     const filterByFormula = conditions.length ? `AND(${conditions.join(",")})` : ""
 
     // 5. Sort field mapping
-    const sortFieldMap = { assignedDate: 'Created Date', name: 'Applicant Name' }
+    const sortFieldMap = {
+      assignedDate: 'Created Date',
+      name: 'Applicant Name',
+      status: 'Status',
+    }
     const sortField = sortFieldMap[sortBy] || sortBy
 
     // 6. Fetch via REST API for reliable pagination
-    const apiUrl = new URL(
-      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
-    )
-    const params = apiUrl.searchParams
-    params.set('pageSize', pageSize)
-    if (clientCursor) params.set('offset', clientCursor)
-    if (filterByFormula) params.set('filterByFormula', filterByFormula)
-    params.set('sort[0][field]', sortField)
-    params.set('sort[0][direction]', sortDirection)
+    // Build the URL manually so we can use encodeURIComponent for filterByFormula.
+    // URLSearchParams / URL.searchParams both encode spaces as '+', but Airtable's formula
+    // parser treats '+' as a literal character — so {Display+Title} is an unknown field.
+    // encodeURIComponent uses '%20' (decoded as a space by Airtable's HTTP layer) which is safe.
+    // sort[0][field] bracket notation is kept literal so Airtable recognises the sort param.
+    const baseUrl = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/Onboarding%20Tasks%20Logs`
+    const queryParts = [`pageSize=${pageSize}`]
+    if (clientCursor) queryParts.push(`offset=${encodeURIComponent(clientCursor)}`)
+    if (filterByFormula) queryParts.push(`filterByFormula=${encodeURIComponent(filterByFormula)}`)
+    queryParts.push(`sort[0][field]=${encodeURIComponent(sortField)}`)
+    queryParts.push(`sort[0][direction]=${sortDirection}`)
+    const airtableUrl = `${baseUrl}?${queryParts.join('&')}`
 
     logger.debug(`Assigned Tasks Logs Filter Formula: ${filterByFormula}`)
+    logger.debug(`Assigned Tasks Logs Airtable URL: ${airtableUrl}`)
 
-    const airtableRes = await fetch(apiUrl.toString(), {
+    const airtableRes = await fetch(airtableUrl, {
       headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` },
     })
     if (!airtableRes.ok) {
-      throw new Error(`Airtable REST error: ${airtableRes.statusText}`)
+      const errBody = await airtableRes.text().catch(() => '')
+      throw new Error(`Airtable REST error: ${airtableRes.status} ${airtableRes.statusText}${errBody ? ` — ${errBody}` : ''}`)
     }
 
     const { records: rawRecords, offset } = await airtableRes.json()
     const records = rawRecords || []
     const nextCursor = offset || null
 
-    // Debug logging for folder data
-    logger.debug('Raw Airtable records:', JSON.stringify(records.map(rec => ({
-      id: rec.id,
-      folder: rec.fields['Folder Name']
-    })), null, 2))
-
     // 7. Format logs for frontend
+    // multipleLookupValues fields return arrays from the REST API — extract first element.
+    const firstVal = (v) => (Array.isArray(v) ? v[0] : v) || ''
     const logs = records.map(rec => {
       const rawAttachments = rec.fields['File(s)'] || []
       return {
         id: rec.id,
-        name: rec.fields['Applicant Name'] || '',
-        email: rec.fields['Applicant Email'] || '',
+        name: firstVal(rec.fields['Applicant Name']),
+        email: firstVal(rec.fields['Applicant Email']),
         title: rec.fields['Display Title'] || '',
         description: rec.fields['Display Desc'] || '',
-        folder: rec.fields['Folder Name'] || '',
+        folder: firstVal(rec.fields['Folder Name']),
         resource: rec.fields['Display Resource Link'] || '',
         assignedDate: rec.fields['Created Date'] || '',
+        status: rec.fields['Status'] || '',
         attachments: rawAttachments,
         attachmentCount: rawAttachments.length,
       }

@@ -15,11 +15,12 @@ import { Button } from "@components/ui/button"
 import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
-export default function BulkDeleteTasksModal({ 
-  open, 
-  onOpenChange, 
-  selectedTasks = [], 
-  onDeleteSuccess 
+export default function BulkDeleteTasksModal({
+  open,
+  onOpenChange,
+  selectedTasks = [],
+  deleteEndpoint = '/api/admin/tasks/bulk-delete',
+  onDeleteSuccess
 }) {
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -28,7 +29,7 @@ export default function BulkDeleteTasksModal({
 
     setIsDeleting(true)
     try {
-      const response = await fetch('/api/admin/tasks/bulk-delete', {
+      const response = await fetch(deleteEndpoint, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

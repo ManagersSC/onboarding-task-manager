@@ -398,7 +398,7 @@ const RenameDialog = ({ file, isOpen, onClose, onSave }) => {
 
 
 // Main File Viewer Modal Component
-export function FileViewerModal({ isOpen, onClose, taskId, resourceUrl, onFilesUpdated }) {
+export function FileViewerModal({ isOpen, onClose, taskId, resourceUrl, onFilesUpdated, attachmentsEndpoint }) {
   const [files, setFiles] = useState([])
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileContent, setFileContent] = useState("")
@@ -455,7 +455,8 @@ export function FileViewerModal({ isOpen, onClose, taskId, resourceUrl, onFilesU
   const fetchFiles = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/admin/tasks/core-tasks/${taskId}/attachments`)
+      const endpoint = attachmentsEndpoint || `/api/admin/tasks/core-tasks/${taskId}/attachments`
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error(`Error fetching files: ${response.statusText}`)
       }
@@ -642,7 +643,8 @@ export function FileViewerModal({ isOpen, onClose, taskId, resourceUrl, onFilesU
       })
 
       // Send request
-      const response = await fetch(`/api/admin/tasks/core-tasks/${taskId}/attachments`, {
+      const patchEndpoint = attachmentsEndpoint || `/api/admin/tasks/core-tasks/${taskId}/attachments`
+      const response = await fetch(patchEndpoint, {
         method: "PATCH",
         body: formData,
       })

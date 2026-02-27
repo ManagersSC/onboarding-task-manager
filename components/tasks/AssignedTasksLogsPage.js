@@ -8,6 +8,7 @@ import { CreateTaskDialog } from "./CreateTaskDialog"
 
 export function AssignedTasksLogsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [selectedTasks, setSelectedTasks] = useState([])
 
   return (
     <div className="space-y-6">
@@ -21,7 +22,7 @@ export function AssignedTasksLogsPage() {
           Create Task
         </Button>
       </div>
-      <AssignedTasksLogsTable />
+      <AssignedTasksLogsTable onSelectionChange={setSelectedTasks} />
       <CreateTaskDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
     </div>
   )
