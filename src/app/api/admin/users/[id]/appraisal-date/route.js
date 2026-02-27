@@ -32,9 +32,26 @@ export async function POST(request, { params }) {
       return new Response(JSON.stringify({ error: "Invalid date format (expected YYYY-MM-DD)" }), { status: 400, headers: { "Content-Type": "application/json" } })
     }
 
+    // Use provided startTime (HH:MM) if valid, otherwise fall back to 09:00
+    const startTimeRaw = String(body?.startTime || "").trim()
+    const timeStr = /^\d{2}:\d{2}$/.test(startTimeRaw) ? startTimeRaw : "09:00"
+
     // Build stringified JSON for 'Appraisal History' and merge with existing if present
     const nowIso = new Date().toISOString()
-    const appraisalDateIso = new Date(`${dateStr}T09:00:00Z`).toISOString()
+    // Store the appointment in Europe/London by appending the local time and letting
+    // the Intl API resolve the UTC offset for that date (handles BST/GMT automatically)
+    const appraisalDateIso = (() => {
+      try {
+        const localStr = `${dateStr}T${timeStr}:00`
+        // Get the UTC offset for Europe/London on that specific date
+        const londonDate = new Date(new Date(localStr).toLocaleString("en-US", { timeZone: "Europe/London" }))
+        const utcDate = new Date(localStr)
+        const offsetMs = utcDate - londonDate
+        return new Date(utcDate.getTime() + offsetMs).toISOString()
+      } catch {
+        return new Date(`${dateStr}T${timeStr}:00Z`).toISOString()
+      }
+    })()
     const year = Number(dateStr.slice(0, 4))
 
     let historyString
