@@ -1001,6 +1001,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                             applicantName={applicant?.name}
                             applicantEmail={applicant?.email}
                             currentDate={applicant?.appraisalDate}
+                            appraisalHistoryRaw={appraisalHistoryRaw}
                             onUpdated={async () => { await mutate?.() }}
                           />
                           
@@ -2146,10 +2147,10 @@ function MonthOnlyPicker({ selected, onSelect, currentMonth, onMonthChange, even
   )
 }
 
-function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = "Applicant", applicantEmail = "", currentDate, onUpdated }) {
+function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = "Applicant", applicantEmail = "", currentDate, appraisalHistoryRaw = "", onUpdated }) {
   // Multi-step flow: "date" -> "questions"
   const [step, setStep] = useState("date")
-  
+
   // Date selection state
   const [date, setDate] = useState("")
   const [startTime, setStartTime] = useState("")
@@ -2158,7 +2159,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
   const [eventsByDate, setEventsByDate] = useState({})
   const [dayEvents, setDayEvents] = useState([])
   const [hasConflict, setHasConflict] = useState(false)
-  
+
   // Question editor state
   const [pendingQuestions, setPendingQuestions] = useState([])
   const [roleKey, setRoleKey] = useState("unknown")
@@ -2166,10 +2167,15 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
   const [templateWarning, setTemplateWarning] = useState("")
   const [editingIndex, setEditingIndex] = useState(null)
   const [editingText, setEditingText] = useState("")
-  
+
   // Loading/saving states
   const [templateLoading, setTemplateLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Template / overwrite state
+  const [hasTemplate, setHasTemplate] = useState(false)
+  const [inlineTemplateEditorOpen, setInlineTemplateEditorOpen] = useState(false)
+  const [existingYearWarning, setExistingYearWarning] = useState("")
 
   // Initialize date from currentDate
   useEffect(() => {
@@ -2195,6 +2201,9 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
       setTemplateWarning("")
       setEditingIndex(null)
       setEditingText("")
+      setHasTemplate(false)
+      setInlineTemplateEditorOpen(false)
+      setExistingYearWarning("")
     }
   }, [open])
 
@@ -2259,23 +2268,37 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
     if (!applicantId || !date || !startTime || !endTime) return
     setTemplateLoading(true)
     setTemplateWarning("")
+    setExistingYearWarning("")
     try {
       const res = await fetch(`/api/admin/users/${applicantId}/appraisal-template`)
       const data = await res.json().catch(() => ({}))
-      
+
       const templateQuestions = data?.template?.questions || []
       const templateRoleKey = data?.template?.roleKey || data?.jobName || "unknown"
-      
+
       setPendingQuestions(templateQuestions)
       setRoleKey(templateRoleKey)
       setJobName(data?.jobName || "")
-      
-      if (data?.warning) {
+      setHasTemplate(templateQuestions.length > 0)
+
+      if (data?.warning && templateQuestions.length === 0) {
         setTemplateWarning(data.warning)
-      } else if (templateQuestions.length === 0) {
-        setTemplateWarning("No template questions found for this job. You can add questions manually.")
       }
-      
+
+      // Check if an appraisal for this year already exists (Fix 4)
+      const year = Number(date.slice(0, 4))
+      if (appraisalHistoryRaw && appraisalHistoryRaw.trim()) {
+        try {
+          const histObj = JSON.parse(appraisalHistoryRaw)
+          if (Array.isArray(histObj.appraisals)) {
+            const existing = histObj.appraisals.find(a => Number(a?.year) === year)
+            if (existing) {
+              setExistingYearWarning(`An appraisal for ${year} already exists. Confirming will update the date and overwrite the question snapshot.`)
+            }
+          }
+        } catch {}
+      }
+
       setStep("questions")
     } catch (err) {
       toast.error(err?.message || "Failed to load template questions")
@@ -2359,6 +2382,27 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
     } finally {
       setTemplateLoading(false)
     }
+  }
+
+  // Save template inline (when no template existed) then reload questions into step 2
+  const handleSaveInlineTemplate = async (questions) => {
+    const res = await fetch(`/api/admin/users/${applicantId}/appraisal-template`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questions, roleKey }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || "Failed to save template")
+    }
+    const data = await res.json().catch(() => ({}))
+    const savedQuestions = data?.template?.questions || questions
+    setPendingQuestions(savedQuestions)
+    setRoleKey(data?.template?.roleKey || roleKey)
+    setHasTemplate(savedQuestions.length > 0)
+    setTemplateWarning("")
+    setInlineTemplateEditorOpen(false)
+    toast.success(`Template saved for ${jobName || "this role"}. You can now customise the questions for this applicant.`)
   }
 
   // Final confirm - save questions, date, and create calendar event
@@ -2541,8 +2585,34 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
               )}
             </div>
             
-            {/* Warning banner */}
-            {templateWarning && (
+            {/* No-template panel */}
+            {!hasTemplate && (
+              <div className="rounded-md bg-muted border border-border/40 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium">
+                      {jobName ? `No template questions for "${jobName}"` : "No template questions for this role"}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Set template questions for this role first — they will be reused for all future appraisals in this role.
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-xs"
+                      onClick={() => setInlineTemplateEditorOpen(true)}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Set template questions{jobName ? ` for ${jobName}` : ""}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Warning banner (non-template warnings, e.g. no linked job) */}
+            {templateWarning && hasTemplate && (
               <div className="rounded-md bg-warning-muted border border-warning/20 p-3">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
@@ -2550,22 +2620,34 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
                 </div>
               </div>
             )}
-            
+
+            {/* Existing-year warning */}
+            {existingYearWarning && (
+              <div className="rounded-md bg-warning-muted border border-warning/20 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                  <div className="text-sm text-warning">{existingYearWarning}</div>
+                </div>
+              </div>
+            )}
+
             {/* Questions list */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Pre-Appraisal Questions</Label>
                 <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 text-xs"
-                    onClick={handleResetToTemplate}
-                    disabled={templateLoading}
-                  >
-                    {templateLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                    Reset to Template
-                  </Button>
+                  {hasTemplate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={handleResetToTemplate}
+                      disabled={templateLoading}
+                    >
+                      {templateLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                      Reset to Template
+                    </Button>
+                  )}
                 </div>
               </div>
               
@@ -2683,5 +2765,15 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Inline template editor — opens when no template exists for the role */}
+    <AppraisalQuestionEditor
+      open={inlineTemplateEditorOpen}
+      onOpenChange={setInlineTemplateEditorOpen}
+      questions={[]}
+      roleKey={roleKey}
+      isTemplate={true}
+      onSave={handleSaveInlineTemplate}
+    />
   )
 }
