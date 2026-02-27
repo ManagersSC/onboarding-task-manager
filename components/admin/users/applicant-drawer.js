@@ -2545,6 +2545,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { if (!saving && !templateLoading) onOpenChange?.(v) }}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
@@ -2825,5 +2826,6 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
       isTemplate={true}
       onSave={handleSaveInlineTemplate}
     />
+    </>
   )
 }
