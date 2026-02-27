@@ -5,7 +5,7 @@ import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
 
 export async function GET(request, { params }) {
-  const { id } = params
+  const { id } = await params
   // Auth
   const sessionCookie = (await cookies()).get("session")?.value
   if (!sessionCookie) return new Response(null, { status: 401 })
@@ -49,7 +49,7 @@ export async function GET(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
-  const { id } = params
+  const { id } = await params
   // Auth
   const sessionCookie = (await cookies()).get("session")?.value
   if (!sessionCookie) return new Response(null, { status: 401 })
@@ -108,7 +108,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const { id } = params
+  const { id } = await params
   const sessionCookie = (await cookies()).get("session")?.value
   if (!sessionCookie) return new Response(null, { status: 401 })
   let session

@@ -177,7 +177,7 @@ export function DynamicTaskEditSheet({
         })
         .catch((err) => {
           setError(err.message)
-          toast({ variant: "destructive", title: "Error loading record", description: err.message })
+          toast.error("Error loading record", { description: err.message })
         })
         .finally(() => setLoading(false))
     }
@@ -234,11 +234,11 @@ export function DynamicTaskEditSheet({
       if (!response.ok) throw new Error("Failed to update record")
       setOriginalData({ ...data, attachments })
       setFormModified(false)
-      toast({ title: "Record updated", description: "Details have been saved successfully" })
+      toast.success("Record updated", { description: "Details have been saved successfully" })
       if (typeof onEditSuccess === "function") onEditSuccess()
       onOpenChange(false)
     } catch (err) {
-      toast({ variant: "destructive", title: "Error updating record", description: err.message })
+      toast.error("Error updating record", { description: err.message })
     } finally {
       setLoading(false)
     }
