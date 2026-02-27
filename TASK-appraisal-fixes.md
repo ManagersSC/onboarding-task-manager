@@ -8,12 +8,12 @@
 ## Sub-tasks
 
 - [x] Create task tracker
-- [ ] **[PRIORITY]** No-template scenario: show info + "Set Template Questions" button; hide "Reset to Template" when no template exists
-- [ ] Fix 1: Add "Mark done" buttons to appraisal steps in the history list
-- [ ] Fix 3: Pass the actual appointment time to Airtable (currently always stores 09:00 UTC)
-- [ ] Fix 4: Warn admin when setting a date for a year that already has an appraisal
-- [ ] Fix 5: Show error banner when appraisal history JSON cannot be parsed (instead of silent empty state)
-- [ ] Fix 6: Include admin user page link in Google Calendar event description
+- [x] **[PRIORITY]** No-template scenario: show info + "Set Template Questions" button; hide "Reset to Template" when no template exists
+- [x] Fix 1: Add "Mark done" buttons to appraisal steps in the history list
+- [x] Fix 3: Pass the actual appointment time to Airtable (correctly stored in Europe/London timezone)
+- [x] Fix 4: Warn admin when setting a date for a year that already has an appraisal
+- [x] Fix 5: Show error banner when appraisal history JSON cannot be parsed (instead of silent empty state)
+- [x] Fix 6: Include admin user page link in Google Calendar event description
 
 ---
 
