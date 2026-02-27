@@ -184,6 +184,12 @@ export async function deleteStaffTask(taskId) {
   try {
     await base("Tasks").destroy([taskId]);
   } catch (e) {
+    // Treat "record not found" as already deleted — idempotent delete
+    const msg = e?.message || "";
+    if (msg.includes("Could not find a record") || msg.includes("NOT_FOUND") || e?.statusCode === 404) {
+      logger.info("Task already deleted (record not found), treating as success:", taskId);
+      return;
+    }
     logger.error("Error deleting task in Tasks table:", e);
     throw e;
   }
