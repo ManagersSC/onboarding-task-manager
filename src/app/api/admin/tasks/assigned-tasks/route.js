@@ -117,15 +117,17 @@ export async function GET(request) {
     const nextCursor = offset || null
 
     // 7. Format logs for frontend
+    // multipleLookupValues fields return arrays from the REST API — extract first element.
+    const firstVal = (v) => (Array.isArray(v) ? v[0] : v) || ''
     const logs = records.map(rec => {
       const rawAttachments = rec.fields['File(s)'] || []
       return {
         id: rec.id,
-        name: rec.fields['Applicant Name'] || '',
-        email: rec.fields['Applicant Email'] || '',
+        name: firstVal(rec.fields['Applicant Name']),
+        email: firstVal(rec.fields['Applicant Email']),
         title: rec.fields['Display Title'] || '',
         description: rec.fields['Display Desc'] || '',
-        folder: rec.fields['Folder Name'] || '',
+        folder: firstVal(rec.fields['Folder Name']),
         resource: rec.fields['Display Resource Link'] || '',
         assignedDate: rec.fields['Created Date'] || '',
         status: rec.fields['Status'] || '',
