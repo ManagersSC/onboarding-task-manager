@@ -2680,11 +2680,14 @@ function isAppraisalActionPlanTask(task) {
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Created By</Label>
                       <div className="mt-2">
-                        {staff && staff.length > 0 ? (
-                          <p className="text-sm">{getStaffName(selectedTask.createdBy) || "Unknown"}</p>
-                        ) : (
-                          <Skeleton className="h-4 w-40" />
-                        )}
+                        <p className="text-sm">{selectedTask.createdByName || "Unknown"}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Created Date</Label>
+                      <div className="mt-2">
+                        <p className="text-sm">{selectedTask.createdDate ? formatDueDate(selectedTask.createdDate) : "—"}</p>
                       </div>
                     </div>
 

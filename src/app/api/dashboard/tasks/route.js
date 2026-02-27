@@ -85,7 +85,8 @@ export async function GET(req) {
           "Flagged Reason",
           "Resolution Note",
           "Task Type",
-          "Display Resource Link"
+          "Display Resource Link",
+          "Created Date",
         ],
         pageSize
       }
@@ -135,10 +136,40 @@ export async function GET(req) {
       }
     }
 
+    // Build createdById -> name map by resolving linked Staff records
+    const createdByIdSet = new Set();
+    for (const t of tasks) {
+      const createdByLinks = t.fields["👩 Created By"];
+      if (Array.isArray(createdByLinks) && createdByLinks.length > 0) {
+        createdByIdSet.add(createdByLinks[0]);
+      }
+    }
+
+    let createdByNameById = {};
+    if (createdByIdSet.size > 0) {
+      const ids = Array.from(createdByIdSet);
+      const formula = ids.map(id => `RECORD_ID() = '${id}'`).join(", ");
+      try {
+        const staffRecords = await base('Staff')
+          .select({
+            filterByFormula: `OR(${formula})`,
+            fields: ['Name'],
+            pageSize: ids.length
+          })
+          .firstPage();
+        createdByNameById = Object.fromEntries(
+          staffRecords.map(s => [s.id, s.fields['Name'] || ''])
+        );
+      } catch (e) {
+        console.error('Error fetching creator names:', e);
+      }
+    }
+
     // Map tasks to match frontend expectations
     const mappedTasks = tasks.map(task => {
       const applicantLinks = task.fields["👤 Assigned Applicant"];
       const applicantId = Array.isArray(applicantLinks) && applicantLinks.length > 0 ? applicantLinks[0] : "";
+      const createdById = Array.isArray(task.fields["👩 Created By"]) ? task.fields["👩 Created By"][0] : (task.fields["👩 Created By"] || "");
       return ({
         id: task.id,
         title: task.fields["📌 Task"] || "",
@@ -146,7 +177,9 @@ export async function GET(req) {
         rawDueDate: task.fields["📆 Due Date"] || "",
         priority: task.fields["🚨 Urgency"] || "medium",
         status: task.fields["🚀 Status"] || "", // Keep original case for select options
-        createdBy: Array.isArray(task.fields["👩 Created By"]) ? task.fields["👩 Created By"][0] : (task.fields["👩 Created By"] || ""),
+        createdBy: createdById,
+        createdByName: createdById ? (createdByNameById[createdById] || "") : "",
+        createdDate: task.fields["Created Date"] || "",
         for: Array.isArray(task.fields["👨 Assigned Staff"]) ? task.fields["👨 Assigned Staff"][0] : (task.fields["👨 Assigned Staff"] || ""), // Use record ID, not name
         forName: Array.isArray(task.fields["Assigned Staff Name"]) ? task.fields["Assigned Staff Name"][0] : (task.fields["Assigned Staff Name"] || ""), // Store name separately
         applicantId,
