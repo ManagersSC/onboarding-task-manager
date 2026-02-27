@@ -2513,7 +2513,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           summary: 'Appraisal Appointment',
-          description: `Appraisal for ${applicantName}\nView in admin: ${typeof window !== 'undefined' ? window.location.origin : ''}/admin/users`,
+          description: `Appraisal for ${applicantName}\nView in admin: ${process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/admin/users`,
           start: { dateTime: startDT, timeZone: 'Europe/London' },
           end: { dateTime: endDT, timeZone: 'Europe/London' },
           attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
