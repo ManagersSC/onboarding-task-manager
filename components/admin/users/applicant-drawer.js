@@ -2483,8 +2483,9 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
       const dateRes = await fetch(`/api/admin/users/${applicantId}/appraisal-date`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           date,
+          startTime,
           preappraisalQuestions: questionsJSON
         })
       })
