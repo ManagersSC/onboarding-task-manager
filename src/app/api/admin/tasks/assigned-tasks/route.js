@@ -64,9 +64,12 @@ export async function GET(request) {
     const conditions = []
     if (search) {
       const s = escapeStr(search).replace(/\n/g, ' ')
-      // Display Title is a formula field (singleLineText) — no ARRAYJOIN needed.
-      // Applicant Name and Applicant Email are multipleLookupValues — ARRAYJOIN required.
-      conditions.push(`OR(FIND(LOWER("${s}"),LOWER({Display Title}))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Name})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Email})))>0)`)
+      // Display Title is a formula wrapping multipleLookupValues fields — unreliable in filterByFormula.
+      // Search the underlying fields directly instead:
+      //   Task Title and Quiz Title are multipleLookupValues — ARRAYJOIN required.
+      //   Custom Task Title is singleLineText — no ARRAYJOIN needed.
+      //   Applicant Name and Applicant Email are multipleLookupValues — ARRAYJOIN required.
+      conditions.push(`OR(FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Task Title})))>0,FIND(LOWER("${s}"),LOWER({Custom Task Title}))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Quiz Title})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Name})))>0,FIND(LOWER("${s}"),LOWER(ARRAYJOIN({Applicant Email})))>0)`)
     }
     if (folder) conditions.push(`ARRAYJOIN({Folder Name}) = "${escapeStr(folder)}"`)
     if (name) conditions.push(`ARRAYJOIN({Applicant Name}) = "${escapeStr(name)}"`)
