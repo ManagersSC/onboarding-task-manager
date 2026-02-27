@@ -223,6 +223,7 @@ export function TaskManagement({ initialTasks }) {
 
   // Selection state for bulk actions
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // All actively onboarding hires for hire completions modal (must be before applicantGroups IIFE)
   const [allOnboardingHires, setAllOnboardingHires] = useState([])
@@ -1415,8 +1416,6 @@ function isAppraisalActionPlanTask(task) {
       }
       clearSelection()
     }
-
-    const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
     const bulkDelete = async () => {
       if (isBulkDeleting) return
