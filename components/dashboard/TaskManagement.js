@@ -629,32 +629,30 @@ function isAppraisalActionPlanTask(task) {
 
   const deleteTask = async (taskId) => {
     try {
-      // First, make the API call to delete the task
-      const response = await fetch(`/api/dashboard/tasks/${taskId}`, { 
-        method: "DELETE" 
+      const response = await fetch(`/api/dashboard/tasks/${taskId}`, {
+        method: "DELETE"
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to delete task")
       }
 
-      // If API call succeeds, remove from local state
-      let deletedTask
-      const newTasks = { ...tasks }
-      for (const key of Object.keys(newTasks)) {
-        const idx = newTasks[key].findIndex((t) => t.id === taskId)
-        if (idx !== -1) {
-          deletedTask = newTasks[key][idx]
-          newTasks[key] = [...newTasks[key].slice(0, idx), ...newTasks[key].slice(idx + 1)]
-          break
+      // Use functional updater to avoid stale closure over `tasks`
+      setTasks((prev) => {
+        const next = { ...prev }
+        for (const key of Object.keys(next)) {
+          const idx = next[key].findIndex((t) => t.id === taskId)
+          if (idx !== -1) {
+            next[key] = [...next[key].slice(0, idx), ...next[key].slice(idx + 1)]
+            break
+          }
         }
-      }
-      setTasks(newTasks)
+        return next
+      })
 
-      // Show success message
       toast.success("Task deleted successfully!")
-      
+
     } catch (err) {
       console.error("Error deleting task:", err)
       toast.error("Error deleting task: " + err.message)
@@ -1418,12 +1416,27 @@ function isAppraisalActionPlanTask(task) {
       clearSelection()
     }
 
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
     const bulkDelete = async () => {
-      const toDelete = sortedTasks.filter((t) => selectedTaskIds.has(t.id) && canDeleteTask(t))
-      for (const t of toDelete) {
-        await deleteTask(t.id)
+      if (isBulkDeleting) return
+      setIsBulkDeleting(true)
+      try {
+        // Deduplicate by ID in case the same task appears in multiple groups
+        const seen = new Set()
+        const toDelete = sortedTasks.filter((t) => {
+          if (!selectedTaskIds.has(t.id) || !canDeleteTask(t)) return false
+          if (seen.has(t.id)) return false
+          seen.add(t.id)
+          return true
+        })
+        for (const t of toDelete) {
+          await deleteTask(t.id)
+        }
+        clearSelection()
+      } finally {
+        setIsBulkDeleting(false)
       }
-      clearSelection()
     }
 
     return (
@@ -1440,8 +1453,8 @@ function isAppraisalActionPlanTask(task) {
               <Button size="sm" variant="outline" className="h-7 px-2" onClick={bulkClaim}>
                 Claim
               </Button>
-              <Button size="sm" variant="destructive" className="h-7 px-2" onClick={bulkDelete}>
-                Delete
+              <Button size="sm" variant="destructive" className="h-7 px-2" onClick={bulkDelete} disabled={isBulkDeleting}>
+                {isBulkDeleting ? "Deleting…" : "Delete"}
               </Button>
               <Button
                 size="icon"
