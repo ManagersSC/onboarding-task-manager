@@ -886,11 +886,22 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                           </div>
                           {(() => {
                             let appraisals = []
+                            let parseError = false
                             try {
                               const raw = appraisalHistoryRaw
                               const parsed = typeof raw === "string" ? JSON.parse(raw.trim()) : (raw || {})
                               if (parsed && Array.isArray(parsed.appraisals)) appraisals = parsed.appraisals
-                            } catch {}
+                            } catch {
+                              if (appraisalHistoryRaw && appraisalHistoryRaw.trim()) parseError = true
+                            }
+                            if (parseError) return (
+                              <div className="rounded-md bg-error-muted border border-error/20 p-3">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="h-4 w-4 text-error mt-0.5 shrink-0" />
+                                  <div className="text-sm text-error">Appraisal history could not be read. The stored data may be corrupt.</div>
+                                </div>
+                              </div>
+                            )
 
                             // Sort by appraisalDate or updatedAt (newest first)
                             appraisals.sort((a,b) => new Date(b?.appraisalDate || b?.updatedAt || 0) - new Date(a?.appraisalDate || a?.updatedAt || 0))
@@ -2502,7 +2513,7 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           summary: 'Appraisal Appointment',
-          description: `Appointment event: Appraisal for applicant ${applicantName}`,
+          description: `Appraisal for ${applicantName}\nView in admin: ${typeof window !== 'undefined' ? window.location.origin : ''}/admin/users`,
           start: { dateTime: startDT, timeZone: 'Europe/London' },
           end: { dateTime: endDT, timeZone: 'Europe/London' },
           attendees: (applicantEmail ? [{ email: applicantEmail, displayName: applicantName }] : []),
