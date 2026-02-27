@@ -243,6 +243,7 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
   const isHiredStage = stageLower === "hired"
   const isRejectedStage = stageLower.startsWith("rejected")
   const [expandedAppraisals, setExpandedAppraisals] = useState({})
+  const [markingStepDone, setMarkingStepDone] = useState(null)
 
   // Determine if Appraisal History long text exists (string in Airtable)
   const appraisalHistoryRaw = useMemo(() => {
@@ -353,6 +354,28 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
     })()
     return () => { cancelled = true }
   }, [])
+
+  const handleMarkStepDone = async (stepId) => {
+    if (!applicant?.id) return
+    setMarkingStepDone(stepId)
+    try {
+      const res = await fetch(`/api/admin/users/${applicant.id}/appraisal-history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepId }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || "Failed to mark step as done")
+      }
+      await mutate?.()
+      toast.success("Step marked as done")
+    } catch (e) {
+      toast.error(e?.message || "Failed to mark step as done")
+    } finally {
+      setMarkingStepDone(null)
+    }
+  }
 
   const handleSubmitAppraisal = async (files) => {
     if (!applicant || !files?.length) return
@@ -964,21 +987,36 @@ export default function ApplicantDrawer({ open, onOpenChange, applicantId, onApp
                                               const done = !!s?.completedAt
                                               const isActive = !done && (i === nextIdx)
                                               const textClass = done ? "" : "text-muted-foreground"
+                                              const canMarkDone = !done && s?.id !== "set_appraisal_date"
+                                              const isMarkingThis = markingStepDone === s?.id
                                               return (
-                                                <li key={`${s?.id || 'step'}-${i}`} className="flex items-start gap-2">
-                                                  <div className="pt-0.5">
-                                                    {done ? (
-                                                      <CheckCircle2 className="h-4 w-4 text-success" />
-                                                    ) : isActive ? (
-                                                      <AlertCircle className="h-4 w-4 text-warning" />
-                                                    ) : (
-                                                      <Circle className="h-4 w-4 text-muted-foreground" />
-                                                    )}
+                                                <li key={`${s?.id || 'step'}-${i}`} className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-start gap-2 min-w-0">
+                                                    <div className="pt-0.5 shrink-0">
+                                                      {done ? (
+                                                        <CheckCircle2 className="h-4 w-4 text-success" />
+                                                      ) : isActive ? (
+                                                        <AlertCircle className="h-4 w-4 text-warning" />
+                                                      ) : (
+                                                        <Circle className="h-4 w-4 text-muted-foreground" />
+                                                      )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                      <div className={`text-xs font-medium ${textClass}`}>{s?.label || 'Step'}</div>
+                                                      {done ? <div className="text-[11px] text-muted-foreground mt-0.5">Completed • {formatDate(s.completedAt)}</div> : null}
+                                                    </div>
                                                   </div>
-                                                  <div className="min-w-0">
-                                                    <div className={`text-xs font-medium ${textClass}`}>{s?.label || 'Step'}</div>
-                                                    {done ? <div className="text-[11px] text-muted-foreground mt-0.5">Completed • {formatDate(s.completedAt)}</div> : null}
-                                                  </div>
+                                                  {canMarkDone && (
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="h-6 px-2 text-[11px] shrink-0"
+                                                      disabled={!!markingStepDone}
+                                                      onClick={() => handleMarkStepDone(s.id)}
+                                                    >
+                                                      {isMarkingThis ? <Loader2 className="h-3 w-3 animate-spin" /> : "Mark done"}
+                                                    </Button>
+                                                  )}
                                                 </li>
                                               )
                                             })}
