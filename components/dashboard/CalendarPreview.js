@@ -618,9 +618,12 @@ export function CalendarPreview() {
 
       toast.success("Event deleted successfully")
 
-      // Refresh events
-      await fetchEvents()
+      // Close both dialogs before refetching so stale UI isn't visible
+      setShowDeleteConfirm(false)
+      setPendingDeleteId(null)
       setEditingEvent(null)
+      setIsModalOpen(false)
+      await fetchEvents()
     } catch (error) {
       console.error("Error deleting event:", error)
       toast.error("Failed to delete event")
