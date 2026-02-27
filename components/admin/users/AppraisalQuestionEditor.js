@@ -204,7 +204,15 @@ export default function AppraisalQuestionEditor({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!isLoading) onOpenChange?.(v) }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] flex flex-col"
+          onPointerDownOutside={(e) => {
+            if (deleteConfirmIdx !== null || resetConfirmOpen) e.preventDefault()
+          }}
+          onInteractOutside={(e) => {
+            if (deleteConfirmIdx !== null || resetConfirmOpen) e.preventDefault()
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isTemplate ? "Edit Role Template Questions" : "Edit Pre-Appraisal Questions"}
