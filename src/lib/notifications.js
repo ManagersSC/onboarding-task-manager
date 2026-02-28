@@ -104,7 +104,7 @@ export async function createNotification({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          body,
+          body: body.replace(/"/g, "\u2019"),
           type,
           severity,
           actionUrl,
