@@ -156,10 +156,6 @@ export default function ForgotPasswordPage() {
             </div>
           </CardContent>
         </Card>
-
-        <p className="text-center text-caption text-muted-foreground/60 mt-8">
-          Secure login powered by Smile Cliniq
-        </p>
       </main>
     </GradientBackground>
   )

@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Smile Cliniq — Onboarding Task Manager
+
+A Next.js web app for managing the full Smile Cliniq hiring and onboarding workflow. Admins manage candidates, assign tasks, and send communications. New hires log in to complete tasks, upload documents, and take quizzes.
+
+## Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **Database:** Airtable
+- **Auth:** iron-session (cookie-based)
+- **UI:** Radix UI + Tailwind CSS + shadcn/ui
+- **Automations:** Make.com (email, Slack notifications)
+- **Deployment:** Vercel
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.local.example` to `.env.local` and fill in the required variables (Airtable, session secret, Google OAuth, Make.com webhooks).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev        # Development server
+npm run build      # Production build
+npm run lint       # ESLint with --fix
+npm test           # Run all tests
+```
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
+Full documentation (architecture, automations, operations manual) lives at `/docs` when the app is running, or in `public/docs/`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `CLAUDE.md` for the full list of required and optional environment variables.

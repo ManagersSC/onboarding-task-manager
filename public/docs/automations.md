@@ -1,7 +1,7 @@
 # Make.com Automations — Full Reference
 
-> **Audience:** Developer maintaining or inheriting this project
-> **Last updated:** February 2026
+> **Audience:** Developer maintaining or inheriting this project<br>
+> **Last updated:** February 2026<br>
 > **Blueprint files:** `docs/handover/automations/` (JSON exports for all 10 scenarios — 3 hiring + 7 onboarding)
 
 This page documents every Make.com automation used by the Smile Cliniq platform — covering both the **hiring/ATS phase** (3 scenarios triggered by Airtable) and the **onboarding phase** (7 scenarios triggered by the web app). Each entry covers what triggers the scenario, exactly what it does step-by-step, what payload it expects, which email account sends the message, and how to test and debug it.
@@ -10,27 +10,29 @@ This page documents every Make.com automation used by the Smile Cliniq platform 
 
 ## Table of Contents
 
-1. [Overview — All 10 Scenarios](#1-overview--all-10-scenarios)
+1. [Overview — All 10 Scenarios](#overview)
 
 **Hiring Phase Scenarios (triggered by Airtable)**
-- [H1 — New Applicant](#h1--new-applicant)
-- [H2 — Send First Interview Invite](#h2--send-first-interview-invite)
-- [H3 — Changes in Status (Stage Router)](#h3--changes-in-status-stage-router)
+- [H1 — New Applicant](#h1)
+- [H2 — Send First Interview Invite](#h2)
+- [H3 — Changes in Status (Stage Router)](#h3)
 
 **Onboarding Scenarios (triggered by the web app)**
-2. [Scenario 1 — Application Form Email](#2-scenario-1--application-form-email)
-3. [Scenario 2 — Admin Invite Email](#3-scenario-2--admin-invite-email)
-4. [Scenario 3 — Password Reset Email](#4-scenario-3--password-reset-email)
-5. [Scenario 4 — Onboarding Start Notification](#5-scenario-4--onboarding-start-notification)
-6. [Scenario 5 — Task Assignment Notification](#6-scenario-5--task-assignment-notification)
-7. [Scenario 6 — General Notifications (Email + Slack)](#7-scenario-6--general-notifications-email--slack)
-8. [Scenario 7 — Custom Email](#8-scenario-7--custom-email)
+2. [Scenario 1 — Application Form Email](#scenario-1)
+3. [Scenario 2 — Admin Invite Email](#scenario-2)
+4. [Scenario 3 — Password Reset Email](#scenario-3)
+5. [Scenario 4 — Onboarding Start Notification](#scenario-4)
+6. [Scenario 5 — Task Assignment Notification](#scenario-5)
+7. [Scenario 6 — General Notifications (Email + Slack)](#scenario-6)
+8. [Scenario 7 — Custom Email](#scenario-7)
 
 **Reference**
-9. [Reconnecting After Account Migration](#9-reconnecting-after-account-migration)
-10. [Debugging a Broken Webhook](#10-debugging-a-broken-webhook)
+9. [Reconnecting After Account Migration](#reconnecting)
+10. [Debugging a Broken Webhook](#debugging)
 
 ---
+
+<a id="overview"></a>
 
 ## 1. Overview — All 10 Scenarios
 
@@ -72,6 +74,8 @@ These scenarios are triggered by Airtable automations, not by the web app. They 
 
 ---
 
+<a id="h1"></a>
+
 ## H1 — New Applicant
 
 > **Blueprint file:** `docs/handover/automations/applications/NEW_APPLICANT.json`
@@ -108,9 +112,11 @@ When a candidate submits the application form, Airtable creates a new record and
 
 > **Note:** This scenario only fires for genuine new applications (Onboarding Manual Import unchecked). If a staff member is manually added to Airtable with the checkbox ticked, Airtable skips its "New Applicant" automation, so this Make.com scenario is never called.
 
-> 📸 **Screenshot:** _Make.com scenario editor showing the flow: Webhook → Airtable Search → Router → Gmail → Airtable Update_
+![Make.com New Applicant scenario](images/make_automation_new_applicant.png)
 
 ---
+
+<a id="h2"></a>
 
 ## H2 — Send First Interview Invite
 
@@ -160,9 +166,11 @@ Builds a personalised first interview invitation email. Fetches the interviewer'
 
 > **Prerequisite:** The **Interviewer** and **Interview Location** fields must be set on the Airtable applicant record before changing stage to "First Interview Invite Sent". If the interviewer has no Cal.com link in the Staff table, Make.com falls back to a generic booking URL.
 
-> 📸 **Screenshot:** _Make.com scenario editor showing: Webhook → 2x Airtable Get Record → Set Variable (cal_link) → Gmail_
+![Make.com Send First Interview Invite scenario](images/make_automation_send_first_interview_invite.png)
 
 ---
+
+<a id="h3"></a>
 
 ## H3 — Changes in Status (Stage Router)
 
@@ -239,7 +247,7 @@ A routing scenario that handles multiple hiring stage changes. A Router module d
 
 > ⚠️ **Important:** If these Drive files are moved or renamed, the Google Drive module will break. Keep file names and locations consistent. If you need to replace a file, update the file ID in the Make.com scenario's Google Drive module.
 
-> 📸 **Screenshot:** _Make.com scenario editor showing the Router with 3 branches — Hired (with Drive + 2x Gmail), Second Interview (Airtable → Gmail), and Other (Gmail)_
+![Make.com Changes in Status scenario](images/make_automation_changes_in_status.png)
 
 ---
 
@@ -249,9 +257,11 @@ These scenarios are triggered by the Next.js web app via environment variable we
 
 ---
 
+<a id="scenario-1"></a>
+
 ## 2. Scenario 1 — Application Form Email
 
-> **Blueprint file:** `docs/handover/automations/NEW_APPLICATION_FORM.json`
+> **Blueprint file:** `docs/handover/automations/NEW_APPLICATION_FORM.json` <br>
 > **Webhook label in Make.com:** "Send New Application Form"
 
 ### What it does
@@ -302,11 +312,11 @@ https://airtable.com/appZ4QT8rXFlX6LrZ/pagVXLJWkx39hTvHF/form
   &prefill_Email={candidateEmail}
 ```
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario editor showing the 4-step flow (Webhook → Set Variable → Iterator → Gmail).
+![Make.com Application Form Email scenario](images/make_automation_send_new_application_form.png)
 
 ---
+
+<a id="scenario-2"></a>
 
 ## 3. Scenario 2 — Admin Invite Email
 
@@ -342,16 +352,16 @@ When an existing admin invites a new admin user via the "Invite Admin" form in t
 |-------|-------|
 | **From** | FlowFusion Gmail (sauravkc@flowfusionai.com) — *should be updated to clinic address* |
 | **To** | `email` from payload |
-| **Subject** | `"testing"` — ⚠️ **This is a placeholder subject. Update it in Make.com to something like "You've been invited to Smile Cliniq"** |
+| **Subject** | `"You have been invited to join our platform as an admin!"`|
 | **Body** | Styled HTML: blue header ("Admin Access Invitation"), personalised greeting using `name`, blue "Set Your Password" button linking to `inviteLink`, fallback plain-text link, security note that link may expire |
 
 > **Known issue:** The email subject in the blueprint is still set to "testing" — this needs to be updated in the Make.com scenario editor directly.
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario editor showing the 2-step flow (Webhook → Gmail). Also useful: the email as it appears in an inbox.
+![Make.com Admin Invite Email scenario](images/make_automation_admin_invite_email.png)
 
 ---
+
+<a id="scenario-3"></a>
 
 ## 4. Scenario 3 — Password Reset Email
 
@@ -405,11 +415,11 @@ When a user submits the "Forgot Password" form, the Next.js app generates a sign
 - The nonce is cleared from Airtable after the user successfully resets their password, making the link **single-use**.
 - Make.com does not need to validate the token — it just delivers the email. Validation happens in the Next.js reset-password page.
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario editor showing the Router with two branches. Also useful: the reset email in an inbox.
+![Make.com Password Reset Email scenario](images/make_automation_password_reset_email.png)
 
 ---
+
+<a id="scenario-4"></a>
 
 ## 5. Scenario 4 — Onboarding Start Notification
 
@@ -442,11 +452,11 @@ When an admin triggers onboarding for a new hire (assigns their first batch of t
 
 `recordID` is the Airtable record ID of the applicant whose onboarding is starting.
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario overview showing the full scenario flow. Focus on the Airtable lookup step and the notification dispatch.
+![Make.com Onboarding Start Notification scenario](images/make_automation_onboarding_start_notification.png)
 
 ---
+
+<a id="scenario-5"></a>
 
 ## 6. Scenario 5 — Task Assignment Notification
 
@@ -491,11 +501,11 @@ This is the most complex scenario (2.6MB blueprint). When an admin assigns onboa
 | **Subject** | `New Tasks Have Been Assigned` |
 | **Body** | HTML notification listing assigned tasks (constructed from Airtable data) |
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario overview (zoomed out to show the full flow). The scenario is large so a zoomed-out view is most useful.
+![Make.com Task Assignment Notification scenario](images/make_automation_task_assignment_notification.png)
 
 ---
+
+<a id="scenario-6"></a>
 
 ## 7. Scenario 6 — General Notifications (Email + Slack)
 
@@ -563,11 +573,11 @@ The recipient is looked up in Airtable using their record ID — Make.com fetche
 
 The `channels` array is built by `src/lib/notifications.js` in the app. It reads the recipient's `Notification Channels` field from the Staff Airtable table, which is a multi-select of `["Email", "Slack"]`. Only the channels the staff member has opted into are included in the webhook payload — Make.com does not check preferences itself.
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario editor showing the two-route Router — one branch going to Gmail (Email route) and the other going to Slack DM (Slack route).
+![Make.com General Notifications scenario](images/make_automation_general_notification.png)
 
 ---
+
+<a id="scenario-7"></a>
 
 ## 8. Scenario 7 — Custom Email
 
@@ -618,11 +628,11 @@ When an admin uses the "Send Email" feature in the admin panel to compose and se
 
 > **Note on newlines:** The admin enters the email body as plain text in the admin panel UI. Make.com converts line breaks to `<br>` HTML tags before sending. This is why the email renders correctly in email clients even though it was typed as plain text.
 
-### Screenshot placeholder
-
-> 📸 **Screenshot needed:** Make.com scenario editor showing the 4-step flow (Webhook → Regex Replace → Iterator → Gmail).
+![Make.com Custom Email scenario](images/make_automation_custom_email.png)
 
 ---
+
+<a id="reconnecting"></a>
 
 ## 9. Reconnecting After Account Migration
 
@@ -675,6 +685,8 @@ Scenario 6 uses the Slack "Recruitment Bot":
 4. Any scenario showing **"Error"** needs investigation — click through to see the error detail
 
 ---
+
+<a id="debugging"></a>
 
 ## 10. Debugging a Broken Webhook
 

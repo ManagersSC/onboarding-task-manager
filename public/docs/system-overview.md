@@ -15,12 +15,6 @@ The platform is made up of two connected systems:
 | **Application Tracking System (ATS)** | Airtable | Managing job applicants — from their first application through to being hired |
 | **Onboarding Task Manager** | Web app (onboarding-task-manager.vercel.app) | Managing a new hire's onboarding tasks, documents, quizzes, and progress after they're hired |
 
-They share the same Airtable database. When a candidate is marked as **Hired** in the ATS, their record flows directly into the Onboarding Task Manager — no manual data transfer needed.
-
-> 📸 **Screenshot:** _Airtable ATS grid view showing applicants and their stages_
-
-> 📸 **Screenshot:** _Onboarding Task Manager dashboard showing active onboardings_
-
 ---
 
 ## The Full Candidate Journey
@@ -65,22 +59,16 @@ At any point, a candidate can be moved to **Rejected** or **Rejected – Liked**
 - Runs internal automations (e.g. stage changes, task assignments)
 - Connects to Make.com via webhooks to send emails
 
-> 📸 **Screenshot:** _Airtable base showing the Applicants table_
-
-### Make.com
+### Make
 - Handles all outbound emails (application confirmations, interview invites, hired emails, onboarding notifications, password resets)
 - Acts as the messaging layer — Airtable and the web app trigger it via webhooks
 - Contains ~10 active scenarios covering both hiring and onboarding
-
-> 📸 **Screenshot:** _Make.com scenarios list showing hiring and onboarding scenarios_
 
 ### Onboarding Task Manager (Web App)
 - React/Next.js app hosted on Vercel
 - Used by admins and staff to manage onboarding
 - Tasks, quizzes, document uploads, notifications, audit logs
 - Admin panel for user management and task templates
-
-> 📸 **Screenshot:** _Web app admin dashboard_
 
 ### Google Calendar / Cal.com
 - Interviewers have Cal.com booking links stored in Airtable (Staff table)

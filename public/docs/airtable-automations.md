@@ -4,7 +4,7 @@ _Last updated: February 2026_
 
 This page documents all active Airtable automations. These automations run inside Airtable itself — they watch for record changes or form submissions and either update records directly or call out to Make.com to send emails.
 
-> 📸 **Screenshot:** _Airtable automation panel showing all groups (Tasks, Change Stage, Onboarding, More)_
+> ![Airtable automation panel showing all groups (Tasks, Change Stage, Onboarding, More)](images/airtable_automations.png)
 
 ---
 
@@ -16,16 +16,13 @@ Airtable automations have two parts:
 
 Many automations here use a **"Run a script"** action to call a Make.com webhook. This is how Airtable and Make.com communicate — the script packages up the relevant data and POSTs it to a webhook URL.
 
-> 📸 **Screenshot:** _Example Airtable automation showing a trigger and Run Script action_
+> ![Example Airtable automation showing a trigger and Run Script action](images/airtable_automation_example.png)
 
 ---
 
 ## Hiring Automations (Change Stage Group)
 
 These 5 automations manage the hiring pipeline.
-
-> 📸 **Screenshot:** _Change Stage automation group expanded showing all 5 automations_
-
 ---
 
 ### 1. New Applicant
@@ -44,7 +41,7 @@ These 5 automations manage the hiring pipeline.
 
 **Why the condition matters:** If you manually add an existing staff member to Airtable (checking "Onboarding Manual Import"), this automation is skipped — no confirmation email is sent and the stage history starts blank.
 
-> 📸 **Screenshot:** _New Applicant automation detail view in Airtable_
+> ![New Applicant Airtable Automation](images/airtable_automation_change_stage_1.png)
 
 ---
 
@@ -68,7 +65,7 @@ If Stage = **Hired** AND **Onboarding Manual Import** is **unchecked**:
 - Runs a script that calculates a **Due Date** (skipping weekends from today's date)
 - Creates a new record in the **Tasks** table using this due date — this is the manager's task to set the onboarding start date
 
-> 📸 **Screenshot:** _Changes in Stage automation detail showing the conditional if-block_
+> ![Changes in Status Airtable Automation](images/airtable_automation_change_stage_2.png)
 
 ---
 
@@ -85,7 +82,7 @@ If Stage = **Hired** AND **Onboarding Manual Import** is **unchecked**:
 
 **Prerequisite:** The **Interviewer** and **Interview Location** fields must be filled in on the applicant record before this stage is set. If the interviewer has no Cal.com link in the Staff table, the automation falls back to a generic booking URL.
 
-> 📸 **Screenshot:** _Send First Interview Invite automation detail_
+> ![Send First Interview Invite Airtable Automation](images/airtable_automation_change_stage_3.png)
 
 ---
 
@@ -107,7 +104,7 @@ If Stage = **Hired** AND **Onboarding Manual Import** is **unchecked**:
 
 This means by the end of the hiring process, each applicant has one consolidated feedback record rather than two separate ones.
 
-> 📸 **Screenshot:** _Feedback Submission automation detail_
+> ![Feedback Submission Airtable Automation](images/airtable_automation_change_stage_4.png)
 
 ---
 
@@ -123,16 +120,13 @@ This means by the end of the hiring process, each applicant has one consolidated
 3. Links the new Documents record to the matching applicant record (via the "Documents" linked field)
 4. Triggers the `RECEIVED_JOB_DOCUMENTS` Make.com scenario via script — this processes the submitted documents and sends a confirmation
 
-> 📸 **Screenshot:** _Document Submission automation detail_
+> ![Document Submission Airtable Automation](images/airtable_automation_change_stage_5.png)
 
 ---
 
 ## Onboarding Automations
 
 Two automations handle the weekly task assignment cycle. Both call the same massive Make.com scenario: `ONBOARDING_TASK_ASSIGNEMENT`.
-
-> 📸 **Screenshot:** _Onboarding automation group expanded in Airtable_
-
 ---
 
 ### 6. Send Week 1 Tasks
@@ -148,7 +142,7 @@ Sends a simple payload to the `ONBOARDING_TASK_ASSIGNEMENT` Make.com scenario:
 ```
 Make.com then processes all active onboardings and assigns the correct Week 1 tasks to each new hire.
 
-> 📸 **Screenshot:** _Send Week 1 Tasks automation detail_
+> ![Send Week 1 Tasks Airtable Automation](images/airtable_automation_onboarding_1.png)
 
 ---
 
@@ -164,7 +158,7 @@ When a hire's onboarding week increments (e.g. Week 1 → Week 2), and it's the 
 
 The condition `Onboarding Week ≠ 1` prevents double-triggering on Week 1 (which is already handled by the "Send Week 1 Tasks" automation above).
 
-> 📸 **Screenshot:** _Week Change automation detail showing the condition block_
+> ![Week Change Airtable Automation](images/airtable_automation_onboarding_2.png)
 
 ---
 
@@ -180,11 +174,6 @@ These automations handle housekeeping tasks. They are self-contained and do not 
 | **Start Onboarding** | Onboarding | Button-triggered — when clicked, updates the applicant record to mark onboarding as started |
 | **Custom Task** | Onboarding | When a custom task form is submitted, runs a script |
 | **DISC PDF Record Merge** | Onboarding | When a DISC PDF form is submitted, updates the relevant record |
-| **Delete All Rejected Applicants** | More | Button-triggered — bulk deletes rejected applicant records |
-| **Revoke Invitation** | More | Button-triggered — revokes a pending admin invite |
-| **Clear Interface Button** | More | Button-triggered — resets interface state |
-
-> 📸 **Screenshot:** _"More" automation group expanded showing these minor automations_
 
 ---
 
@@ -194,11 +183,11 @@ Which Airtable automations call which Make.com scenarios:
 
 | Airtable Automation | Make.com Scenario |
 |---|---|
-| New Applicant | `NEW_APPLICANT` |
-| Changes in Stage | `CHANGES_IN_STATUS` |
-| Send First Interview Invite | `SEND_FIRST_INTERVIEW_INVITE` |
-| Document Submission | `RECEIVED_JOB_DOCUMENTS` |
-| Send Week 1 Tasks | `ONBOARDING_TASK_ASSIGNEMENT` |
-| Week Change | `ONBOARDING_TASK_ASSIGNEMENT` |
+| New Applicant | [`NEW_APPLICANT`](https://eu2.make.com/340077/scenarios/789471/edit) |
+| Changes in Stage | [`CHANGES_IN_STATUS`](https://eu2.make.com/340077/scenarios/789471/edit) |
+| Send First Interview Invite | [`SEND_FIRST_INTERVIEW_INVITE`](https://eu2.make.com/340077/scenarios/964072/edit) |
+| Document Submission | [`RECEIVED_JOB_DOCUMENTS`](https://eu2.make.com/340077/scenarios/1069841/edit) |
+| Send Week 1 Tasks | [`ONBOARDING_TASK_ASSIGNEMENT`](https://eu2.make.com/340077/scenarios/5707892/edit) |
+| Week Change | [`ONBOARDING_TASK_ASSIGNEMENT`](https://eu2.make.com/340077/scenarios/5707892/edit) |
 
 For details on what each Make.com scenario does internally, see [Make.com Scenarios](automations).

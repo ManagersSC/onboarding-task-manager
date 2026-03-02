@@ -58,8 +58,6 @@ The platform is made up of **two distinct systems** that share the same Airtable
                                     └──────────────────────────────────┘
 ```
 
-> 📸 **Screenshot:** _High-level architecture: Airtable interface, web app dashboard, and Make.com scenario list side by side_
-
 ---
 
 ### Two Airtable contexts to be aware of
@@ -278,10 +276,6 @@ Every significant user action is logged here.
 
 The app references Airtable field names as strings throughout the codebase. If you rename a field in Airtable, the app will break silently. **Always update the code when renaming Airtable fields.**
 
-> 📸 **Screenshot:** _Airtable base showing the key tables in the left sidebar (Applicants, Jobs, Staff, Onboarding Tasks Logs, Quizzes, Notifications, Website Audit Log)_
-
-> 📸 **Screenshot:** _Airtable Applicants table open in grid view showing the key fields (Name, Email, Stage, Interviewer, Onboarding Manual Import, etc.)_
-
 ---
 
 ## 6. Environment Variables
@@ -332,8 +326,6 @@ Set these in Vercel → Project Settings → Environment Variables.
 2. Select the project
 3. The **Deployments** tab shows all deployments with status (Ready / Error / Building)
 4. Click any deployment to see build logs
-
-> 📸 **Screenshot:** _Vercel dashboard showing the project's Deployments tab with recent deployments and their status (Ready / Building / Error)_
 
 ### Rolling back
 
