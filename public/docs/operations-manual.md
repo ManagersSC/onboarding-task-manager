@@ -2,7 +2,7 @@
 
 > **For:** Admins and Staff
 > **Last updated:** February 2026
-> **Need help?** See [Who to Contact](#who-to-contact) at the bottom of this document
+> **Need help?** See [Who to Contact](#10-who-to-contact) at the bottom of this document
 
 ---
 
@@ -39,10 +39,6 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 - Quizzes and assessments with automatic scoring
 - A complete audit trail of who did what and when
 
-**What it is NOT:** This is not a payroll system, a scheduling rota, or an HR system. It handles the *onboarding process only* — getting a new hire from application to being ready to work.
-
-> 📸 **Screenshot:** _Onboarding Task Manager homepage / login screen_
-
 ---
 
 ## 2. Who Uses What (Roles)
@@ -53,8 +49,6 @@ Before this platform existed, onboarding a new dental team member meant chasing 
 | **Staff** | New hires and team members completing onboarding | See their own tasks, upload documents, take quizzes |
 
 > **Important:** If you need to give someone access, an Admin must create their account. Staff members cannot create accounts for others.
-
-> 📸 **Screenshot:** _User Management page showing role badges next to each staff member_
 
 ---
 
@@ -172,9 +166,7 @@ The navigation on the left gives you access to:
 - **Audit Logs** — complete activity history
 - **Resources** — shared document/link hub
 
-> 📸 **Screenshot:** _Admin dashboard showing Active Onboardings and Tasks Due This Week metrics_
-
-> 📸 **Screenshot:** _Left sidebar navigation with all sections visible_
+> ![Dashboard at a glance](images/operations_manual_admin_dashboard.png)
 
 ---
 
@@ -182,7 +174,7 @@ The navigation on the left gives you access to:
 
 ### Adding a New Hire
 
-1. Go to **Applicants** in the left navigation
+1. Go to **Users** in the left navigation
 2. Click **"Add Applicant"** (or wait for them to submit the application form — this creates a record automatically)
 3. Fill in the new hire's name, email, and role
 4. Click **Save**
@@ -190,46 +182,39 @@ The navigation on the left gives you access to:
 
 > **Tip:** If the applicant submitted the form themselves, their record is already there — just search for their name.
 
-> 📸 **Screenshot:** _Applicants list page showing all new hires with their status_
-
-> 📸 **Screenshot:** _Add Applicant form with fields filled in_
+> ![Add Applicants Form](images/operations_manual_add_applicants.png)
 
 ---
 
 ### Assigning Onboarding Tasks
 
-1. Go to **Applicants** and click on the new hire's name
-2. In their profile, click **"Assign Tasks"**
-3. Select the task templates to assign (e.g. "Submit CV", "Complete DBS", "Watch induction video")
-4. Set due dates for each task
-5. Click **"Assign"**
-6. The team member will receive an email notification automatically
+1. Go to **Resources** and click on the Create Resource button
+2. You have multiple options:
+   a. **Core** vs **Custom** task. Core will allow all future new hires to access the resource. Custom is a one time task for a specific person.
+   b. **Single** vs **Bulk**. Single will allow you create one singular resource. Bulk will allow you to create multiple resources at once.
+3. Once you submit the form, the automations in Make will take care of notifying any relevant new hires.
 
 > **Note:** Task templates are pre-created. If you need a new type of task, an Admin can create it under the **Tasks** section.
 
-> 📸 **Screenshot:** _Assign Tasks modal showing task template list with due date fields_
-
-> 📸 **Screenshot:** _Hire's profile page showing their assigned task list_
+> ![Create Resources Form](images/operations_manual_create%20resources.png)
 
 ---
 
 ### Uploading Documents
 
 **Uploading a document for a hire (admin):**
-1. Go to **Applicants** → click the hire's name
-2. Click **"Upload Document"**
-3. Select the document type (CV, Passport, DBS, etc.)
+1. Go to **Users** → click the hire's name
+2. Expand applicant drawer
+3. Scroll to Documents section and select the type of document you want to upload
 4. Drag and drop the file or click to browse
-5. Click **"Upload"**
+5. Click **"Add"**
 
 **Accepted file types:** PDF, Word documents, JPEG, PNG, GIF, WebP
 **Maximum file size:** 10 MB per file
 
 > **If an upload fails:** Check that the file is not larger than 10 MB and is one of the accepted types.
 
-> 📸 **Screenshot:** _Document upload modal with file type selector and drag-and-drop zone_
-
-> 📸 **Screenshot:** _Hire's profile showing the Documents section with uploaded files listed_
+> ![Documents Upload Form](images/operations_manual_upload%20documents.png)
 
 ---
 
@@ -238,32 +223,33 @@ The navigation on the left gives you access to:
 Quizzes are assessments new hires take as part of their onboarding.
 
 **To view quiz results:**
-1. Go to **Applicants** → click the hire's name
-2. Scroll to their task list
-3. Quiz tasks show a quiz icon — click to see their submission and score
+1. Go to **Quizzes**
+2. You will see all recent submissions
+3. You can search the quiz submission of a specific new hire in the search bar and or filter the results
 
 **To create or edit quizzes:**
 1. Go to **Quizzes** in the navigation
-2. Click an existing quiz to edit, or **"Create Quiz"** for a new one
+2. Click on Quizzes switch on the top righ
+3. Click an existing quiz to edit, or **"New Quiz"** for a new one
 3. Add questions (multiple choice, checkboxes, or info blocks)
 4. Save — the quiz is now available to assign as a task
 
-> 📸 **Screenshot:** _Quizzes page showing list of quizzes with question count_
+> ![Quiz Submissions Page](images/operations_manual_quiz_submissions.png)
 
-> 📸 **Screenshot:** _Quiz builder showing question types (multiple choice, checkboxes, info block)_
+> ![Quiz Edit Page](images/operations_manual_quiz_edit.png)
 
-> 📸 **Screenshot:** _Hire's quiz submission view showing their answers and score_
+> ![Quiz Creation Form](images/operations_manual_quiz_creation.png)
 
 ---
 
 ### Sending a Custom Email
 
-1. Go to **Users** or the relevant applicant profile
-2. Look for the **"Send Email"** option
-3. Compose your message
+1. Go to **Dashboard** → New Hire Tracker
+2. Select an applicant → Look for the **"Send Email"** option
+3. Compose your message or select from an email tempalte
 4. Click **Send** — the email is delivered automatically via the email system
 
-> 📸 **Screenshot:** _Custom email compose screen with recipient, subject, and body fields_
+> ![Custom Email Form](images/operations_manual_custom_email.png)
 
 ---
 
@@ -273,13 +259,11 @@ Quizzes are assessments new hires take as part of their onboarding.
 
 1. Hire submits application form (or admin adds them manually)
 2. Admin reviews the application → changes status to "Hired"
-3. Admin assigns onboarding tasks to the hire
+3. Automations assign onboarding tasks to the hire
 4. Hire receives email notification and logs into their dashboard
 5. Hire works through tasks: uploads documents, completes quizzes, reads materials
 6. Admin reviews submitted documents and marks each task complete
 7. Once all tasks are complete, the hire's onboarding is marked as finished
-
-> 📸 **Screenshot:** _Hire's profile page showing completed tasks with green checkmarks_
 
 ---
 
@@ -292,6 +276,8 @@ Quizzes are assessments new hires take as part of their onboarding.
 5. They can log in immediately
 
 > **If they don't receive the email:** Ask them to check their spam folder. If still not found, contact your developer — the Make.com email automation may need checking.
+
+> ![Forgot Password Form](images/operations_manual_forgot_password.png)
 
 ---
 
@@ -314,34 +300,17 @@ The audit log records every significant action in the system — who did what an
 2. Filter by date range, user, or action type
 3. To export: click **"Export CSV"** — this downloads a spreadsheet of all logged actions
 
-> 📸 **Screenshot:** _Audit Logs page showing action history with date, user, and action columns_
-
 ---
 
 ### Walkthrough: Managing Notification Preferences
 
 Each staff member can control which notifications they receive:
 
-1. Go to **Users** → click on a staff member's name
+1. Go to **Profile** → click on a staff member's name
 2. Find the **Notification Preferences** section
 3. Toggle individual notification types on/off
 4. Set their preferred channel: **Email**, **Slack**, or both
 5. Save — changes take effect immediately
-
-> 📸 **Screenshot:** _Notification preferences panel showing toggles for Email, Slack, and In-app per notification type_
-
----
-
-### Walkthrough: Adding a Resource to the Resource Hub
-
-The Resource Hub is a shared library of links and documents for staff.
-
-1. Go to **Resources** in the navigation
-2. Click **"Add Resource"**
-3. Enter the title, link or upload file, and category
-4. Save — it appears in the hub immediately for all staff
-
-> 📸 **Screenshot:** _Resource Hub page showing resources listed by category_
 
 ---
 
@@ -357,8 +326,6 @@ Staff can receive notifications in two places:
 
 > **To change notification preferences:** Go to Users → select the staff member → Notification Preferences section.
 
-> 📸 **Screenshot:** _In-app notification bell open showing unread notifications_
-
 ---
 
 ## 8. Troubleshooting
@@ -366,14 +333,15 @@ Staff can receive notifications in two places:
 ### Tasks not appearing in a hire's dashboard
 
 - Try refreshing the page (press F5)
-- Confirm the task was actually assigned — go to the hire's profile and check their task list
+- Confirm the task was actually assigned — go to the Tasks page and check tasks assigned to them
 - If tasks are there but not showing: contact your developer, it may be a caching issue
 
 ### Automated email not received
 
 1. Ask the recipient to check their spam/junk folder
 2. Check that the email address on file is correct (go to their profile)
-3. If the email is correct and not in spam: contact your developer — the Make.com email automation may have an error
+3. Check the correct Make autoamtion scenario for any errors.
+3. If you still cannot find the problem/solution, contact developer.
 
 ### Login not working
 
@@ -445,15 +413,15 @@ A: Yes — go to Audit Logs. Every significant action is recorded with the user'
 
 ## 10. Who to Contact
 
-This platform was built and is maintained by **FlowFusion AI**. For any technical issues, changes, or questions, please reach out to us directly.
+This platform was built and maintained by **FlowFusion AI**. For any technical issues, changes, or questions, please reach out directly.
 
 | Issue | Who to contact |
 |-------|----------------|
-| Something in the app is broken | **FlowFusion AI** — reach out via email or WhatsApp |
-| Make.com automation not working (emails not sending, etc.) | **FlowFusion AI** — we monitor and manage all Make.com scenarios |
-| Airtable data issue (record incorrect, automation not firing) | **FlowFusion AI** — we manage the Airtable base and automations |
-| Hosting issue (site down or not loading) | **FlowFusion AI** — we manage the Vercel deployment |
-| Requesting a new feature or change | **FlowFusion AI** — get in touch and we'll scope it out |
+| Something in the app is broken | **Developer** |
+| Make.com automation not working (emails not sending, etc.) | **Developer** |
+| Airtable data issue (record incorrect, automation not firing) | **Developer** |
+| Hosting issue (site down or not loading) | **Developer** |
+| Requesting a new feature or change | **Developer** |
 
 > **When reporting an issue:** Please describe the exact steps that led to the problem, what you expected to happen, and what actually happened. A screenshot is extremely helpful and speeds up resolution significantly.
 

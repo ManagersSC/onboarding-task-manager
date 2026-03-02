@@ -57,7 +57,8 @@ All stage changes are made through the platform, not directly in Airtable.
 
 The Airtable automation fires automatically when the stage is updated.
 
-> 📸 **Screenshot:** _Admin → Users page showing a candidate's current stage and the stage change control_
+> ![Users Page Compact Applicant Drawer](images/hiring_guide_moving_candidate.png)
+> ![User Page Expanded Applicant Drawer](images/hiring_guide_moving_candidate_2.png)
 
 ### Before setting "First Interview Invite Sent"
 
@@ -83,7 +84,9 @@ When a first interview invite is sent, the candidate receives a 3-step email:
 2. Upload their DISC PDF results via a personalised Airtable form (pre-filled with their email)
 3. Book their interview time via their personalised Cal.com link
 
-> 📸 **Screenshot:** _Example first interview invite email showing the 3-step layout_
+> ![Interview Invite Email](images/hiring_guide_interview_process_disc_email.png)
+> ![Disc PDF Upload Form](images/hiring_guide_interview_process_disc_form.png)
+> ![Interview Booking Page (Cal.com)](images/hiring_guide_interview_process_interview_booking_page.png)
 
 ### Cal.com Booking Links
 Each interviewer has two Cal.com links stored in the Staff table:
@@ -93,13 +96,13 @@ Each interviewer has two Cal.com links stored in the Staff table:
 Make.com appends the branch location slug to these links, so bookings are routed to the correct branch.
 
 ### Feedback Forms
-After each interview, the interviewer submits a Feedback Form (an Airtable form). The form captures their assessment and score.
+After each interview, the interviewer submits a Feedback Form through the platform (`/admin/users page`). The form captures their assessment and score.
 
 **What happens automatically:**
 - First Interview feedback submitted → candidate stage changes to **Reviewed**
 - Second Interview feedback submitted → candidate stage changes to **Reviewed (2nd)**, and both feedback records are merged into one
 
-> 📸 **Screenshot:** _Feedback form (interviewer view)_
+> ![Feedback Form](images/hiring_guide_interview_feedback_form.png)
 
 ---
 

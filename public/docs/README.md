@@ -11,21 +11,21 @@ Welcome. This documentation covers the full **Smile Cliniq platform** — from h
 | I need to... | Go to |
 |---|---|
 | Understand the full hiring pipeline | [Hiring Guide](hiring-guide) |
-| Move a candidate to the next stage | [Moving a Candidate Through Stages](hiring-guide#_3-moving-a-candidate-through-stages) |
-| Understand what happens automatically at each stage | [What Happens Automatically](hiring-guide#what-automatic-means-at-each-stage) |
-| Add a candidate manually (existing staff) | [Adding a Candidate Manually](hiring-guide#adding-a-candidate-manually-existing-staff) |
+| Move a candidate to the next stage | [Moving a Candidate Through Stages](hiring-guide#2-moving-a-candidate-through-stages) |
+| Understand what happens automatically at each stage | [What Happens Automatically](hiring-guide#what-happens-automatically-at-each-stage) |
+| Add a candidate manually (existing staff) | [Adding a Candidate Manually](hiring-guide#6-adding-a-candidate-manually-existing-staff) |
 
 ### Onboarding
 
 | I need to... | Go to |
 |---|---|
-| Learn what the onboarding system does | [What This System Does](operations-manual#_1-what-this-system-does) |
-| Understand user roles | [Who Uses What](operations-manual#_2-who-uses-what-roles) |
+| Learn what the onboarding system does | [What This System Does](operations-manual#1-what-this-system-does) |
+| Understand user roles | [Who Uses What](operations-manual#2-who-uses-what-roles) |
 | Add a new hire | [Adding a New Hire](operations-manual#adding-a-new-hire) |
 | Assign tasks | [Assigning Onboarding Tasks](operations-manual#assigning-onboarding-tasks) |
-| Fix something that's not working | [Troubleshooting](operations-manual#_8-troubleshooting) |
-| Get answers to common questions | [FAQ](operations-manual#_9-faq) |
-| Contact support | [Who to Contact](operations-manual#_10-who-to-contact) |
+| Fix something that's not working | [Troubleshooting](operations-manual#8-troubleshooting) |
+| Get answers to common questions | [FAQ](operations-manual#9-faq) |
+| Contact support | [Who to Contact](operations-manual#10-who-to-contact) |
 
 ### Reference
 
@@ -60,4 +60,4 @@ This documentation is written in two layers:
 
 ---
 
-> **Need help right now?** Jump to [Troubleshooting](operations-manual#_8-troubleshooting) or [Who to Contact](operations-manual#_10-who-to-contact).
+> **Need help right now?** Jump to [Troubleshooting](operations-manual#8-troubleshooting) or [Who to Contact](operations-manual#10-who-to-contact).
