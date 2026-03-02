@@ -68,9 +68,10 @@ export async function middleware(request) {
   ].includes(path);
   const isPublic = isPublicPage || isPublicApi;
   const isAdminRoute = path.startsWith("/admin");
+  const isDocsRoute = path.startsWith("/docs");
   const isAdminApiRoute = path.startsWith("/api/admin");
   const adminApiExemptions = ['/api/admin/login', '/api/admin/accept-invite'];
-  const needsAdminRole = isAdminRoute || (isAdminApiRoute && !adminApiExemptions.includes(path));
+  const needsAdminRole = isAdminRoute || isDocsRoute || (isAdminApiRoute && !adminApiExemptions.includes(path));
 
   // Allow public routes through without session check
   if (isPublic) {
@@ -104,6 +105,7 @@ export async function middleware(request) {
     if (isAdminApiRoute) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    // Docs and other admin pages redirect to the admin login view
     return NextResponse.redirect(new URL("/?mode=admin", request.nextUrl));
   }
 
@@ -114,6 +116,8 @@ export const config = {
   matcher: [
     '/api/:path*',
     '/admin/:path*',
-    '/dashboard/:path*'
+    '/dashboard/:path*',
+    '/docs',
+    '/docs/:path*'
   ]
 }

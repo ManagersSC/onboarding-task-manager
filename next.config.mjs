@@ -3,6 +3,10 @@ const nextConfig = {
     eslint: {
       ignoreDuringBuilds: false,
     },
+    // Ensure docs-content/ is bundled into the serverless function for Vercel deployments
+    outputFileTracingIncludes: {
+      '/docs': ['./docs-content/**/*'],
+    },
     images: {
       remotePatterns: [
         {
