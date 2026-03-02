@@ -15,3 +15,4 @@
 
 - **For Developers**
   - [Technical Overview](technical-overview)
+  - [Security](security)
