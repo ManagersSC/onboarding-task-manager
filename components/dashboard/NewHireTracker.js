@@ -1134,7 +1134,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
 
                       {/* View Tasks Button */}
                       <a
-                        href={`/admin/users?applicantId=${hire.id}`}
+                        href={`/admin/assigned-tasks?search=${encodeURIComponent(hire.name)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between w-full rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 hover:border-border px-4 py-3 transition-all group"
