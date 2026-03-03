@@ -192,8 +192,9 @@ function TableFilters({
   onRefresh,
   viewMode,
   onViewModeChange,
+  initialTerm = "",
 }) {
-  const [term, setTerm] = useState("")
+  const [term, setTerm] = useState(initialTerm)
   const debouncedTerm = useDebounce(term, 300)
   const [isFocused, setIsFocused] = useState(false)
 
@@ -446,7 +447,7 @@ const COLUMN_FIELD_MAP = {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function AssignedTasksLogsTable({ onSelectionChange }) {
+export function AssignedTasksLogsTable({ onSelectionChange, initialSearchTerm = "" }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -464,7 +465,7 @@ export function AssignedTasksLogsTable({ onSelectionChange }) {
   const [expandedRows, setExpandedRows] = useState({})
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
   const [statusFilter, setStatusFilter] = useState("all")
   const [folderFilter, setFolderFilter] = useState("all")
   const [hasDocumentsFilter, setHasDocumentsFilter] = useState("all")
@@ -978,6 +979,7 @@ export function AssignedTasksLogsTable({ onSelectionChange }) {
         onRefresh={handleRefresh}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        initialTerm={initialSearchTerm}
       />
 
       {/* Expand / Collapse all (grouped view only) */}

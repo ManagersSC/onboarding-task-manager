@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@components/ui/button"
 import { Plus } from "lucide-react"
 import { AssignedTasksLogsTable } from "./AssignedTasksLogsTable"
@@ -9,6 +10,8 @@ import { CreateTaskDialog } from "./CreateTaskDialog"
 export function AssignedTasksLogsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState([])
+  const searchParams = useSearchParams()
+  const initialSearchTerm = searchParams.get("search") || ""
 
   return (
     <div className="space-y-6">
@@ -22,7 +25,7 @@ export function AssignedTasksLogsPage() {
           Create Task
         </Button>
       </div>
-      <AssignedTasksLogsTable onSelectionChange={setSelectedTasks} />
+      <AssignedTasksLogsTable onSelectionChange={setSelectedTasks} initialSearchTerm={initialSearchTerm} />
       <CreateTaskDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
     </div>
   )
