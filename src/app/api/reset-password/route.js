@@ -57,16 +57,32 @@ export async function POST(request) {
       return Response.json({ error: "Invalid token payload" }, { status: 400 });
     }
 
-    const users = await base("Applicants")
+    // Check Applicants table first, then fall back to Staff (admin accounts)
+    let userRecord = null;
+    let userTable = "Applicants";
+
+    const applicants = await base("Applicants")
       .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
       .firstPage();
 
-    if (users.length === 0) {
+    if (applicants.length > 0) {
+      userRecord = applicants[0];
+    } else {
+      const staff = await base("Staff")
+        .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
+        .firstPage();
+      if (staff.length > 0) {
+        userRecord = staff[0];
+        userTable = "Staff";
+      }
+    }
+
+    if (!userRecord) {
       return Response.json({ error: "Invalid token or user not found" }, { status: 400 });
     }
 
     // VULN-H6: Verify nonce matches (single-use token)
-    const storedNonce = users[0].fields["Reset Nonce"];
+    const storedNonce = userRecord.fields["Reset Nonce"];
     if (!nonce || !storedNonce || nonce !== storedNonce) {
       return Response.json({ error: "This reset link has already been used" }, { status: 400 });
     }
@@ -74,9 +90,9 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Clear nonce on use to prevent replay
-    await base("Applicants").update([
+    await base(userTable).update([
       {
-        id: users[0].id,
+        id: userRecord.id,
         fields: {
           "Password": hashedPassword,
           "Reset Nonce": "",

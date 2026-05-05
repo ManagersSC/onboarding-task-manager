@@ -21,12 +21,27 @@ export async function POST(request) {
     // Normalise email.
     const normalisedEmail = email.trim().toLowerCase();
 
-    // Check if user exists.
-    const users = await base("Applicants")
+    // Check Applicants table first, then fall back to Staff (admin accounts)
+    let userRecord = null;
+    let userTable = "Applicants";
+
+    const applicants = await base("Applicants")
       .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
       .firstPage();
 
-    if (users.length === 0) {
+    if (applicants.length > 0) {
+      userRecord = applicants[0];
+    } else {
+      const staff = await base("Staff")
+        .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
+        .firstPage();
+      if (staff.length > 0) {
+        userRecord = staff[0];
+        userTable = "Staff";
+      }
+    }
+
+    if (!userRecord) {
       // Return generic response to prevent enumeration.
       return Response.json({
         message: "If the email is registered, a password reset email will be sent.",
@@ -41,8 +56,8 @@ export async function POST(request) {
 
     // VULN-H6: Generate unique nonce for single-use token
     const resetNonce = crypto.randomUUID();
-    await base("Applicants").update([{
-      id: users[0].id,
+    await base(userTable).update([{
+      id: userRecord.id,
       fields: { "Reset Nonce": resetNonce }
     }]);
 
