@@ -52,37 +52,22 @@ export async function POST(request) {
       return Response.json({ error: "Invalid or expired token" }, { status: 400 });
     }
 
-    const { email, nonce } = decoded;
-    if (!email) {
+    const { email, nonce, userTable } = decoded;
+    if (!email || !userTable) {
       return Response.json({ error: "Invalid token payload" }, { status: 400 });
     }
 
-    // Check Applicants table first, then fall back to Staff (admin accounts)
-    let userRecord = null;
-    let userTable = "Applicants";
-
-    const applicants = await base("Applicants")
+    // Query the exact table encoded in the JWT — Applicants for users, Staff for admins.
+    const users = await base(userTable)
       .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
       .firstPage();
 
-    if (applicants.length > 0) {
-      userRecord = applicants[0];
-    } else {
-      const staff = await base("Staff")
-        .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
-        .firstPage();
-      if (staff.length > 0) {
-        userRecord = staff[0];
-        userTable = "Staff";
-      }
-    }
-
-    if (!userRecord) {
+    if (users.length === 0) {
       return Response.json({ error: "Invalid token or user not found" }, { status: 400 });
     }
 
     // VULN-H6: Verify nonce matches (single-use token)
-    const storedNonce = userRecord.fields["Reset Nonce"];
+    const storedNonce = users[0].fields["Reset Nonce"];
     if (!nonce || !storedNonce || nonce !== storedNonce) {
       return Response.json({ error: "This reset link has already been used" }, { status: 400 });
     }
@@ -92,7 +77,7 @@ export async function POST(request) {
     // Clear nonce on use to prevent replay
     await base(userTable).update([
       {
-        id: userRecord.id,
+        id: users[0].id,
         fields: {
           "Password": hashedPassword,
           "Reset Nonce": "",

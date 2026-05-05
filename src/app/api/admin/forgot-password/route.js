@@ -4,12 +4,10 @@ import logger from "@/lib/utils/logger";
 import { logAuditEvent } from "@/lib/auditLogger";
 import { escapeAirtableValue } from "@/lib/airtable/sanitize";
 
-// Initialize Airtable base.
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE_ID
 );
 
-// src/app/api/forgot-password/route.js
 export async function POST(request) {
   try {
     const { email } = await request.json();
@@ -18,22 +16,23 @@ export async function POST(request) {
       return Response.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Normalise email.
     const normalisedEmail = email.trim().toLowerCase();
 
-    // Check if user exists in Applicants table.
-    const users = await base("Applicants")
-      .select({ filterByFormula: `{Email}='${escapeAirtableValue(normalisedEmail)}'`, maxRecords: 1 })
+    // Check Staff table for admin accounts only.
+    const admins = await base("Staff")
+      .select({
+        filterByFormula: `AND({Email}='${escapeAirtableValue(normalisedEmail)}', {IsAdmin}=TRUE())`,
+        maxRecords: 1,
+      })
       .firstPage();
 
-    if (users.length === 0) {
-      // Return generic response to prevent enumeration.
+    if (admins.length === 0) {
+      // Generic response to prevent enumeration.
       return Response.json({
         message: "If the email is registered, a password reset email will be sent.",
       });
     }
 
-    // Ensure JWT_SECRET is set.
     if (!process.env.JWT_SECRET) {
       logger.error("JWT_SECRET is not configured");
       return Response.json({ error: "Server configuration error" }, { status: 500 });
@@ -41,39 +40,28 @@ export async function POST(request) {
 
     // VULN-H6: Generate unique nonce for single-use token
     const resetNonce = crypto.randomUUID();
-    await base("Applicants").update([{
-      id: users[0].id,
-      fields: { "Reset Nonce": resetNonce }
+    await base("Staff").update([{
+      id: admins[0].id,
+      fields: { "Reset Nonce": resetNonce },
     }]);
 
-    // Generate JWT-based reset token (expires in 1 hour).
-    // userTable is encoded so reset-password knows which table to update.
+    // userTable encoded in JWT so reset-password queries the correct table.
     const expiryTime = "1h";
-    const payload = { email: normalisedEmail, nonce: resetNonce, userTable: "Applicants" };
-    const tokenOptions = { expiresIn: expiryTime };
-    const resetToken = jwt.sign(payload, process.env.JWT_SECRET, tokenOptions);
+    const payload = { email: normalisedEmail, nonce: resetNonce, userTable: "Staff" };
+    const resetToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: expiryTime });
 
-    // Ensure Make.com webhook URL is configured.
     if (!process.env.MAKE_WEBHOOK_URL_RESET_PASSWORD) {
       logger.error("Make.com webhook URL is not configured");
-      await logAuditEvent({
-        eventType: "Server",
-        eventStatus: "Error",
-        userIdentifier: normalisedEmail,
-        detailedMessage: `Webhook call failed: ${webhookError}`,
-        request,
-      });
       return Response.json({ error: "Server configuration error" }, { status: 500 });
     }
 
-    // Trigger Make.com webhook for email delivery.
-    try{
+    try {
       const response = await fetch(process.env.MAKE_WEBHOOK_URL_RESET_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalisedEmail, expiresIn: expiryTime, resetToken }),
       });
-  
+
       if (!response.ok) {
         const webhookError = await response.json();
         logger.error("Webhook failed", webhookError);
@@ -85,11 +73,11 @@ export async function POST(request) {
           request,
         });
         return Response.json(
-          {error: webhookError.error || "Failed to send password reset email"}, 
+          { error: webhookError.error || "Failed to send password reset email" },
           { status: 500 }
         );
       }
-    } catch(err){
+    } catch (err) {
       logger.error("Error triggering Make.com automation", err);
       return Response.json({ error: "Internal server error" }, { status: 500 });
     }
@@ -98,7 +86,7 @@ export async function POST(request) {
       eventType: "Forgot Password",
       eventStatus: "Success",
       userIdentifier: normalisedEmail,
-      detailedMessage: "Password reset email triggered via webhook",
+      detailedMessage: "Admin password reset email triggered via webhook",
       request,
     });
 
@@ -106,7 +94,7 @@ export async function POST(request) {
       message: "If the email is registered, a password reset email will be sent.",
     });
   } catch (error) {
-    logger.error("Forgot Password Error:", error);
+    logger.error("Admin Forgot Password Error:", error);
     await logAuditEvent({
       eventType: "Forgot Password",
       eventStatus: "Error",
