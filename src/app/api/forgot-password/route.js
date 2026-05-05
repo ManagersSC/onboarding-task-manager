@@ -95,7 +95,7 @@ export async function POST(request) {
     }
 
     await logAuditEvent({
-      eventType: "Forgot Password",
+      eventType: "Reset Password",
       eventStatus: "Success",
       userIdentifier: normalisedEmail,
       detailedMessage: "Password reset email triggered via webhook",
@@ -108,7 +108,7 @@ export async function POST(request) {
   } catch (error) {
     logger.error("Forgot Password Error:", error);
     await logAuditEvent({
-      eventType: "Forgot Password",
+      eventType: "Reset Password",
       eventStatus: "Error",
       userIdentifier: "unknown",
       detailedMessage: error.message,
