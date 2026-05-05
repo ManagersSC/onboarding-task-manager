@@ -1866,8 +1866,9 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
         const data = await res.json()
         const map = {}
         for (const ev of data || []) {
-          const s = new Date(ev.start?.dateTime || ev.start?.date)
-          const e = new Date(ev.end?.dateTime || ev.end?.date)
+          if (!ev.start?.dateTime) continue
+          const s = new Date(ev.start.dateTime)
+          const e = new Date(ev.end?.dateTime)
           const key = s.toISOString().slice(0,10)
           if (!map[key]) map[key] = []
           map[key].push({
@@ -1905,8 +1906,6 @@ function MonthlyReviewActions({ applicantId, applicantName = "Applicant", applic
 
   useEffect(() => {
     if (!date || !startTime || !endTime) { setHasConflict(false); return }
-    const [sh, sm] = startTime.split(':').map(Number)
-    const [eh, em] = endTime.split(':').map(Number)
     const start = new Date(`${date}T${startTime}:00`)
     const end = new Date(`${date}T${endTime}:00`)
     if (end <= start) { setHasConflict(true); return }
@@ -2282,8 +2281,9 @@ function AppraisalDateSetter({ open, onOpenChange, applicantId, applicantName = 
         const data = await res.json()
         const map = {}
         for (const ev of data || []) {
-          const s = new Date(ev.start?.dateTime || ev.start?.date)
-          const e = new Date(ev.end?.dateTime || ev.end?.date)
+          if (!ev.start?.dateTime) continue
+          const s = new Date(ev.start.dateTime)
+          const e = new Date(ev.end?.dateTime)
           const key = s.toISOString().slice(0,10)
           if (!map[key]) map[key] = []
           map[key].push({
