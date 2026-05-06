@@ -14,4 +14,4 @@ Fix dynamic rendering of claim/unclaim badges and buttons in the Hire Completion
 - [x] Fix unclaim in Hire Completions modal: add immediate optimistic `setTasks` + revert on undo
 - [x] Replace `X` icon with `UserMinus` for unclaim button in modal
 - [x] Fix modal subtitle to count only unclaimed tasks (not all tasks)
-- [ ] Commit changes
+- [x] Commit changes
