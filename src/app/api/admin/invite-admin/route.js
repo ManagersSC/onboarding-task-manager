@@ -97,10 +97,11 @@ export async function POST(request) {
       expiresIn: "24h",
     })
 
-    // VULN-L4: Require APP_BASE_URL in production to prevent host header injection
-    const envBase = process.env.APP_BASE_URL && process.env.APP_BASE_URL.trim()
+    // VULN-L4: Require a known base URL in production to prevent host header injection.
+    // APP_BASE_URL takes precedence; falls back to NEXT_PUBLIC_APP_URL (set on Vercel).
+    const envBase = (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim()
     if (!envBase && process.env.NODE_ENV === "production") {
-      logger.error("APP_BASE_URL is required in production for invite links")
+      logger.error("APP_BASE_URL or NEXT_PUBLIC_APP_URL is required in production for invite links")
       return Response.json({ error: "Server configuration error" }, { status: 500 })
     }
     const baseUrl = envBase || `http://localhost:3000`

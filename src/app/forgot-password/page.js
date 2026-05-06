@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -18,8 +18,10 @@ const resetPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
 })
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isAdmin = searchParams.get("isAdmin") === "true"
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -41,8 +43,8 @@ export default function ForgotPasswordPage() {
     setSuccess("")
 
     try {
-      // In a real application, this would call your API
-      const response = await fetch("/api/forgot-password", {
+      const endpoint = isAdmin ? "/api/admin/forgot-password" : "/api/forgot-password"
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -62,6 +64,8 @@ export default function ForgotPasswordPage() {
       setIsLoading(false)
     }
   }
+
+  const backRoute = isAdmin ? "/?mode=admin" : "/"
 
   return (
     <GradientBackground
@@ -90,7 +94,7 @@ export default function ForgotPasswordPage() {
             Smile Cliniq
           </h1>
           <p className="text-muted-foreground mt-2 text-body-sm">
-            Reset your account password
+            {isAdmin ? "Reset your admin account password" : "Reset your account password"}
           </p>
         </div>
 
@@ -148,7 +152,7 @@ export default function ForgotPasswordPage() {
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
-                onClick={() => router.push("/")}
+                onClick={() => router.push(backRoute)}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Sign In
@@ -158,5 +162,13 @@ export default function ForgotPasswordPage() {
         </Card>
       </main>
     </GradientBackground>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense>
+      <ForgotPasswordForm />
+    </Suspense>
   )
 }
