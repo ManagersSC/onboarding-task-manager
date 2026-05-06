@@ -342,6 +342,15 @@ function isAppraisalActionPlanTask(task) {
         return
       }
       toast.success("Task claimed!")
+      setTasks((prev) => {
+        const next = { ...prev }
+        for (const group of Object.keys(next)) {
+          next[group] = next[group].map((t) =>
+            t.id === taskId ? { ...t, for: ["__claimed__"] } : t
+          )
+        }
+        return next
+      })
       fetchTasks()
     } catch (err) {
       toast.error("Error claiming task: " + err.message)
@@ -1268,6 +1277,15 @@ function isAppraisalActionPlanTask(task) {
                               throw new Error(d.error || "Failed to unclaim")
                             }
                             toast.success("Task unclaimed")
+                            setTasks((prev) => {
+                              const next = { ...prev }
+                              for (const group of Object.keys(next)) {
+                                next[group] = next[group].map((t) =>
+                                  t.id === task.id ? { ...t, for: [] } : t
+                                )
+                              }
+                              return next
+                            })
                             fetchTasks()
                           } catch (e) {
                             toast.error(e.message)
