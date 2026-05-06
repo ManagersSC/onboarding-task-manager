@@ -52,12 +52,13 @@ export async function POST(request) {
       return Response.json({ error: "Invalid or expired token" }, { status: 400 });
     }
 
-    const { email, nonce } = decoded;
-    if (!email) {
+    const { email, nonce, userTable } = decoded;
+    if (!email || !userTable) {
       return Response.json({ error: "Invalid token payload" }, { status: 400 });
     }
 
-    const users = await base("Applicants")
+    // Query the exact table encoded in the JWT — Applicants for users, Staff for admins.
+    const users = await base(userTable)
       .select({ filterByFormula: `{Email}='${escapeAirtableValue(email)}'`, maxRecords: 1 })
       .firstPage();
 
@@ -74,7 +75,7 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Clear nonce on use to prevent replay
-    await base("Applicants").update([
+    await base(userTable).update([
       {
         id: users[0].id,
         fields: {

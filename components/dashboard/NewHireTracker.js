@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion } from "framer-motion"
 import { format, parse, isValid, isBefore, startOfDay } from "date-fns"
 import {
@@ -63,6 +63,7 @@ import {
 } from "@components/ui/dropdown-menu"
 
 export function NewHireTracker({ initialNewHires = [] }) {
+  const scrollRef = useRef(null)
   const [newHires, setNewHires] = useState(initialNewHires || [])
   const [loading, setLoading] = useState(!(initialNewHires && initialNewHires.length > 0))
   const [selectedHire, setSelectedHire] = useState(null)
@@ -892,10 +893,10 @@ export function NewHireTracker({ initialNewHires = [] }) {
               <Badge variant="secondary">{newHires.length}</Badge>
             </div>
             <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg" onClick={() => scrollRef.current?.scrollBy({ left: -256, behavior: 'smooth' })}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg">
+              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent rounded-lg" onClick={() => scrollRef.current?.scrollBy({ left: 256, behavior: 'smooth' })}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -914,7 +915,7 @@ export function NewHireTracker({ initialNewHires = [] }) {
             </div>
           ) : (
             <div className="relative">
-              <div className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
+              <div ref={scrollRef} className="grid grid-cols-1 sm:flex sm:space-x-4 gap-4 sm:gap-0 sm:overflow-x-auto pb-2 custom-scrollbar">
               {newHires.map((hire, index) => (
                 <Dialog key={hire.id}>
                   <DialogTrigger asChild>

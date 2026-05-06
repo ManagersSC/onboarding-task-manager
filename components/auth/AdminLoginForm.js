@@ -126,7 +126,7 @@ export function AdminLoginForm({ onSuccess, onUserLoginClick }) {
               type="button"
               variant="link"
               className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
-              onClick={() => router.push("/forgot-password")}
+              onClick={() => router.push("/forgot-password?isAdmin=true")}
             >
               Forgot password?
             </Button>

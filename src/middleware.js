@@ -64,7 +64,8 @@ export async function middleware(request) {
   const isPublicPage = ["/", "/signup", "/forgot-password", "/accept-admin-invite"].includes(path);
   const isPublicApi = [
     "/api/login", "/api/admin/login", "/api/sign-up",
-    "/api/forgot-password", "/api/reset-password", "/api/admin/accept-invite",
+    "/api/forgot-password", "/api/reset-password",
+    "/api/admin/forgot-password", "/api/admin/accept-invite",
   ].includes(path);
   const isPublic = isPublicPage || isPublicApi;
   const isAdminRoute = path.startsWith("/admin");

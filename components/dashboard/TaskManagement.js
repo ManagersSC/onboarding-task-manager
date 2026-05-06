@@ -25,6 +25,8 @@ import {
   Users,
   ExternalLink,
   FileText,
+  RotateCcw,
+  UserMinus,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -341,7 +343,18 @@ function isAppraisalActionPlanTask(task) {
         return
       }
       toast.success("Task claimed!")
-      fetchTasks()
+      setTasks((prev) => {
+        const next = { ...prev }
+        for (const group of Object.keys(next)) {
+          next[group] = next[group].map((t) =>
+            t.id === taskId ? { ...t, for: ["__claimed__"] } : t
+          )
+        }
+        return next
+      })
+      // Delay refetch so Airtable has time to settle — prevents the optimistic update
+      // from being immediately overwritten by a stale read-after-write response.
+      setTimeout(fetchTasks, 2000)
     } catch (err) {
       toast.error("Error claiming task: " + err.message)
     } finally {
@@ -365,7 +378,17 @@ function isAppraisalActionPlanTask(task) {
       toast.success(
         `Claimed ${claimedCount} task${claimedCount === 1 ? "" : "s"}${alreadyCount ? `, ${alreadyCount} already claimed` : ""}`,
       )
-      fetchTasks()
+      // Optimistically mark all unclaimed tasks for this applicant as claimed
+      setTasks((prev) => {
+        const next = { ...prev }
+        for (const group of Object.keys(next)) {
+          next[group] = next[group].map((t) =>
+            t.applicantId === applicantId && isGlobalTask(t) ? { ...t, for: ["__claimed__"] } : t
+          )
+        }
+        return next
+      })
+      setTimeout(fetchTasks, 2000)
     } catch (e) {
       toast.error(`Claim all failed: ${e.message}`)
     }
@@ -1151,17 +1174,25 @@ function isAppraisalActionPlanTask(task) {
               </TooltipProvider>
               {/* Consistent overflow menu for unclaimed */}
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
-                    aria-label="More actions"
-                    title="More actions"
-                  >
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                          aria-label="More actions"
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>More actions</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem
                     onClick={() => {
@@ -1213,15 +1244,24 @@ function isAppraisalActionPlanTask(task) {
                 </TooltipProvider>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
-                    >
-                      <MoreHorizontal className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>More actions</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <DropdownMenuContent align="end" className="w-40">
                     <DropdownMenuItem
                       onClick={() => {
@@ -1238,42 +1278,34 @@ function isAppraisalActionPlanTask(task) {
                     </DropdownMenuItem>
                     {!isGlobalTask(task) && (
                       <DropdownMenuItem
-                        onClick={() => {
-                          const key = `unclaim-${task.id}`
-                          const t = setTimeout(async () => {
-                            try {
-                              const res = await fetch(`/api/dashboard/tasks/${task.id}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ action: "unclaim" }),
-                              })
-                              if (!res.ok) {
-                                const d = await res.json()
-                                throw new Error(d.error || "Failed to unclaim")
-                              }
-                              fetchTasks()
-                            } catch (e) {
-                              toast.error(e.message)
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/dashboard/tasks/${task.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "unclaim" }),
+                            })
+                            if (!res.ok) {
+                              const d = await res.json()
+                              throw new Error(d.error || "Failed to unclaim")
                             }
-                          }, 4000)
-                          pendingTimersRef.current.set(key, t)
-                          toast.success("Task will be unclaimed", {
-                            duration: 4000,
-                            action: {
-                              label: "Undo",
-                              onClick: () => {
-                                const timer = pendingTimersRef.current.get(key)
-                                if (timer) {
-                                  clearTimeout(timer)
-                                  pendingTimersRef.current.delete(key)
-                                  toast.success("Unclaim cancelled")
-                                }
-                              },
-                            },
-                          })
+                            toast.success("Task unclaimed")
+                            setTasks((prev) => {
+                              const next = { ...prev }
+                              for (const group of Object.keys(next)) {
+                                next[group] = next[group].map((t) =>
+                                  t.id === task.id ? { ...t, for: [] } : t
+                                )
+                              }
+                              return next
+                            })
+                            fetchTasks()
+                          } catch (e) {
+                            toast.error(e.message)
+                          }
                         }}
                       >
-                        <X className="h-3 w-3 mr-2" />
+                        <RotateCcw className="h-3 w-3 mr-2" />
                         Unclaim
                       </DropdownMenuItem>
                     )}
@@ -1928,7 +1960,7 @@ function isAppraisalActionPlanTask(task) {
                             <X className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
+                        <TooltipContent side="bottom" className="z-[10000]">
                           <p>Close</p>
                         </TooltipContent>
                       </Tooltip>
@@ -1979,7 +2011,9 @@ function isAppraisalActionPlanTask(task) {
                                 <div className="flex items-center justify-between mb-3 gap-3">
                                   <div className="min-w-0">
                                     <h3 className="text-base font-semibold">{headerName}</h3>
-                                    <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {tasksForRaw.filter(isGlobalTask).length} unclaimed · {tasksForRaw.length} total
+                                    </p>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div className="relative">
@@ -1998,7 +2032,7 @@ function isAppraisalActionPlanTask(task) {
                                             <Plus className="h-3 w-3 mr-1.5" /> Claim All
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="bottom">
+                                        <TooltipContent side="bottom" className="z-[10000]">
                                           <p>Claim all tasks for {headerName}</p>
                                         </TooltipContent>
                                       </Tooltip>
@@ -2043,7 +2077,7 @@ function isAppraisalActionPlanTask(task) {
                                                 <FileText className="h-3.5 w-3.5 text-primary" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
+                                            <TooltipContent side="bottom" className="z-[10000]">
                                               <p>Open Resource Link</p>
                                             </TooltipContent>
                                           </Tooltip>
@@ -2062,8 +2096,8 @@ function isAppraisalActionPlanTask(task) {
                                                 <Plus className="h-3.5 w-3.5" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
-                                              <p>Claim</p>
+                                            <TooltipContent side="bottom" className="z-[10000]">
+                                              <p>Claim this task</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         ) : (
@@ -2079,8 +2113,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>Complete</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>Mark as complete</p>
                                               </TooltipContent>
                                             </Tooltip>
                                             <Tooltip>
@@ -2094,8 +2128,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <Eye className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>View Details</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>View task details</p>
                                               </TooltipContent>
                                             </Tooltip>
                                             <Tooltip>
@@ -2109,8 +2143,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>Edit Task</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>Edit task</p>
                                               </TooltipContent>
                                             </Tooltip>
                                           </>
@@ -2127,8 +2161,8 @@ function isAppraisalActionPlanTask(task) {
                                               <Flag className="h-3.5 w-3.5" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent side="bottom">
-                                            <p>Flag</p>
+                                          <TooltipContent side="bottom" className="z-[10000]">
+                                            <p>Flag this task</p>
                                           </TooltipContent>
                                         </Tooltip>
 
@@ -2141,7 +2175,19 @@ function isAppraisalActionPlanTask(task) {
                                                 className="h-8 w-8"
                                                 onClick={() => {
                                                   const key = `unclaim-${t.id}`
+                                                  if (pendingTimersRef.current.has(key)) return
+                                                  // Optimistically unassign so badge/buttons update instantly
+                                                  setTasks((prev) => {
+                                                    const next = { ...prev }
+                                                    for (const group of Object.keys(next)) {
+                                                      next[group] = next[group].map((task) =>
+                                                        task.id === t.id ? { ...task, for: [] } : task
+                                                      )
+                                                    }
+                                                    return next
+                                                  })
                                                   const timer = setTimeout(async () => {
+                                                    pendingTimersRef.current.delete(key)
                                                     try {
                                                       const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
                                                         method: "PATCH",
@@ -2152,9 +2198,10 @@ function isAppraisalActionPlanTask(task) {
                                                         const d = await res.json()
                                                         throw new Error(d.error || "Failed to unclaim")
                                                       }
-                                                      fetchTasks()
+                                                      setTimeout(fetchTasks, 1000)
                                                     } catch (e) {
                                                       toast.error(e.message)
+                                                      fetchTasks()
                                                     }
                                                   }, 4000)
                                                   pendingTimersRef.current.set(key, timer)
@@ -2164,17 +2211,30 @@ function isAppraisalActionPlanTask(task) {
                                                       label: "Undo",
                                                       onClick: () => {
                                                         const tt = pendingTimersRef.current.get(key)
-                                                        if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
+                                                        if (tt) {
+                                                          clearTimeout(tt)
+                                                          pendingTimersRef.current.delete(key)
+                                                          // Revert optimistic update
+                                                          setTasks((prev) => {
+                                                            const next = { ...prev }
+                                                            for (const group of Object.keys(next)) {
+                                                              next[group] = next[group].map((task) =>
+                                                                task.id === t.id ? { ...task, for: ["__claimed__"] } : task
+                                                              )
+                                                            }
+                                                            return next
+                                                          })
+                                                        }
                                                       },
                                                     },
                                                   })
                                                 }}
                                               >
-                                                <X className="h-3.5 w-3.5" />
+                                                <UserMinus className="h-3.5 w-3.5" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
-                                              <p>Unclaim</p>
+                                            <TooltipContent side="bottom" className="z-[10000]">
+                                              <p>Unclaim task</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         )}
