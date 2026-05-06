@@ -1960,7 +1960,7 @@ function isAppraisalActionPlanTask(task) {
                             <X className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
+                        <TooltipContent side="bottom" className="z-[10000]">
                           <p>Close</p>
                         </TooltipContent>
                       </Tooltip>
@@ -2032,7 +2032,7 @@ function isAppraisalActionPlanTask(task) {
                                             <Plus className="h-3 w-3 mr-1.5" /> Claim All
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="bottom">
+                                        <TooltipContent side="bottom" className="z-[10000]">
                                           <p>Claim all tasks for {headerName}</p>
                                         </TooltipContent>
                                       </Tooltip>
@@ -2077,7 +2077,7 @@ function isAppraisalActionPlanTask(task) {
                                                 <FileText className="h-3.5 w-3.5 text-primary" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
+                                            <TooltipContent side="bottom" className="z-[10000]">
                                               <p>Open Resource Link</p>
                                             </TooltipContent>
                                           </Tooltip>
@@ -2096,8 +2096,8 @@ function isAppraisalActionPlanTask(task) {
                                                 <Plus className="h-3.5 w-3.5" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
-                                              <p>Claim</p>
+                                            <TooltipContent side="bottom" className="z-[10000]">
+                                              <p>Claim this task</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         ) : (
@@ -2113,8 +2113,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>Complete</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>Mark as complete</p>
                                               </TooltipContent>
                                             </Tooltip>
                                             <Tooltip>
@@ -2128,8 +2128,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <Eye className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>View Details</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>View task details</p>
                                               </TooltipContent>
                                             </Tooltip>
                                             <Tooltip>
@@ -2143,8 +2143,8 @@ function isAppraisalActionPlanTask(task) {
                                                   <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p>Edit Task</p>
+                                              <TooltipContent side="bottom" className="z-[10000]">
+                                                <p>Edit task</p>
                                               </TooltipContent>
                                             </Tooltip>
                                           </>
@@ -2161,8 +2161,8 @@ function isAppraisalActionPlanTask(task) {
                                               <Flag className="h-3.5 w-3.5" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent side="bottom">
-                                            <p>Flag</p>
+                                          <TooltipContent side="bottom" className="z-[10000]">
+                                            <p>Flag this task</p>
                                           </TooltipContent>
                                         </Tooltip>
 
@@ -2233,8 +2233,8 @@ function isAppraisalActionPlanTask(task) {
                                                 <UserMinus className="h-3.5 w-3.5" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom">
-                                              <p>Unclaim</p>
+                                            <TooltipContent side="bottom" className="z-[10000]">
+                                              <p>Unclaim task</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         )}
