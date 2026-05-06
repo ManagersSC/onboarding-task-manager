@@ -14,6 +14,9 @@ Fixes for bugs reported by client (Benji) via email.
 - [x] Task 3: Fix password reset for Staff/Admin accounts (only Applicants table queried)
 - [x] Task 4: Investigate admin invite URL mismatch (`/accept-admin-invite` vs actual page route)
 - [x] Task 5: Investigate meeting booking failure for "Deb" (likely missing email in Airtable)
+- [x] Task 6: Verify Airtable schema has all required auth fields
+- [x] Task 7: Fix claim/unclaim badge not updating immediately in the UI
+- [x] Task 8: Fix unclaim UX — remove 4-second delay, fix icon, add tooltips to action buttons
 
 ---
 
@@ -109,6 +112,49 @@ The expiry label in the password reset email incorrectly referenced `{{13.$2}}` 
 
 ---
 
+---
+
+### Task 6 — Airtable schema verification
+**No code changes required.**
+
+Confirmed all required auth fields exist in Airtable:
+- `Staff` table: `Reset Nonce` (singleLineText) ✅, `Invite Nonce` (singleLineText) ✅
+- `Applicants` table: `Reset Nonce` (singleLineText) ✅
+
+Both fields were previously created by the client as instructed. No fields need to be added or deleted.
+
+---
+
+### Task 7 — Claim/unclaim badge not updating immediately
+**Commits:** `16843a6`, `9536afe`
+**File:** `components/dashboard/TaskManagement.js`
+
+**What was broken:** After clicking Claim or Unclaim, the task badge ("Claimed" / "Unclaimed") did not update visually until `fetchTasks()` completed a full Airtable round-trip. From the user's perspective, the action looked like it had no effect. Attempting to claim again produced a 409 "already claimed by someone else" error, confirming the API worked but the UI was stale.
+
+**Root cause:** `handleClaimTask` and the unclaim handler both relied solely on `fetchTasks()` for state updates. `completeTask` correctly uses an optimistic `setTasks` before the refetch — claim and unclaim were missing this.
+
+**Fix:**
+- **Claim:** After a successful API response, immediately set `task.for = ["__claimed__"]` in local state via `setTasks`. This makes `isGlobalTask()` return `false` instantly, flipping the badge. `fetchTasks()` then syncs the real Airtable value in the background.
+- **Unclaim:** Same pattern — set `task.for = []` immediately so `isGlobalTask()` returns `true` and the badge reverts. `fetchTasks()` syncs afterwards.
+
+---
+
+### Task 8 — Unclaim UX: delay, icon, and missing tooltips
+**Commit:** `16843a6`
+**File:** `components/dashboard/TaskManagement.js`
+
+**What was broken / confusing:**
+1. Unclaim used the same 4-second delayed-timer pattern as task completion, so clicking "Unclaim" showed "Task will be unclaimed" toast but nothing happened visually for 4 seconds — looked broken.
+2. The Unclaim dropdown item used the `<X>` icon, which reads as "delete" to most users.
+3. The three-dot (`MoreHorizontal`) button on both unclaimed and claimed task cards had no tooltip, making it non-obvious for new admins.
+
+**Fix:**
+1. Removed the `setTimeout` / undo-timer from unclaim. The action now fires immediately (unclaiming is trivially reversible by re-claiming).
+2. Swapped `<X>` for `<RotateCcw>` on the Unclaim dropdown item.
+3. Wrapped both `MoreHorizontal` dropdown triggers (unclaimed and claimed card variants) with `<Tooltip>` / `<TooltipProvider>` showing "More actions".
+
+---
+
 ### Bonus — Removed broken `createNotification` call from `create-task`
 **Commit:** `1c75232`
 **File:** `src/app/api/admin/tasks/create-task/route.js`
@@ -150,3 +196,15 @@ This call was silently failing on every task assignment. It passed an `Applicant
 4. Complete the invite flow (set password) and verify admin login works
 
 > **Note for local dev testing:** In development, the invite link will correctly use `http://localhost:3000/accept-admin-invite?token=...` as the fallback. To test the production URL locally, temporarily set `NEXT_PUBLIC_APP_URL=http://localhost:3000` in `.env.local`.
+
+### Task 6 — Airtable schema
+No test needed — fields were verified directly via the Airtable Metadata API.
+
+### Tasks 7 & 8 — Claim/unclaim badge and UX
+1. Log in as admin, navigate to the task management view
+2. Find an unclaimed task (badge shows "Unclaimed") — click the `+` (Claim) button
+3. Badge should flip to "Claimed" **immediately** without waiting for a network round-trip
+4. Open the three-dot (`⋯`) menu on the claimed task — hover over it first to confirm "More actions" tooltip appears
+5. Click **Unclaim** (circular arrow icon) — badge should flip back to "Unclaimed" immediately
+6. Confirm the toast says "Task unclaimed" (not "Task will be unclaimed")
+7. Confirm no 4-second delay before the task moves back to the unclaimed list
