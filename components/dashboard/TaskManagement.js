@@ -25,6 +25,7 @@ import {
   Users,
   ExternalLink,
   FileText,
+  RotateCcw,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -1151,17 +1152,25 @@ function isAppraisalActionPlanTask(task) {
               </TooltipProvider>
               {/* Consistent overflow menu for unclaimed */}
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
-                    aria-label="More actions"
-                    title="More actions"
-                  >
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                          aria-label="More actions"
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>More actions</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem
                     onClick={() => {
@@ -1213,15 +1222,24 @@ function isAppraisalActionPlanTask(task) {
                 </TooltipProvider>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
-                    >
-                      <MoreHorizontal className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-muted-foreground/10 hover:text-foreground"
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>More actions</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <DropdownMenuContent align="end" className="w-40">
                     <DropdownMenuItem
                       onClick={() => {
@@ -1238,42 +1256,25 @@ function isAppraisalActionPlanTask(task) {
                     </DropdownMenuItem>
                     {!isGlobalTask(task) && (
                       <DropdownMenuItem
-                        onClick={() => {
-                          const key = `unclaim-${task.id}`
-                          const t = setTimeout(async () => {
-                            try {
-                              const res = await fetch(`/api/dashboard/tasks/${task.id}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ action: "unclaim" }),
-                              })
-                              if (!res.ok) {
-                                const d = await res.json()
-                                throw new Error(d.error || "Failed to unclaim")
-                              }
-                              fetchTasks()
-                            } catch (e) {
-                              toast.error(e.message)
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/dashboard/tasks/${task.id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "unclaim" }),
+                            })
+                            if (!res.ok) {
+                              const d = await res.json()
+                              throw new Error(d.error || "Failed to unclaim")
                             }
-                          }, 4000)
-                          pendingTimersRef.current.set(key, t)
-                          toast.success("Task will be unclaimed", {
-                            duration: 4000,
-                            action: {
-                              label: "Undo",
-                              onClick: () => {
-                                const timer = pendingTimersRef.current.get(key)
-                                if (timer) {
-                                  clearTimeout(timer)
-                                  pendingTimersRef.current.delete(key)
-                                  toast.success("Unclaim cancelled")
-                                }
-                              },
-                            },
-                          })
+                            toast.success("Task unclaimed")
+                            fetchTasks()
+                          } catch (e) {
+                            toast.error(e.message)
+                          }
                         }}
                       >
-                        <X className="h-3 w-3 mr-2" />
+                        <RotateCcw className="h-3 w-3 mr-2" />
                         Unclaim
                       </DropdownMenuItem>
                     )}
