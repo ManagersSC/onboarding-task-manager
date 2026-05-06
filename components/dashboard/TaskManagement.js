@@ -26,6 +26,7 @@ import {
   ExternalLink,
   FileText,
   RotateCcw,
+  UserMinus,
 } from "lucide-react"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
@@ -351,7 +352,9 @@ function isAppraisalActionPlanTask(task) {
         }
         return next
       })
-      fetchTasks()
+      // Delay refetch so Airtable has time to settle — prevents the optimistic update
+      // from being immediately overwritten by a stale read-after-write response.
+      setTimeout(fetchTasks, 2000)
     } catch (err) {
       toast.error("Error claiming task: " + err.message)
     } finally {
@@ -375,7 +378,17 @@ function isAppraisalActionPlanTask(task) {
       toast.success(
         `Claimed ${claimedCount} task${claimedCount === 1 ? "" : "s"}${alreadyCount ? `, ${alreadyCount} already claimed` : ""}`,
       )
-      fetchTasks()
+      // Optimistically mark all unclaimed tasks for this applicant as claimed
+      setTasks((prev) => {
+        const next = { ...prev }
+        for (const group of Object.keys(next)) {
+          next[group] = next[group].map((t) =>
+            t.applicantId === applicantId && isGlobalTask(t) ? { ...t, for: ["__claimed__"] } : t
+          )
+        }
+        return next
+      })
+      setTimeout(fetchTasks, 2000)
     } catch (e) {
       toast.error(`Claim all failed: ${e.message}`)
     }
@@ -1998,7 +2011,9 @@ function isAppraisalActionPlanTask(task) {
                                 <div className="flex items-center justify-between mb-3 gap-3">
                                   <div className="min-w-0">
                                     <h3 className="text-base font-semibold">{headerName}</h3>
-                                    <p className="text-xs text-muted-foreground">{tasksFor.length} unclaimed task{tasksFor.length === 1 ? "" : "s"}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {tasksForRaw.filter(isGlobalTask).length} unclaimed · {tasksForRaw.length} total
+                                    </p>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div className="relative">
@@ -2160,7 +2175,19 @@ function isAppraisalActionPlanTask(task) {
                                                 className="h-8 w-8"
                                                 onClick={() => {
                                                   const key = `unclaim-${t.id}`
+                                                  if (pendingTimersRef.current.has(key)) return
+                                                  // Optimistically unassign so badge/buttons update instantly
+                                                  setTasks((prev) => {
+                                                    const next = { ...prev }
+                                                    for (const group of Object.keys(next)) {
+                                                      next[group] = next[group].map((task) =>
+                                                        task.id === t.id ? { ...task, for: [] } : task
+                                                      )
+                                                    }
+                                                    return next
+                                                  })
                                                   const timer = setTimeout(async () => {
+                                                    pendingTimersRef.current.delete(key)
                                                     try {
                                                       const res = await fetch(`/api/dashboard/tasks/${t.id}`, {
                                                         method: "PATCH",
@@ -2171,9 +2198,10 @@ function isAppraisalActionPlanTask(task) {
                                                         const d = await res.json()
                                                         throw new Error(d.error || "Failed to unclaim")
                                                       }
-                                                      fetchTasks()
+                                                      setTimeout(fetchTasks, 1000)
                                                     } catch (e) {
                                                       toast.error(e.message)
+                                                      fetchTasks()
                                                     }
                                                   }, 4000)
                                                   pendingTimersRef.current.set(key, timer)
@@ -2183,13 +2211,26 @@ function isAppraisalActionPlanTask(task) {
                                                       label: "Undo",
                                                       onClick: () => {
                                                         const tt = pendingTimersRef.current.get(key)
-                                                        if (tt) { clearTimeout(tt); pendingTimersRef.current.delete(key) }
+                                                        if (tt) {
+                                                          clearTimeout(tt)
+                                                          pendingTimersRef.current.delete(key)
+                                                          // Revert optimistic update
+                                                          setTasks((prev) => {
+                                                            const next = { ...prev }
+                                                            for (const group of Object.keys(next)) {
+                                                              next[group] = next[group].map((task) =>
+                                                                task.id === t.id ? { ...task, for: ["__claimed__"] } : task
+                                                              )
+                                                            }
+                                                            return next
+                                                          })
+                                                        }
                                                       },
                                                     },
                                                   })
                                                 }}
                                               >
-                                                <X className="h-3.5 w-3.5" />
+                                                <UserMinus className="h-3.5 w-3.5" />
                                               </Button>
                                             </TooltipTrigger>
                                             <TooltipContent side="bottom">
