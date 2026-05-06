@@ -17,6 +17,7 @@ Fixes for bugs reported by client (Benji) via email.
 - [x] Task 6: Verify Airtable schema has all required auth fields
 - [x] Task 7: Fix claim/unclaim badge not updating immediately in the UI
 - [x] Task 8: Fix unclaim UX — remove 4-second delay, fix icon, add tooltips to action buttons
+- [x] Task 9: Fix `/api/admin/forgot-password` blocked by middleware (missing public API whitelist entry)
 
 ---
 
@@ -155,6 +156,18 @@ Both fields were previously created by the client as instructed. No fields need 
 
 ---
 
+### Task 9 — `/api/admin/forgot-password` blocked by middleware
+**Commit:** `e800466`
+**File:** `src/middleware.js`
+
+**What was broken:** The admin forgot-password route was never reachable by unauthenticated users. The middleware's `isPublicApi` array included `/api/forgot-password` and `/api/reset-password` but was missing `/api/admin/forgot-password`. With no session cookie present (expected — the user is not logged in when resetting a password), the middleware redirected every POST to `/` before the route handler ran. The form showed the hardcoded success banner anyway (the page shows success on any 2xx), so the failure was silent.
+
+**How it was found:** Added debug `console.log` to the route — terminal showed `[MIDDLEWARE] No session cookie, redirecting to home` instead of any route output, confirming the request never reached the handler.
+
+**Fix:** Added `/api/admin/forgot-password` to the `isPublicApi` array in `src/middleware.js`, alongside the existing admin auth exemptions (`/api/admin/login`, `/api/admin/accept-invite`).
+
+---
+
 ### Bonus — Removed broken `createNotification` call from `create-task`
 **Commit:** `1c75232`
 **File:** `src/app/api/admin/tasks/create-task/route.js`
@@ -199,6 +212,13 @@ This call was silently failing on every task assignment. It passed an `Applicant
 
 ### Task 6 — Airtable schema
 No test needed — fields were verified directly via the Airtable Metadata API.
+
+### Task 9 — Admin forgot-password middleware fix
+1. **While logged out**, go to `/?mode=admin` → click "Forgot password?"
+2. Enter a valid admin email and submit
+3. Confirm Make.com automation triggers and email is received
+4. Click the reset link, set a new password — should succeed
+5. Log in with the new password on the Admin tab — should succeed
 
 ### Tasks 7 & 8 — Claim/unclaim badge and UX
 1. Log in as admin, navigate to the task management view
