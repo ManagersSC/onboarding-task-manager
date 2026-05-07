@@ -24,7 +24,22 @@ function AcceptAdminInviteInner() {
 
   useEffect(() => {
     const t = searchParams.get("token")
-    if (t) setToken(t)
+    if (!t) return
+    setToken(t)
+    // Client-side expiry pre-check: decode the JWT payload (no verification) to read exp
+    try {
+      const parts = t.split(".")
+      if (parts.length === 3) {
+        // JWT uses base64url — replace - and _ before decoding
+        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
+        const decoded = JSON.parse(atob(base64))
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+          setError("This invite link has expired. Ask an admin to resend the invite.")
+        }
+      }
+    } catch {
+      // Silently ignore — server validation on submit will catch malformed tokens
+    }
   }, [searchParams])
 
   const handleSubmit = async (e) => {
