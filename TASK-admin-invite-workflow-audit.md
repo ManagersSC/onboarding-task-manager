@@ -1,7 +1,7 @@
 # TASK: Admin Invite Workflow Audit
 
-**Branch:** `master` (documentation only — no code changes in this file)
-**Status:** Research complete. Bugs documented. Awaiting implementation decisions.
+**Branch:** `fix/admin-invite-bugs`
+**Status:** All bugs implemented. Awaiting PR.
 
 ---
 
