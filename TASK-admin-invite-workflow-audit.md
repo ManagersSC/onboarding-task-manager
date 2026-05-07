@@ -309,3 +309,101 @@ Then use `normalisedName` everywhere `name` is used (Staff record creation, webh
 | 4 | Non-admin Staff silently promoted | Low | Small |
 | 5 | No expiry feedback on page load | UX | Small |
 | 6 | `name` not trimmed | Very Low | Trivial |
+
+---
+
+## Testing
+
+### Unit tests (automated)
+
+**File:** `src/app/api/admin/invite-admin/route.test.js`
+
+Run with:
+```bash
+npm test -- invite-admin --forceExit
+```
+
+15 tests covering the route directly (no HTTP server, no live Airtable). Each bug fix has at least one dedicated test case:
+
+| Test | Bug covered |
+|------|-------------|
+| returns 400 when name is whitespace only | Bug 6 |
+| creates Staff record with trimmed name | Bug 6 |
+| sends trimmed name to Make.com webhook | Bug 6 |
+| updates Name field on re-invite | Bug 3 |
+| logs warning when inviting existing non-admin Staff record | Bug 4 |
+| returns 502 with Make.com error message when webhook fails | Bug 1 |
+| deletes newly-created Staff record when webhook fails | Bug 2 |
+| does NOT delete existing Staff record when webhook fails | Bug 2 |
+| returns 401 when no session cookie | Auth |
+| returns 403 when session role is not admin | Auth |
+| returns 400 when name is missing | Validation |
+| returns 400 when email is invalid | Validation |
+| returns 400 when user already has a password | Validation |
+| reuses existing Staff record on re-invite | Re-invite path |
+| returns 200 with staffId on success | Happy path |
+
+**Patterns and gotchas in the test file:**
+- Uses `jest.doMock()` + `jest.resetModules()` (same pattern as all other route tests in this project). All mocks must be set up via `setupMocks()` before requiring the route — re-mocking after the fact requires another `resetModules()` call.
+- `jest.resetModules()` creates new module instances, so any reference to a mocked module (e.g. `logger`) obtained *before* calling `setupMocks()` will be stale. Always call `require("@/lib/utils/logger")` *after* `setupMocks()` in tests that check logger calls.
+- `global.crypto.randomUUID` is mocked to return a fixed nonce so assertions on Airtable update calls are deterministic.
+- `global.fetch` is mocked to simulate Make.com webhook responses — set `webhookOk: false` + `webhookBody` in the overrides to simulate failures.
+
+---
+
+### Manual E2E: happy path
+
+**Prerequisites:** dev server running (`npm run dev`), valid Airtable base, Make.com scenario active and Gmail connected.
+
+1. Log in as an existing admin → go to **Profile → "Create Admin"**
+2. Enter a real email you can receive (use a personal inbox, not the sending account)
+3. Confirm in the dialog → expect toast: "Invite sent successfully"
+4. Open your inbox — expect an email from `managers@smilecliniq.com` with subject "You have been invited to join our platform as an admin!"
+5. Click "Set Your Password" (or copy the fallback URL)
+6. Set a password meeting the rules (8+ chars, special char, no `123` etc.)
+7. Expect: immediate redirect to `/admin/dashboard`, logged in automatically
+8. Check Airtable `Staff` table: `IsAdmin: true`, bcrypt hash in `Password`, **`Invite Nonce` empty**
+
+---
+
+### Manual E2E: bug-specific scenarios
+
+**Bug 1 + 2 — Webhook failure and rollback**
+1. Temporarily set `MAKE_WEBHOOK_URL_ADMIN_PASSWORD_PAGE` in `.env.local` to a broken URL (e.g. `https://hook.make.com/invalid`)
+2. Invite a **new** email → the toast error should include the Make.com error detail, not just "Failed to trigger invite email"
+3. Check Airtable `Staff` — the record should **not exist** (rollback worked)
+4. Invite an email that **already has a partial record** (no password) → same 502, but the record should **still exist** (no rollback for pre-existing records)
+5. Restore the correct webhook URL
+
+**Bug 3 — Name update on re-invite**
+1. Invite `test@example.com` with name `"Alice"` — let the email send but don't accept the invite
+2. Invite the same `test@example.com` again with name `"Alice Smith"`
+3. Check Airtable `Staff` — Name field should now be `"Alice Smith"` and a fresh nonce should be present (the old invite link is now invalid)
+
+**Bug 4 — Non-admin Staff promotion warning**
+1. Manually create a Staff record in Airtable with `IsAdmin: false`, a specific email, and no password
+2. Invite that email via the admin UI → invite should succeed
+3. Check the server terminal (running `npm run dev`) for a warn log containing `"promoting existing non-admin Staff record to admin"`
+4. Accept the invite → verify the record now has `IsAdmin: true`
+
+**Bug 5 — Token expiry on page load**
+1. Use an invite link from a previous test that has already been used or is older than 24h
+2. Navigate directly to `/accept-admin-invite?token=<that-token>`
+3. Expect: error message "This invite link has expired. Ask an admin to resend the invite." appears **on page load**, before typing anything
+
+**Bug 6 — Name trimming**
+1. In the invite dialog enter `"  John Smith  "` (leading and trailing spaces) as the name
+2. Send the invite
+3. Check the email received — greeting should be `"Hi John Smith,"` not `"Hi   John Smith  ,"`
+4. Check Airtable — Name field should be `"John Smith"` (no spaces)
+
+---
+
+### What is NOT covered by unit tests
+
+| Scenario | Why not in unit tests | How to verify |
+|----------|----------------------|---------------|
+| Accept-invite page token expiry display (Bug 5) | React client component — project uses `testEnvironment: node`, no jsdom | Manual Bug 5 scenario above |
+| Gmail actually delivers the email | Live external service | Manual happy path |
+| Airtable field names match the code exactly | Schema can't be validated in tests | Check `Staff` table has: `Name`, `Email`, `Password`, `IsAdmin`, `Invite Nonce` |
+| Session cookie works across redirect | Integration-level | Complete the manual happy path end-to-end |
