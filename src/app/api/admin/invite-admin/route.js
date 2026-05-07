@@ -30,7 +30,8 @@ export async function POST(request) {
     }
 
     const { name, email } = await request.json()
-    if (!name || !email) {
+    const normalisedName = String(name || "").trim()
+    if (!normalisedName || !email) {
       return Response.json({ error: "Name and email are required" }, { status: 400 })
     }
 
@@ -64,14 +65,19 @@ export async function POST(request) {
 
     let staffId
     let alreadyConfigured = false
+    let createdInThisRequest = false
     if (existing.length > 0) {
       staffId = existing[0].id
       alreadyConfigured = Boolean(existing[0].fields?.Password)
+      // Warn if promoting an existing non-admin staff record to admin
+      if (!alreadyConfigured && !existing[0].fields?.IsAdmin) {
+        logger.warn("invite-admin: promoting existing non-admin Staff record to admin", { staffId, email: normalisedEmail })
+      }
     } else {
       const created = await base("Staff").create([
         {
           fields: {
-            Name: name,
+            Name: normalisedName,
             Email: normalisedEmail,
             IsAdmin: true,
             Password: "", // pending until invite accepted
@@ -79,6 +85,7 @@ export async function POST(request) {
         },
       ])
       staffId = created[0].id
+      createdInThisRequest = true
     }
 
     if (alreadyConfigured) {
@@ -89,7 +96,10 @@ export async function POST(request) {
     const inviteNonce = crypto.randomUUID()
     await base("Staff").update([{
       id: staffId,
-      fields: { "Invite Nonce": inviteNonce }
+      fields: {
+        Name: normalisedName, // keep Name current on re-invite
+        "Invite Nonce": inviteNonce,
+      },
     }])
 
     // Create 24h invite token
@@ -109,7 +119,7 @@ export async function POST(request) {
 
     // Notify via Make.com webhook
     const payload = {
-      name,
+      name: normalisedName,
       email: normalisedEmail,
       inviteLink,
       requestedBy: requesterEmail,
@@ -121,10 +131,17 @@ export async function POST(request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
+    const webhookBody = await webhookRes.json().catch(() => null)
     if (!webhookRes.ok) {
-      const text = await webhookRes.text()
-      logger.error("Admin invite webhook failed", { status: webhookRes.status, text })
-      return Response.json({ error: "Failed to trigger invite email" }, { status: 502 })
+      const makeError = webhookBody?.error || "Unknown error"
+      logger.error("Admin invite webhook failed", { status: webhookRes.status, body: webhookBody })
+      // Rollback: remove the Staff record if we just created it so Airtable stays clean
+      if (createdInThisRequest) {
+        await base("Staff").destroy([staffId]).catch((e) =>
+          logger.error("Failed to rollback Staff record after webhook failure", { staffId, error: e.message })
+        )
+      }
+      return Response.json({ error: `Failed to trigger invite email: ${makeError}` }, { status: 502 })
     }
 
     try {
