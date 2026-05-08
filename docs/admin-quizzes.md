@@ -65,9 +65,10 @@ Notes:
 - For now, we return one page (`pageSize` default 50). Advanced pagination can be added later.
 
 ### Airtable schema
-- Onboarding Quizzes: `Quiz Title`, `Passing Score`, `Week`, links to `Onboarding Quiz Questions` and `Submissions`.
+- Onboarding Quizzes: `Quiz Title`, `Passing Score`, `Week`, `Target Roles` (singleSelect, field ID `fldSHMGQGWUxecF65`), links to `Onboarding Quiz Questions` and `Submissions`.
 - Onboarding Quiz Items: `Type`, `Q.Type` (Radio/Checkbox), `Content`, `Options` (multiline string, `<br>`-joined), `Correct Answer`, `Order`, `Points`, link to quiz.
 - Onboarding Quiz Submissions: `Quiz Title` (formula), `Passed?`, `Score`, `Total Form Score`, `Submission Timestamp`, `Respondent Email`, links to `Applicants` and `Onboarding - Quizzes`, `Answers` (JSON string).
+- Applicants: `Job Name` (multipleLookupValues via field `fldd0RHjePJFSOoQP`, returns array — take `[0]` for the role string).
 
 ### Options field handling
 - Airtable `Options` is stored as a multiline string joined by `<br>` (HTML). In some cases, values can be HTML-escaped: `&lt;br>`.
@@ -80,25 +81,53 @@ Rules:
 - Radio: Correct Answer must be exactly one of the options.
 - Checkbox: Correct Answer may represent multiple options (stored either as `<br>`-joined string or array); each must match an option.
 
+### Role-Based Quiz Assignment
+
+Quizzes can be targeted to specific job roles so applicants only see quizzes relevant to their position.
+
+#### How it works
+
+1. Each quiz has an optional `Target Roles` field (Airtable singleSelect: `Nurse`, `Receptionist`, `Dentist`).
+2. When set, the field acts as a server-side gate in `/api/user/quizzes` — applicants whose `Job Name` doesn't match the target role will not see the quiz, even if a task log exists for them.
+3. A quiz with no `Target Roles` set is visible to all roles (backward compatible).
+
+#### Admin workflow
+
+1. **Create** a quiz and select a **Target Role** from the dropdown (or leave as “All roles”).
+2. Click **Assign** on the quiz card — the system finds all applicants in Airtable with a matching `Job Name` and creates `Onboarding Tasks Logs` records for those not already assigned. Duplicate assignments are skipped.
+3. The quiz card displays a badge showing the target role (or “All Roles”).
+
+#### Role values
+
+Must match exactly what is stored in `Applicants.Job Name`:
+- `Nurse`
+- `Receptionist`
+- `Dentist`
+
+To add new roles, update the `KNOWN_ROLES` constant in `src/app/admin/quizzes/page.js` and the `VALID_ROLES` constant in both `src/app/api/admin/quizzes/route.js` and `src/app/api/admin/quizzes/[quizId]/bulk-assign/route.js`, then add the matching option to the `Target Roles` singleSelect field in Airtable.
+
 ### Current state
 - Subtle “View all” link added in Applicant Drawer.
 - Quizzes Admin includes Submissions and Quizzes tabs.
 - Submissions endpoint implemented for filtering; returns `submissions` and `questionsById`.
-- Quizzes tab lists quizzes (title, passing score) with an Edit workflow:
-  - Edit modal with Page Title, Passing Score
+- Quizzes tab lists quizzes (title, passing score, target role badge) with an Edit workflow:
+  - Edit modal with Page Title, Passing Score, Target Role
   - Items editor with Type, Q.Type, Content, Order, Points
   - Options editor (list UI) and correct-answer pickers
   - Duplicate Order detection and auto-resequence dialog
   - Preview modal mirroring end-user layout
+  - Assign button for bulk-assigning to matching applicants
 
 ### Roadmap
 - Add analytics (pass rate, average score, item difficulty) and CSV export.
 - Pagination for submissions and quizzes.
 
 ### API contracts (editor)
-- GET `/api/admin/quizzes` → `{ quizzes: [{ id, title, passingScore, pageTitle }] }`
+- GET `/api/admin/quizzes` → `{ quizzes: [{ id, title, passingScore, pageTitle, targetRole }] }`
 - GET `/api/admin/quizzes/:quizId/items` → `{ items: [{ id, type, qType, content, options, correctAnswer, order, points }] }`
-- PUT `/api/admin/quizzes/:quizId` body: `{ pageTitle?, passingScore? }`
+- POST `/api/admin/quizzes` body: `{ title, pageTitle, passingScore, week, items, targetRole? }`
+- PUT `/api/admin/quizzes/:quizId` body: `{ pageTitle?, passingScore?, targetRole? }` — pass `null` to clear
+- POST `/api/admin/quizzes/:quizId/bulk-assign` body: `{ roles?: string[] }` — if omitted, uses quiz's own Target Roles → `{ created, skipped, roles }`
 - PUT `/api/admin/quizzes/items/:itemId` body: `{ type?, qType?, content?, options: string[]|string, correctAnswer?, order?, points? }`
 - POST `/api/admin/quizzes/items/batch` body: `{ items: [{ id, order }, ...] }` (resequence)
 
