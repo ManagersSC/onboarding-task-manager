@@ -1,7 +1,7 @@
 # TASK: Appraisal Manager Notifications
 
 **Branch:** `test/notifications-workflow`
-**Status:** In Progress
+**Status:** Complete
 
 ---
 
