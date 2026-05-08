@@ -144,11 +144,11 @@ try {
 
 ## Sub-tasks
 
-- [ ] **Step 0** — Create this TASK doc (done)
-- [ ] **Step 1** — Extend applicant fetch to include `"Name"` and `"Job Name"` fields; extract `applicantName` + `applicantJobName` from record
-- [ ] **Step 2** — Replace single-admin notification block with all-admins `Promise.all` notify
-- [ ] **Step 3** — Update `docs/appraisal-system.md` to document the notification behaviour
-- [ ] **Step 4** — Commit with message `feat: notify all admins when appraisal date is set`
+- [x] **Step 0** — Create this TASK doc (done)
+- [x] **Step 1** — Extend applicant fetch to include `"Name"` and `"Job Name"` fields; extract `applicantName` + `applicantJobName` from record
+- [x] **Step 2** — Replace single-admin notification block with all-admins `Promise.all` notify
+- [x] **Step 3** — Update `docs/appraisal-system.md` to document the notification behaviour
+- [x] **Step 4** — Commit with message `feat: notify all admins when appraisal date is set`
 
 ---
 
