@@ -20,17 +20,21 @@ async function getSessionUser() {
   return user;
 }
 
-async function getApplicantIdByEmail(userEmail) {
+async function getApplicantRecord(userEmail) {
   const applicants = await base(APPLICANTS)
-    .select({ filterByFormula: `{Email} = '${userEmail}'`, maxRecords: 1 })
+    .select({ filterByFormula: `{Email} = '${userEmail}'`, maxRecords: 1, fields: ["Email", "fldd0RHjePJFSOoQP"] })
     .firstPage();
-  return applicants[0]?.id;
+  const record = applicants[0];
+  if (!record) return { id: null, jobName: null };
+  const jobNameField = record.get("Job Name");
+  const jobName = Array.isArray(jobNameField) ? jobNameField[0] || null : jobNameField || null;
+  return { id: record.id, jobName };
 }
 
 export async function GET(request) {
   try {
     const user = await getSessionUser();
-    const applicantId = await getApplicantIdByEmail(user.userEmail);
+    const { id: applicantId, jobName: userJobName } = await getApplicantRecord(user.userEmail);
     if (!applicantId) {
       logger.debug(`No applicant found for email: ${user.userEmail}`);
       return NextResponse.json({ error: "Applicant not found" }, { status: 404 });
@@ -89,6 +93,10 @@ export async function GET(request) {
         }
         
         if (!quizRec || !quizRec.fields) return null;
+
+        // Role gate: if quiz has a target role set, skip if user's job doesn't match
+        const targetRole = quizRec.get("Target Roles") || null;
+        if (targetRole && userJobName && targetRole !== userJobName) return null;
 
         // Find submission for this quiz/applicant
         const submissions = await base(ONBOARDING_QUIZ_SUBMISSIONS)

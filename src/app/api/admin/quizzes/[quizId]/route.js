@@ -16,11 +16,17 @@ export async function PUT(request, { params }) {
     const { quizId } = await params
     if (!quizId) return new Response(JSON.stringify({ error: "quizId required" }), { status: 400, headers: { "Content-Type": "application/json" } })
 
+    const VALID_ROLES = ["Nurse", "Receptionist", "Dentist"]
     const body = await request.json().catch(() => ({}))
     const patch = {}
     if (typeof body.pageTitle === "string") patch["Page Title"] = body.pageTitle
     if (typeof body.passingScore !== "undefined" && body.passingScore !== null && body.passingScore !== "") {
       patch["Passing Score"] = Number(body.passingScore)
+    }
+    if (typeof body.targetRole === "string" && VALID_ROLES.includes(body.targetRole)) {
+      patch["fldSHMGQGWUxecF65"] = body.targetRole
+    } else if (body.targetRole === null || body.targetRole === "") {
+      patch["fldSHMGQGWUxecF65"] = null
     }
     if (Object.keys(patch).length === 0) {
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } })

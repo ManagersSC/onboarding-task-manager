@@ -5,6 +5,7 @@ import { joinOptionsArray } from "@/lib/quiz/options"
 import { logAuditEvent } from "@/lib/auditLogger"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+const VALID_ROLES = ["Nurse", "Receptionist", "Dentist"]
 
 async function getAdminSession() {
   const cookieStore = await cookies()
@@ -21,7 +22,7 @@ export async function GET() {
     if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } })
 
     const records = await base("Onboarding Quizzes").select({
-      fields: ["Quiz Title", "Passing Score", "Page Title", "Week"]
+      fields: ["Quiz Title", "Passing Score", "Page Title", "Week", "fldSHMGQGWUxecF65"]
     }).all()
 
     const quizzes = records.map((r) => ({
@@ -29,7 +30,8 @@ export async function GET() {
       title: r.get("Quiz Title") || "",
       passingScore: r.get("Passing Score") ?? null,
       pageTitle: r.get("Page Title") || "",
-      week: r.get("Week") ?? null
+      week: r.get("Week") ?? null,
+      targetRole: r.get("Target Roles") || null
     }))
 
     return new Response(JSON.stringify({ quizzes }), { status: 200, headers: { "Content-Type": "application/json" } })
@@ -50,7 +52,7 @@ export async function POST(request) {
     userName = session.userName || userEmail?.split("@")[0]
 
     const body = await request.json().catch(() => ({}))
-    const { title, pageTitle, passingScore, week, items } = body
+    const { title, pageTitle, passingScore, week, items, targetRole } = body
 
     // Validate all required fields
     const errors = []
@@ -88,6 +90,9 @@ export async function POST(request) {
       "Page Title": pageTitle.trim(),
       "Passing Score": passingScore,
       "Week": week
+    }
+    if (typeof targetRole === "string" && VALID_ROLES.includes(targetRole)) {
+      quizFields["fldSHMGQGWUxecF65"] = targetRole
     }
 
     const quizRecord = await base("Onboarding Quizzes").create([{ fields: quizFields }])

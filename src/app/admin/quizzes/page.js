@@ -27,6 +27,8 @@ import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
 import { toast } from "sonner"
 
+const KNOWN_ROLES = ["Nurse", "Receptionist", "Dentist"]
+
 function AdminQuizzesPageContent() {
   const params = useSearchParams()
   const router = useRouter()
@@ -137,7 +139,8 @@ function AdminQuizzesPageContent() {
 
   // Create quiz state
   const [createOpen, setCreateOpen] = useState(false)
-  const [createQuiz, setCreateQuiz] = useState({ title: "", pageTitle: "", passingScore: "", week: "" })
+  const [createQuiz, setCreateQuiz] = useState({ title: "", pageTitle: "", passingScore: "", week: "", targetRole: null })
+  const [bulkAssigning, setBulkAssigning] = useState(new Set())
   const [createItems, setCreateItems] = useState([])
   const [createSaving, setCreateSaving] = useState(false)
   const [createPreviewOpen, setCreatePreviewOpen] = useState(false)
@@ -175,7 +178,8 @@ function AdminQuizzesPageContent() {
       title: quiz.title,
       pageTitle: quiz.pageTitle || "",
       // Normalize to percent number string for editing (e.g., 60 instead of 0.6)
-      passingScore: toPercentDisplay(quiz.passingScore)
+      passingScore: toPercentDisplay(quiz.passingScore),
+      targetRole: quiz.targetRole || null
     })
     setEditQuizDirty(false)
     setEditItems([])
@@ -352,7 +356,8 @@ function AdminQuizzesPageContent() {
           pageTitle: createQuiz.pageTitle.trim(),
           passingScore: normalizedPassing,
           week: Number(createQuiz.week),
-          items: itemsPayload
+          items: itemsPayload,
+          targetRole: createQuiz.targetRole || null
         })
       })
       if (!res.ok) return false
@@ -416,13 +421,14 @@ function AdminQuizzesPageContent() {
       const originalPassingDisplay = toPercentDisplay(editOriginal.quiz?.passingScore)
       const changedQuiz =
         (editQuiz.pageTitle !== (editOriginal.quiz?.pageTitle || "")) ||
-        (String(editQuiz.passingScore ?? "") !== String(originalPassingDisplay))
+        (String(editQuiz.passingScore ?? "") !== String(originalPassingDisplay)) ||
+        (editQuiz.targetRole !== (editOriginal.quiz?.targetRole || null))
       if (changedQuiz) {
         const normalizedPassing = fromPercentInput(editQuiz.passingScore)
         await fetch(`/api/admin/quizzes/${editQuiz.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: normalizedPassing })
+          body: JSON.stringify({ pageTitle: editQuiz.pageTitle, passingScore: normalizedPassing, targetRole: editQuiz.targetRole ?? null })
         })
       }
       // Save dirty items (update existing, create new)
@@ -812,8 +818,37 @@ function AdminQuizzesPageContent() {
                       Passing Score: {formatPassingScoreLabel(q.passingScore)}
                       {q.week != null && <span className="ml-2">· Week {q.week}</span>}
                     </div>
+                    <div className="mt-1.5">
+                      <Badge variant={q.targetRole ? "secondary" : "outline"} className="text-xs">
+                        {q.targetRole || "All Roles"}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2 text-xs"
+                      disabled={bulkAssigning.has(q.id)}
+                      title={q.targetRole ? `Assign to all ${q.targetRole}s` : "Set a Target Role before bulk assigning"}
+                      onClick={async () => {
+                        if (!q.targetRole) { toast.error("Set a Target Role on this quiz before bulk assigning"); return }
+                        setBulkAssigning(s => new Set(s).add(q.id))
+                        try {
+                          const res = await fetch(`/api/admin/quizzes/${q.id}/bulk-assign`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ roles: [q.targetRole] })
+                          })
+                          const data = await res.json()
+                          if (res.ok) toast.success(`Assigned to ${data.created} applicant(s) — ${data.skipped} already assigned`)
+                          else toast.error(data.error || "Bulk assignment failed")
+                        } catch { toast.error("Bulk assignment failed") }
+                        finally { setBulkAssigning(s => { const n = new Set(s); n.delete(q.id); return n }) }
+                      }}
+                    >
+                      {bulkAssigning.has(q.id) ? <Loader2 className="h-3 w-3 animate-spin" /> : "Assign"}
+                    </Button>
                     <Button size="sm" className="h-8" onClick={() => openEdit(q)}>Edit</Button>
                     <Button
                       size="sm"
@@ -926,6 +961,21 @@ function AdminQuizzesPageContent() {
                     />
                     <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-muted-foreground text-sm">%</span>
                   </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Target Role</div>
+                  <Select
+                    value={editQuiz.targetRole || "all"}
+                    onValueChange={(v) => { setEditQuiz((q) => ({ ...q, targetRole: v === "all" ? null : v })); setEditQuizDirty(true) }}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All roles</SelectItem>
+                      {KNOWN_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -1376,6 +1426,21 @@ function AdminQuizzesPageContent() {
                   ))}
                 </div>
               </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Target Role</div>
+              <Select
+                value={createQuiz.targetRole || "all"}
+                onValueChange={(v) => setCreateQuiz(q => ({ ...q, targetRole: v === "all" ? null : v }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  {KNOWN_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <Separator />
