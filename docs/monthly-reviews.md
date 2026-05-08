@@ -56,6 +56,12 @@ DELETE /api/admin/users/:id/monthly-reviews/:reviewId
 
 > **Note:** If a Google Calendar event was created when scheduling, it is **not** automatically deleted — the Calendar event ID is not currently persisted to Airtable. This can be extended by storing the event ID on the Monthly Review record.
 
+## Booking conflict detection
+
+When selecting a date/time for a review, the booking UI checks your Google Calendar for conflicts and disables the Confirm button if a clash is detected.
+
+> **All-day events (holidays, full-day blocks) are intentionally excluded from conflict detection.** Only timed events can block a booking slot. If the Confirm button appears disabled with no visible conflict, check whether the admin calendar has an all-day event on that date — all-day events should never prevent booking.
+
 ## UI Behavior
 
 In the applicant drawer → Monthly Reviews section:
