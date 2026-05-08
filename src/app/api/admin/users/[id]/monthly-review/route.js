@@ -28,6 +28,12 @@ export async function POST(request, { params }) {
     const title = String(body?.title || "Monthly Review").trim()
     if (!dateStr) return new Response(JSON.stringify({ error: "date is required (YYYY-MM-DD)" }), { status: 400 })
 
+    // Fetch applicant name for notification message
+    const applicantRecs = await base("Applicants")
+      .select({ filterByFormula: `RECORD_ID() = '${id}'`, fields: ["Name"], maxRecords: 1 })
+      .firstPage()
+    const applicantName = applicantRecs?.[0]?.get?.("Name") || "Unknown"
+
     // Create Monthly Reviews record instead of appending free-text
     const period = `${dateStr.slice(0, 7)}` // YYYY-MM
     const startDateTime = startTime ? `${dateStr}T${startTime}:00` : null
@@ -59,23 +65,28 @@ export async function POST(request, { params }) {
       logger?.error?.("audit log failed for monthly review", e)
     }
 
-    // Try to notify acting staff (if Staff record exists)
+    // Notify all admins of the scheduled monthly review
     try {
-      const staffRecs = await base("Staff").select({ filterByFormula: `{Email}='${String(session.userEmail).toLowerCase()}'`, maxRecords: 1 }).firstPage()
-      const staff = staffRecs?.[0]
-      if (staff) {
-        await createNotification({
-          title: "Monthly Review Scheduled",
-          body: `${title} on ${dateStr}${startTime && endTime ? ` ${startTime}-${endTime}` : ""}`,
-          type: NOTIFICATION_TYPES.MONTHLY_REVIEW,
-          severity: "Info",
-          recipientId: staff.id,
-          actionUrl: "/admin/users",
-          source: "Applicant Drawer",
-        })
+      const adminRecs = await base("Staff")
+        .select({ filterByFormula: "{IsAdmin} = TRUE()", fields: ["Name"] })
+        .firstPage()
+      if (adminRecs.length > 0) {
+        await Promise.all(
+          adminRecs.map((admin) =>
+            createNotification({
+              title: "Monthly Review Scheduled",
+              body: `${applicantName} has a monthly review scheduled for ${dateStr}${startTime && endTime ? ` ${startTime}–${endTime}` : ""}.`,
+              type: NOTIFICATION_TYPES.MONTHLY_REVIEW,
+              severity: "Info",
+              recipientId: admin.id,
+              actionUrl: "/admin/users",
+              source: "Applicant Drawer",
+            })
+          )
+        )
       }
     } catch (e) {
-      logger?.error?.("createNotification failed for monthly review", e)
+      logger?.error?.("createNotification failed for monthly review — all admins", e)
     }
 
     return new Response(

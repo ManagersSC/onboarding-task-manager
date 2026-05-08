@@ -88,14 +88,21 @@ GET  /api/admin/users/[id]/appraisal-template   → job template for applicant's
 POST /api/admin/users/[id]/appraisal-template   → save job template
 ```
 
-### Set appraisal date (with question snapshot)
+### Set appraisal date (with question snapshot and manager notifications)
 
 ```
 POST /api/admin/users/[id]/appraisal-date
 Body: { "date": "YYYY-MM-DD", ... }
 ```
 
-On save, reads the current override questions and stores them as `preappraisalQuestions` in the appraisal history entry.
+On save:
+- Reads the current override questions and stores them as `preappraisalQuestions` in the appraisal history entry.
+- Notifies **all admin accounts** via `createNotification` with the message:
+  `"[Applicant Name] ([Job Role]) has an appraisal scheduled for [date]."`
+  Each admin only receives the notification if `"Appraisal"` is enabled in their
+  `Notification Preferences` (Admin → Profile → Preferences → Notifications).
+  Email/Slack delivery follows each admin's configured channels via the
+  `GENERAL_NOTIFICATIONS` Make.com scenario.
 
 ### Upload appraisal document
 

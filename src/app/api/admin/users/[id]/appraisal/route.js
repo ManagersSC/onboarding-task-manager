@@ -2,6 +2,8 @@ import { cookies } from "next/headers"
 import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
+import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -73,6 +75,30 @@ export async function POST(request, { params }) {
     for (const file of files) {
       await uploadFileToAirtable(id, fieldName, file)
       uploaded.push({ name: file.name, size: file.size, type: file.type })
+    }
+
+    // Notify all admins that the appraisal document has been uploaded
+    try {
+      const adminRecs = await base("Staff")
+        .select({ filterByFormula: "{IsAdmin} = TRUE()", fields: ["Name"] })
+        .firstPage()
+      if (adminRecs.length > 0) {
+        await Promise.all(
+          adminRecs.map((admin) =>
+            createNotification({
+              title: "Appraisal Document Uploaded",
+              body: `Appraisal document uploaded for ${applicantName}.`,
+              type: NOTIFICATION_TYPES.APPRAISAL,
+              severity: "Info",
+              recipientId: admin.id,
+              actionUrl: "/admin/users",
+              source: "Applicant Drawer",
+            })
+          )
+        )
+      }
+    } catch (e) {
+      logger?.error?.("createNotification failed for appraisal doc upload — all admins", e)
     }
 
     return new Response(

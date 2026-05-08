@@ -31,7 +31,7 @@ export const NOTIFICATION_TYPES = {
   APPLICANT_STAGE_UPDATED:       "Applicant Stage Updated",
   ONBOARDING_PAUSED:             "Onboarding Paused",
   ONBOARDING_RESUMED:            "Onboarding Resumed",
-  ONBOARDING_STARTED:            "Onboarding Started",
+  ONBOARDING_STARTED:            "Onboarding started",
   NEW_HIRE_ADDED:                "New Hire Added",
 
   // Admin

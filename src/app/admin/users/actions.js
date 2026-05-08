@@ -74,6 +74,32 @@ export async function updateApplicant(payload) {
     } catch (err) {
       logger?.error?.("audit log failed for updateApplicant", err)
     }
+
+    // Notify all admins of the stage change
+    try {
+      const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
+      const adminRecs = await base("Staff")
+        .select({ filterByFormula: "{IsAdmin} = TRUE()", fields: ["Name"] })
+        .firstPage()
+      if (adminRecs.length > 0) {
+        await Promise.all(
+          adminRecs.map((admin) =>
+            createNotification({
+              title: "Applicant Stage Updated",
+              body: `${existing.name || "Unknown"}: stage changed from "${existing.stage || "none"}" to "${stage}".`,
+              type: NOTIFICATION_TYPES.APPLICANT_STAGE_UPDATED,
+              severity: "Info",
+              recipientId: admin.id,
+              actionUrl: "/admin/users",
+              source: "Applicant Drawer",
+            })
+          )
+        )
+      }
+    } catch (err) {
+      logger?.error?.("createNotification failed for stage update — all admins", err)
+    }
+
     return result
   }
 

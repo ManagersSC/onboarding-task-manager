@@ -33,6 +33,7 @@
 ### Feature Documentation
 - [Task Management](./task-management.md)
 - [Admin Workflows](./admin-workflows.md) — Invite flow, claim/complete flow
+- [Admin & Staff Password Reset](./admin-password-reset.md) — Reset flow for admin accounts
 - [Resource Hub](./resource-hub.md) — Resource browsing, search, filters
 - [Notifications](./notifications.md) — In-app notifications and preferences
 - [Appraisal System](./appraisal-system.md) — Pre-appraisal questions and documents
