@@ -72,7 +72,7 @@ export async function POST(request, { params }) {
         .firstPage()
 
       const applicantName = records?.[0]?.get?.("Name") || "Unknown"
-      const applicantJobName = records?.[0]?.get?.("Job Name") || "Unknown Role"
+      const applicantJobName = records?.[0]?.get?.("Job Name")?.[0] || "Unknown Role"
 
       const existingHistoryRaw = records?.[0]?.get?.(FIELD_APPRAISAL_HISTORY)
 

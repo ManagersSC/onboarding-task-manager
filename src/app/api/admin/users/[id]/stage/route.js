@@ -3,6 +3,8 @@ import { unsealData } from "iron-session"
 import Airtable from "airtable"
 import logger from "@/lib/utils/logger"
 import { logAuditEvent } from "@/lib/auditLogger"
+import { createNotification } from "@/lib/notifications"
+import { NOTIFICATION_TYPES } from "@/lib/notification-types"
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID)
 
@@ -22,9 +24,10 @@ export async function POST(request, { params }) {
     const source = String(body?.source || "Stage Override").trim()
     if (!newStage) return new Response(JSON.stringify({ error: "newStage is required" }), { status: 400, headers: { "Content-Type": "application/json" } })
 
-    // Get existing stage for audit
+    // Get existing stage and name for audit + notifications
     const applicantRec = await base("Applicants").find(id)
     const prevStage = applicantRec.get("Stage") || ""
+    const applicantName = applicantRec.get("Name") || "Unknown"
 
     // Update stage
     await base("Applicants").update([{ id, fields: { Stage: newStage } }])
@@ -42,6 +45,30 @@ export async function POST(request, { params }) {
       })
     } catch (e) {
       logger?.error?.("audit log failed for stage override", e)
+    }
+
+    // Notify all admins of the stage change
+    try {
+      const adminRecs = await base("Staff")
+        .select({ filterByFormula: "{IsAdmin} = TRUE()", fields: ["Name"] })
+        .firstPage()
+      if (adminRecs.length > 0) {
+        await Promise.all(
+          adminRecs.map((admin) =>
+            createNotification({
+              title: "Applicant Stage Updated",
+              body: `${applicantName}: stage changed from "${prevStage || "none"}" to "${newStage}".`,
+              type: NOTIFICATION_TYPES.APPLICANT_STAGE_UPDATED,
+              severity: "Info",
+              recipientId: admin.id,
+              actionUrl: "/admin/users",
+              source: "Applicant Drawer",
+            })
+          )
+        )
+      }
+    } catch (e) {
+      logger?.error?.("createNotification failed for stage update — all admins", e)
     }
 
     return new Response(JSON.stringify({ success: true, id, prevStage, newStage }), { status: 200, headers: { "Content-Type": "application/json" } })
