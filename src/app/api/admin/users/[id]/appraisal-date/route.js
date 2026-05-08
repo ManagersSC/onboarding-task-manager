@@ -66,13 +66,16 @@ export async function POST(request, { params }) {
       const records = await base("Applicants")
         .select({ 
           filterByFormula: `RECORD_ID() = '${id}'`, 
-          fields: [FIELD_APPRAISAL_HISTORY, FIELD_QUESTIONS_OVERRIDE], 
-          maxRecords: 1 
+          fields: [FIELD_APPRAISAL_HISTORY, FIELD_QUESTIONS_OVERRIDE, "Name", "Job Name"],
+          maxRecords: 1
         })
         .firstPage()
 
+      const applicantName = records?.[0]?.get?.("Name") || "Unknown"
+      const applicantJobName = records?.[0]?.get?.("Job Name") || "Unknown Role"
+
       const existingHistoryRaw = records?.[0]?.get?.(FIELD_APPRAISAL_HISTORY)
-      
+
       // Get current questions override for snapshot
       const questionsOverrideRaw = records?.[0]?.get?.(FIELD_QUESTIONS_OVERRIDE)
       let questionsSnapshot = null
@@ -168,23 +171,28 @@ export async function POST(request, { params }) {
       logger?.error?.("audit log failed for appraisal date update", e)
     }
 
-    // Notify acting staff (if Staff record exists)
+    // Notify all admins about the scheduled appraisal
     try {
-      const staffRecs = await base("Staff").select({ filterByFormula: `{Email}='${String(session.userEmail).toLowerCase()}'`, maxRecords: 1 }).firstPage()
-      const staff = staffRecs?.[0]
-      if (staff) {
-        await createNotification({
-          title: "Appraisal Date Updated",
-          body: `Appraisal set to ${dateStr}. An appointment event has been created in the calendar.`,
-          type: NOTIFICATION_TYPES.APPRAISAL,
-          severity: "Info",
-          recipientId: staff.id,
-          actionUrl: "/admin/users",
-          source: "Applicant Drawer",
-        })
+      const adminRecs = await base("Staff")
+        .select({ filterByFormula: "{IsAdmin} = TRUE()", fields: ["Name"] })
+        .firstPage()
+      if (adminRecs.length > 0) {
+        await Promise.all(
+          adminRecs.map((admin) =>
+            createNotification({
+              title: "Appraisal Scheduled",
+              body: `${applicantName} (${applicantJobName}) has an appraisal scheduled for ${dateStr}.`,
+              type: NOTIFICATION_TYPES.APPRAISAL,
+              severity: "Info",
+              recipientId: admin.id,
+              actionUrl: "/admin/users",
+              source: "Appraisal",
+            })
+          )
+        )
       }
     } catch (e) {
-      logger?.error?.("createNotification failed for appraisal date update", e)
+      logger?.error?.("createNotification failed for appraisal date — all admins", e)
     }
 
     return new Response(JSON.stringify({ success: true, id, appraisalDate: dateStr }), { status: 200, headers: { "Content-Type": "application/json" } })
