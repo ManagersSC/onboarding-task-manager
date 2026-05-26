@@ -2,7 +2,7 @@
 
 **Replaced manual spreadsheet onboarding with a full-stack workflow platform** for a dental clinic — automating task assignment, document collection, staff notifications, and compliance logging across the entire new hire lifecycle.
 
-**Live:** [onboarding.smilecliniq.com](https://onboarding.smilecliniq.com)
+**Live:** [onboarding.smilecliniq.com](https://onboarding-task-manager.vercel.app)
 
 ---
 
